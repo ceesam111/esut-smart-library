@@ -1,0 +1,5 @@
+-- Complex demo data is seeded by scripts/seed-demo-data.ts because it creates
+-- Supabase Auth users and ordered cross-table records with service-role access.
+-- Run with:
+--   SEED_TARGET=demo npm run seed:demo
+-- This file intentionally avoids embedding fake auth users or secrets in SQL.

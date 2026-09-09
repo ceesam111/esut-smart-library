@@ -1,0 +1,10 @@
+project_id = "uamfjajbxwpbzfgmaalk"
+
+[functions.doab-books]
+verify_jwt = false
+
+[functions.wellbeing-checkin]
+verify_jwt = false
+
+[functions.enrich-catalogue]
+verify_jwt = true

@@ -1,0 +1,29 @@
+services:
+  app:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "test -x node_modules/.bin/next || npm ci --prefer-offline --no-audit --no-fund; test -x node_modules/.bin/next && npm run dev -- -H 0.0.0.0"
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.development
+        required: false
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    volumes:
+      - .:/app
+      - smart-library-node-modules:/app/node_modules
+      - smart-library-npm-cache:/root/.npm
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  smart-library-node-modules:
+  smart-library-npm-cache:

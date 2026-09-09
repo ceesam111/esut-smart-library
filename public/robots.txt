@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /supervisor
+Disallow: /reset-password
+Disallow: /admin/
+
+Sitemap: https://esutlibrary.edu.ng/sitemap.xml

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00529B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#003d75;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="120" rx="8" fill="url(#bg)" />
+
+  <!-- Shield / crest shape -->
+  <path d="M60 25 L85 25 L90 30 L90 65 L85 75 L60 85 L35 75 L30 65 L30 30 L35 25 Z"
+        fill="none" stroke="#D4A017" stroke-width="2.5" />
+
+  <!-- Open book inside shield -->
+  <path d="M45 55 Q55 45 60 50 Q65 45 75 55 L75 68 Q65 60 60 63 Q55 60 45 68 Z"
+        fill="none" stroke="#D4A017" stroke-width="1.8" />
+  <line x1="60" y1="50" x2="60" y2="63" stroke="#D4A017" stroke-width="1.2" />
+
+  <!-- Star accent -->
+  <circle cx="60" cy="35" r="3" fill="#D4A017" />
+
+  <!-- ESUT text -->
+  <text x="130" y="68" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="bold" fill="#FFFFFF" letter-spacing="6">ESUT</text>
+
+  <!-- Subtitle -->
+  <text x="130" y="92" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#D4A017" letter-spacing="3">SMART LIBRARY</text>
+
+  <!-- Bottom accent line -->
+  <rect x="130" y="98" width="180" height="2" rx="1" fill="#D4A017" opacity="0.6" />
+</svg>

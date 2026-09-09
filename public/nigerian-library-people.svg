@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
+  <title id="title">Nigerian library users studying together</title>
+  <desc id="desc">Illustration of Nigerian students and librarians reading in a university library.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0f3b2a"/>
+      <stop offset="1" stop-color="#1f6b49"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#bg)"/>
+  <rect x="0" y="285" width="1200" height="115" fill="#f7f1df" opacity=".95"/>
+  <g opacity=".18" fill="#c9a84c">
+    <rect x="60" y="58" width="180" height="190" rx="10"/>
+    <rect x="285" y="42" width="180" height="205" rx="10"/>
+    <rect x="955" y="60" width="180" height="188" rx="10"/>
+  </g>
+  <g fill="#e7d6a0">
+    <rect x="83" y="82" width="24" height="140" rx="4"/>
+    <rect x="118" y="82" width="24" height="140" rx="4"/>
+    <rect x="153" y="82" width="24" height="140" rx="4"/>
+    <rect x="188" y="82" width="24" height="140" rx="4"/>
+    <rect x="310" y="70" width="24" height="150" rx="4"/>
+    <rect x="346" y="70" width="24" height="150" rx="4"/>
+    <rect x="382" y="70" width="24" height="150" rx="4"/>
+    <rect x="418" y="70" width="24" height="150" rx="4"/>
+    <rect x="980" y="85" width="24" height="138" rx="4"/>
+    <rect x="1016" y="85" width="24" height="138" rx="4"/>
+    <rect x="1052" y="85" width="24" height="138" rx="4"/>
+    <rect x="1088" y="85" width="24" height="138" rx="4"/>
+  </g>
+  <ellipse cx="602" cy="316" rx="330" ry="38" fill="#0f2f24" opacity=".18"/>
+  <rect x="325" y="245" width="550" height="54" rx="12" fill="#8a5a2b"/>
+  <rect x="355" y="230" width="185" height="22" rx="4" fill="#fff7dc"/>
+  <rect x="560" y="224" width="210" height="28" rx="4" fill="#f2df9c"/>
+  <g>
+    <circle cx="430" cy="153" r="42" fill="#5a341f"/>
+    <path d="M376 247c8-55 31-82 54-82s46 27 54 82z" fill="#f4b942"/>
+    <circle cx="430" cy="143" r="26" fill="#7b4b31"/>
+    <path d="M401 132c12-31 47-32 61-4-16-5-40-4-61 4z" fill="#161616"/>
+    <rect x="393" y="247" width="74" height="76" rx="10" fill="#174f38"/>
+  </g>
+  <g>
+    <circle cx="604" cy="139" r="45" fill="#1b1b1b"/>
+    <circle cx="604" cy="145" r="27" fill="#6f4128"/>
+    <path d="M543 249c10-58 34-87 61-87s51 29 61 87z" fill="#ffffff"/>
+    <path d="M561 247h86v80h-86z" fill="#0f3b2a"/>
+    <path d="M570 201c26 23 45 23 68 0" stroke="#c9a84c" stroke-width="10" fill="none" stroke-linecap="round"/>
+  </g>
+  <g>
+    <circle cx="780" cy="155" r="40" fill="#22150f"/>
+    <circle cx="780" cy="149" r="25" fill="#8a5236"/>
+    <path d="M728 247c7-53 28-79 52-79s45 26 52 79z" fill="#2d6cdf"/>
+    <rect x="743" y="247" width="74" height="77" rx="10" fill="#123c2b"/>
+  </g>
+  <path d="M495 266c43-34 86-34 129 0 43-34 86-34 129 0" stroke="#fff7dc" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <text x="600" y="368" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#174f38">AFUED Smart Library</text>
+</svg>
