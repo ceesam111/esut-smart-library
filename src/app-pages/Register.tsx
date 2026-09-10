@@ -8,8 +8,8 @@ import LibrarianForm from '@/components/auth/LibrarianForm';
 import type { RegisterResult } from '@/lib/registration';
 import TurnstileWidget from '@/components/security/TurnstileWidget';
 
-const GREEN = '#1A4731';
-const GOLD = '#C9A84C';
+const GREEN = '#6B1D2A';
+const GOLD = '#D4A017';
 
 type Kind = 'student' | 'researcher' | 'admin_staff' | 'librarian';
 

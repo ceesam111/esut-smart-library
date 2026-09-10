@@ -431,7 +431,7 @@ export default function Databases() {
           <p className="text-sm text-neutral-500 mb-5">Permanent free access to millions of academic and public domain books. No registration required.</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FREE_EBOOK_COLLECTIONS.map((col) => (
-              <div key={col.name} className="bg-white rounded-xl border border-neutral-200 border-l-4 p-5 hover:shadow-md transition-shadow flex flex-col" style={{ borderLeftColor: '#1A4731' }}>
+              <div key={col.name} className="bg-white rounded-xl border border-neutral-200 border-l-4 p-5 hover:shadow-md transition-shadow flex flex-col" style={{ borderLeftColor: '#6B1D2A' }}>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h4 className="font-bold text-neutral-900 text-base leading-snug">{col.name}</h4>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${col.badgeCls}`}>{col.badge}</span>
@@ -439,7 +439,7 @@ export default function Databases() {
                 <p className="text-sm text-neutral-600 flex-1 leading-relaxed mb-4">{col.description}</p>
                 <a href={col.url} target="_blank" rel="noopener noreferrer"
                   className="block text-center text-sm font-semibold py-2 rounded-lg text-white transition-opacity hover:opacity-90"
-                  style={{ background: '#1A4731' }}>
+                  style={{ background: '#6B1D2A' }}>
                   Visit Resource →
                 </a>
               </div>

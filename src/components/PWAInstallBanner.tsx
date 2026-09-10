@@ -73,11 +73,11 @@ export default function PWAInstallBanner() {
       style={{ bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="bg-white rounded-xl shadow-xl border border-neutral-100 p-4"
-           style={{ borderLeft: '4px solid #1A4731' }}>
+           style={{ borderLeft: '4px solid #6B1D2A' }}>
         <div className="flex items-start gap-3">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xl"
-            style={{ background: '#1A4731' }}
+            style={{ background: '#6B1D2A' }}
           >
             📚
           </div>
@@ -94,7 +94,7 @@ export default function PWAInstallBanner() {
                   <button
                     onClick={dismiss}
                     className="px-4 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ background: '#1A4731' }}
+                    style={{ background: '#6B1D2A' }}
                   >
                     Got it
                   </button>
@@ -109,7 +109,7 @@ export default function PWAInstallBanner() {
                   <button
                     onClick={install}
                     className="px-4 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ background: '#1A4731' }}
+                    style={{ background: '#6B1D2A' }}
                   >
                     Install Now
                   </button>

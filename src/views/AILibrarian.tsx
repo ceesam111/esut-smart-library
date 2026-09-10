@@ -4,7 +4,7 @@ import { LYRIA_GREETING, stripMarkdown, isLowConfidence } from '@/lib/lyria';
 import { contacts } from '@/lib/contacts';
 
 const LIBRARIAN_NAME = 'Lexis';
-const GOLD = '#C9A84C';
+const GOLD = '#D4A017';
 const NAVY = '#1F4E79';
 const TEAL = '#005F73';
 const EDGE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ai-librarian`;

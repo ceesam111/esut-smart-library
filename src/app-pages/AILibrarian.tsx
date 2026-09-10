@@ -5,9 +5,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { institutionConfig } from '@config/institution.config';
 
 const LIBRARIAN_NAME = 'Lexis';
-const GOLD = '#C9A84C';
+const GOLD = '#D4A017';
 // Brand colours — green, on-brand with the rest of the app (no blue hero).
-const NAVY = '#1A4731';
+const NAVY = '#6B1D2A';
 const TEAL = '#0B6E4F';
 const API_URL = '/api/ai/reference-librarian';
 

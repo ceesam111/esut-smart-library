@@ -36,7 +36,7 @@ export default function Layout() {
         href="tel:+2347030162879"
         aria-label="Call Us"
         className="md:hidden fixed right-6 flex items-center justify-center w-13 h-13 rounded-full shadow-lg transition-opacity hover:opacity-90"
-        style={{ bottom: '80px', zIndex: 39, background: '#1A4731', width: '52px', height: '52px' }}
+        style={{ bottom: '80px', zIndex: 39, background: '#6B1D2A', width: '52px', height: '52px' }}
         title="Call Us"
       >
         <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

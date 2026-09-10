@@ -3,7 +3,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { supabase } from '@/lib/supabase';
 import { newspapersData } from '@/data/newspapers';
 
-const GREEN = '#1A4731';
+const GREEN = '#6B1D2A';
 const PAGE_SIZE = 24;
 
 interface SerialLite {

@@ -6,8 +6,8 @@ import { getDashboardPath, type AppRole } from '@/config/roles.config';
 import TurnstileWidget from '@/components/security/TurnstileWidget';
 import { verifyTurnstileClient } from '@/lib/turnstileClient';
 
-const GREEN = '#1A4731';
-const GOLD  = '#C9A84C';
+const GREEN = '#6B1D2A';
+const GOLD  = '#D4A017';
 
 const LOCKOUT_KEY   = 'esut_login_attempts';
 const MAX_ATTEMPTS  = 5;

@@ -25,7 +25,7 @@ function Badge({ role }: { role: string }) {
       className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
       style={{
         background: isSuper ? '#FEE2E2' : '#E5F0EA',
-        color: isSuper ? '#991B1B' : '#1A4731',
+        color: isSuper ? '#991B1B' : '#6B1D2A',
       }}
     >
       {ROLE_LABELS[role as AppRole] ?? role}
@@ -168,7 +168,7 @@ export default function AdminAccounts() {
           onClick={handleBroadcast}
           disabled={busy === 'broadcast'}
           className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-          style={{ background: '#1A4731' }}
+          style={{ background: '#6B1D2A' }}
         >
           {busy === 'broadcast' ? 'Sending…' : '🔔 Broadcast notice'}
         </button>
@@ -351,7 +351,7 @@ export default function AdminAccounts() {
             type="submit"
             disabled={busy === 'invite'}
             className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: '#1A4731' }}
+            style={{ background: '#6B1D2A' }}
           >
             {busy === 'invite' ? 'Sending…' : 'Send invitation'}
           </button>

@@ -49,8 +49,8 @@ type View =
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const GREEN = '#1A4731';
-const GOLD  = '#C9A84C';
+const GREEN = '#6B1D2A';
+const GOLD  = '#D4A017';
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();

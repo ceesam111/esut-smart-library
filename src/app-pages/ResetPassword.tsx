@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 
-const GREEN = '#1A4731';
+const GREEN = '#6B1D2A';
 
 function PasswordInput({
   id, value, onChange, label, placeholder,

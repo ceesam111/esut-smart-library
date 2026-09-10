@@ -2,8 +2,8 @@ import { institutionConfig } from '@config/institution.config';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Link } from 'react-router-dom';
 
-const GREEN = '#1A4731';
-const GOLD  = '#C9A84C';
+const GREEN = '#6B1D2A';
+const GOLD  = '#D4A017';
 
 const FEATURES = [
   'Text alternatives are provided for core interface imagery and decorative graphics are hidden where practical',

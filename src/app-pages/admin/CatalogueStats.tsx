@@ -27,7 +27,7 @@ interface ShelfOccupancy {
 interface LibraryItemCount { library: string; count: number }
 interface UnassignedItem   { id: string; title: string; authors: string; format: string; year: number }
 
-const COLORS = ['#1F4E79', '#C9A84C', '#005F73', '#2D6A4F', '#6B4226', '#7B3F84'];
+const COLORS = ['#1F4E79', '#D4A017', '#005F73', '#2D6A4F', '#6B4226', '#7B3F84'];
 
 function textList(value: unknown) {
   if (Array.isArray(value)) return value.filter(Boolean).join(', ');
@@ -335,7 +335,7 @@ export default function CatalogueStats() {
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
               <Legend />
-              <Line type="monotone" dataKey="count" name="Items Added" stroke="#C9A84C" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="count" name="Items Added" stroke="#D4A017" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         )}

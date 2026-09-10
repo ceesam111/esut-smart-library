@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" id="theme-color" content="#00529B" />
+        <meta name="theme-color" id="theme-color" content="#6B1D2A" />
         <link rel="manifest" href="/api/manifest" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

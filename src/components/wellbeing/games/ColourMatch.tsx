@@ -4,7 +4,7 @@ const COLOURS = [
   { name: 'Red', hex: '#dc2626' },
   { name: 'Green', hex: '#16a34a' },
   { name: 'Blue', hex: '#2563eb' },
-  { name: 'Gold', hex: '#C9A84C' },
+  { name: 'Gold', hex: '#D4A017' },
   { name: 'Purple', hex: '#7c3aed' },
   { name: 'Orange', hex: '#ea580c' },
   { name: 'Teal', hex: '#0d9488' },

@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 
 const BRAND = {
   primary: cfg.primaryColour,
-  accent: '#C9A84C',
+  accent: '#D4A017',
   libraryName: cfg.libraryName,
   institution: cfg.name,
   location: cfg.state ? `${cfg.state} State, Nigeria` : 'Nigeria',
@@ -81,12 +81,12 @@ export async function sendRegistrationVerificationEmailServer(patron: {
   expiresAt: string;
 }) {
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Verify Your ESUT Library Email</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Verify Your ESUT Library Email</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>,</p>
     <p style="color:#374151">Please confirm that this email address belongs to you before your library account is activated.</p>
-    <a href="${patron.verificationLink}" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:16px 0">Verify Email Address</a>
+    <a href="${patron.verificationLink}" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:16px 0">Verify Email Address</a>
     <p style="color:#374151">This verification link expires on <strong>${new Date(patron.expiresAt).toLocaleString('en-GB')}</strong>.</p>
-    <p style="color:#94a3b8;font-size:13px;line-height:1.6">If the button does not work, copy and paste this link into your browser:<br><a href="${patron.verificationLink}" style="color:#1A4731;word-break:break-all">${patron.verificationLink}</a></p>
+    <p style="color:#94a3b8;font-size:13px;line-height:1.6">If the button does not work, copy and paste this link into your browser:<br><a href="${patron.verificationLink}" style="color:#6B1D2A;word-break:break-all">${patron.verificationLink}</a></p>
   `);
 
   await sendEmail(patron.email, patron.full_name, 'Verify your ESUT Library email', html);

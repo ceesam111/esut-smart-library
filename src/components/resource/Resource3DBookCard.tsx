@@ -36,7 +36,7 @@ const TYPE_LABELS: Record<ResourceType, string> = {
 };
 
 const TYPE_ACCENTS: Record<ResourceType, string> = {
-  book: '#1A4731',
+  book: '#6B1D2A',
   journal: '#0F766E',
   article: '#7C3AED',
   ebook: '#0369A1',

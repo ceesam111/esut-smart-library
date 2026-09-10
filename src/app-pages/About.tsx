@@ -39,7 +39,7 @@ export default function About() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="pt-20" style={{ background: '#1A4731' }}>
+      <div className="pt-20" style={{ background: '#6B1D2A' }}>
         <div className="max-w-4xl mx-auto px-6 py-20 text-center text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">About ESUT Library</h1>
           <p className="text-lg md:text-xl text-white/80">
@@ -75,7 +75,7 @@ export default function About() {
           {STATS.map((s) => (
             <div key={s.label}>
               <div className="text-3xl mb-1">{s.icon}</div>
-              <p className="text-3xl font-bold" style={{ color: '#C9A84C' }}>{s.value}</p>
+              <p className="text-3xl font-bold" style={{ color: '#D4A017' }}>{s.value}</p>
               <p className="text-sm text-neutral-400 mt-1">{s.label}</p>
             </div>
           ))}
@@ -93,12 +93,12 @@ export default function About() {
                 <div key={item.year} className="relative pl-12">
                   <div
                     className="absolute left-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow"
-                    style={{ background: '#1A4731' }}
+                    style={{ background: '#6B1D2A' }}
                   >
                     ★
                   </div>
                   <div className="bg-white rounded-xl border border-neutral-200 p-5 shadow-sm">
-                    <p className="text-sm font-bold mb-1" style={{ color: '#C9A84C' }}>{item.year}</p>
+                    <p className="text-sm font-bold mb-1" style={{ color: '#D4A017' }}>{item.year}</p>
                     <p className="text-neutral-700 text-sm leading-relaxed">{item.text}</p>
                   </div>
                 </div>
@@ -134,12 +134,12 @@ export default function About() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 px-6 text-center" style={{ background: '#1A4731' }}>
+      <section className="py-16 px-6 text-center" style={{ background: '#6B1D2A' }}>
         <div className="max-w-2xl mx-auto text-white">
           <h2 className="text-3xl font-bold mb-3">Ready to Get Started?</h2>
           <p className="text-white/80 mb-8 text-lg">Register for your free library account and start accessing thousands of resources today.</p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Link to="/register" className="px-8 py-3 rounded-full font-semibold text-neutral-900 hover:opacity-90 transition-opacity" style={{ background: '#C9A84C' }}>
+            <Link to="/register" className="px-8 py-3 rounded-full font-semibold text-neutral-900 hover:opacity-90 transition-opacity" style={{ background: '#D4A017' }}>
               Register Now
             </Link>
             <Link to="/catalogue" className="px-8 py-3 rounded-full font-semibold border border-white/50 text-white hover:bg-white/10 transition-colors">

@@ -77,7 +77,7 @@ export default function FAQ() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="pt-20" style={{ background: '#1A4731' }}>
+      <div className="pt-20" style={{ background: '#6B1D2A' }}>
         <div className="max-w-4xl mx-auto px-6 py-14 text-center text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">Frequently Asked Questions</h1>
           <p className="text-lg text-white/80">Everything you need to know about using ESUT Smart Library.</p>
@@ -101,7 +101,7 @@ export default function FAQ() {
               <a
                 href="mailto:library@esut.edu.ng"
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                style={{ background: '#1A4731' }}
+                style={{ background: '#6B1D2A' }}
               >
                 Email Us
               </a>

@@ -2,8 +2,8 @@ import { useState, useRef } from 'react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { supabase } from '@/lib/supabase';
 
-const GREEN = '#1A4731';
-const GOLD = '#C9A84C';
+const GREEN = '#6B1D2A';
+const GOLD = '#D4A017';
 
 type Tab = 'plagiarism' | 'citation';
 

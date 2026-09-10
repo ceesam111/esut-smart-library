@@ -9,7 +9,7 @@
   </defs>
   <rect width="1200" height="400" fill="url(#bg)"/>
   <rect x="0" y="285" width="1200" height="115" fill="#f7f1df" opacity=".95"/>
-  <g opacity=".18" fill="#c9a84c">
+  <g opacity=".18" fill="#D4A017">
     <rect x="60" y="58" width="180" height="190" rx="10"/>
     <rect x="285" y="42" width="180" height="205" rx="10"/>
     <rect x="955" y="60" width="180" height="188" rx="10"/>
@@ -44,7 +44,7 @@
     <circle cx="604" cy="145" r="27" fill="#6f4128"/>
     <path d="M543 249c10-58 34-87 61-87s51 29 61 87z" fill="#ffffff"/>
     <path d="M561 247h86v80h-86z" fill="#0f3b2a"/>
-    <path d="M570 201c26 23 45 23 68 0" stroke="#c9a84c" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M570 201c26 23 45 23 68 0" stroke="#D4A017" stroke-width="10" fill="none" stroke-linecap="round"/>
   </g>
   <g>
     <circle cx="780" cy="155" r="40" fill="#22150f"/>

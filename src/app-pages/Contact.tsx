@@ -50,7 +50,7 @@ export default function Contact() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="pt-20" style={{ background: '#1A4731' }}>
+      <div className="pt-20" style={{ background: '#6B1D2A' }}>
         <div className="max-w-4xl mx-auto px-6 py-14 text-center text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">Contact ESUT Library</h1>
           <p className="text-lg text-white/80">We are here to help. Reach us by form, phone, or WhatsApp.</p>
@@ -95,7 +95,7 @@ export default function Contact() {
                   type="submit"
                   disabled={sending}
                   className="w-full py-3 rounded-lg font-semibold text-white text-sm transition-opacity hover:opacity-90 disabled:opacity-60"
-                  style={{ background: '#1A4731' }}
+                  style={{ background: '#6B1D2A' }}
                 >
                   {sending ? 'Sending…' : 'Send Message'}
                 </button>
@@ -119,7 +119,7 @@ export default function Contact() {
                   <span className="text-xl shrink-0">📞</span>
                   <div>
                     <p className="font-semibold text-neutral-800 text-sm">Telephone</p>
-                    <a href="tel:+2347030162879" className="text-sm hover:underline" style={{ color: '#1A4731' }}>
+                    <a href="tel:+2347030162879" className="text-sm hover:underline" style={{ color: '#6B1D2A' }}>
                       +234 703 016 2879
                     </a>
                   </div>
@@ -129,7 +129,7 @@ export default function Contact() {
                   <div>
                     <p className="font-semibold text-neutral-800 text-sm">WhatsApp</p>
                     <a href="https://wa.me/2347030162879" target="_blank" rel="noopener noreferrer"
-                      className="text-sm hover:underline" style={{ color: '#1A4731' }}>
+                      className="text-sm hover:underline" style={{ color: '#6B1D2A' }}>
                       Chat on WhatsApp
                     </a>
                   </div>
@@ -138,7 +138,7 @@ export default function Contact() {
                   <span className="text-xl shrink-0">✉️</span>
                   <div>
                     <p className="font-semibold text-neutral-800 text-sm">Email</p>
-                    <a href="mailto:library@esut.edu.ng" className="text-sm hover:underline" style={{ color: '#1A4731' }}>
+                    <a href="mailto:library@esut.edu.ng" className="text-sm hover:underline" style={{ color: '#6B1D2A' }}>
                       library@esut.edu.ng
                     </a>
                   </div>
@@ -167,7 +167,7 @@ export default function Contact() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-medium px-4 py-1.5 rounded-full text-white hover:opacity-90 transition-opacity"
-                style={{ background: '#1A4731' }}
+                style={{ background: '#6B1D2A' }}
               >
                 Get Directions →
               </a>

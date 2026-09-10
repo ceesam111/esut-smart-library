@@ -184,11 +184,11 @@ function Hero() {
       {/* LEFT COLUMN — 55% */}
       <div
         className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-16 lg:py-0 lg:w-[55%]"
-        style={{ background: '#1A4731' }}
+        style={{ background: '#6B1D2A' }}
       >
         {/* Location pill */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 self-start text-xs font-semibold" style={{ borderColor: 'rgba(201,168,76,0.5)', color: '#C9A84C', background: 'rgba(201,168,76,0.08)' }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#C9A84C' }} />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 self-start text-xs font-semibold" style={{ borderColor: 'rgba(201,168,76,0.5)', color: '#D4A017', background: 'rgba(201,168,76,0.08)' }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#D4A017' }} />
           Enugu, Enugu State, Nigeria
         </div>
 
@@ -215,13 +215,13 @@ function Hero() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchTarget === 'catalog' ? 'Search OPAC by title, author, ISBN...' : 'Search theses, papers, datasets...'}
             className="w-full pl-5 pr-28 py-4 rounded-2xl text-sm text-neutral-800 placeholder:text-neutral-400 bg-white shadow-lg focus:outline-none focus:ring-2"
-            style={{ '--tw-ring-color': '#C9A84C' } as React.CSSProperties}
+            style={{ '--tw-ring-color': '#D4A017' } as React.CSSProperties}
             onKeyDown={(e) => e.key === 'Enter' && query && (window.location.href = `/${searchTarget === 'catalog' ? 'catalog' : 'repository'}?q=${encodeURIComponent(query)}`)}
           />
           <Link
             to={`/${searchTarget === 'catalog' ? 'catalog' : 'repository'}${query ? `?q=${encodeURIComponent(query)}` : ''}`}
             className="absolute right-2 top-2 bottom-2 px-4 rounded-xl text-white text-sm font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-90"
-            style={{ background: '#C9A84C' }}
+            style={{ background: '#D4A017' }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -237,7 +237,7 @@ function Hero() {
           <Link
             to="/register"
             className="px-6 py-2.5 rounded-xl text-sm font-semibold text-neutral-900 transition-opacity hover:opacity-90"
-            style={{ background: '#C9A84C' }}
+            style={{ background: '#D4A017' }}
           >
             Register as Patron
           </Link>
@@ -257,7 +257,7 @@ function Hero() {
             { value: dispOpen.toLocaleString(),   label: 'Open Access Works' },
           ].map((s) => (
             <div key={s.label}>
-              <div className="text-2xl font-bold font-mono" style={{ color: '#C9A84C' }}>{s.value}</div>
+              <div className="text-2xl font-bold font-mono" style={{ color: '#D4A017' }}>{s.value}</div>
               <div className="text-white/50 text-xs mt-0.5">{s.label}</div>
             </div>
           ))}
@@ -281,11 +281,11 @@ function Hero() {
           {/* Central open-book SVG */}
           <div
             className="absolute flex items-center justify-center rounded-2xl shadow-xl z-10"
-            style={{ width: 76, height: 76, background: '#1A4731', border: '2px solid rgba(201,168,76,0.4)' }}
+            style={{ width: 76, height: 76, background: '#6B1D2A', border: '2px solid rgba(201,168,76,0.4)' }}
           >
             <svg viewBox="0 0 48 48" fill="none" className="w-10 h-10">
-              <path d="M6 10 C6 10 14 8 24 14 C34 8 42 10 42 10 L42 38 C42 38 34 36 24 42 C14 36 6 38 6 38 Z" stroke="#C9A84C" strokeWidth="2" fill="rgba(201,168,76,0.12)" />
-              <line x1="24" y1="14" x2="24" y2="42" stroke="#C9A84C" strokeWidth="1.5" />
+              <path d="M6 10 C6 10 14 8 24 14 C34 8 42 10 42 10 L42 38 C42 38 34 36 24 42 C14 36 6 38 6 38 Z" stroke="#D4A017" strokeWidth="2" fill="rgba(201,168,76,0.12)" />
+              <line x1="24" y1="14" x2="24" y2="42" stroke="#D4A017" strokeWidth="1.5" />
             </svg>
           </div>
 
@@ -324,7 +324,7 @@ function Hero() {
         {/* Open Access pill */}
         <div
           className="absolute bottom-8 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-semibold border"
-          style={{ background: 'rgba(26,71,49,0.8)', border: '1px solid rgba(201,168,76,0.4)', color: '#C9A84C' }}
+          style={{ background: 'rgba(26,71,49,0.8)', border: '1px solid rgba(201,168,76,0.4)', color: '#D4A017' }}
         >
           Open Access Available
         </div>
@@ -517,7 +517,7 @@ function FreeEbooksStrip() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-auto text-center text-xs font-medium py-2 rounded-lg text-white transition-opacity hover:opacity-90"
-                    style={{ background: '#1A4731' }}
+                    style={{ background: '#6B1D2A' }}
                   >
                     Access Book →
                   </a>

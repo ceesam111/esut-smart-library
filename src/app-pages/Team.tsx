@@ -35,7 +35,7 @@ export default function Team() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="pt-20" style={{ background: '#1A4731' }}>
+      <div className="pt-20" style={{ background: '#6B1D2A' }}>
         <div className="max-w-4xl mx-auto px-6 py-16 text-center text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">Meet Our Library Team</h1>
           <p className="text-lg text-white/80">The dedicated professionals behind ESUT Smart Library</p>
@@ -68,14 +68,14 @@ export default function Team() {
                     </div>
                   )}
                   <p className="font-bold text-neutral-900 text-sm leading-tight">{m.name}</p>
-                  <p className="text-xs font-semibold mt-0.5" style={{ color: '#1A4731' }}>{m.title}</p>
+                  <p className="text-xs font-semibold mt-0.5" style={{ color: '#6B1D2A' }}>{m.title}</p>
                   {m.qual && <p className="text-xs text-neutral-400 mt-1">{m.qual}</p>}
                   {m.bio && <p className="text-xs text-neutral-600 mt-2 leading-relaxed">{m.bio}</p>}
                   {m.email && (
                     <a
                       href={`mailto:${m.email}`}
                       className="text-xs mt-2 hover:underline"
-                      style={{ color: '#1A4731' }}
+                      style={{ color: '#6B1D2A' }}
                     >
                       {m.email}
                     </a>
@@ -94,7 +94,7 @@ export default function Team() {
           <p className="text-neutral-500 text-sm mb-4">
             Interested in joining the ESUT Library team? Current vacancies are advertised through the ESUT human resources portal.
           </p>
-          <Link to="/contact" className="inline-block px-6 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: '#1A4731' }}>
+          <Link to="/contact" className="inline-block px-6 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: '#6B1D2A' }}>
             Contact Us
           </Link>
         </div>

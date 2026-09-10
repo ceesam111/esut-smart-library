@@ -1,6 +1,6 @@
 import { useState, ReactNode } from 'react';
 
-const GREEN = '#1A4731';
+const GREEN = '#6B1D2A';
 
 export function Field({
   label, required, children, hint,

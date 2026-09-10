@@ -180,7 +180,7 @@ export default function NewspaperIndex() {
           onClick={() => runHarvest()}
           disabled={running !== null}
           className="px-4 py-2 rounded-lg text-white font-semibold text-sm disabled:opacity-50"
-          style={{ background: '#1A4731' }}
+          style={{ background: '#6B1D2A' }}
         >
           {running === 'all' ? 'Harvesting…' : '⟳ Run Harvest Now'}
         </button>
@@ -453,7 +453,7 @@ function ManualTab({ serials, categories, onAdded }: { serials: Serial[]; catego
         type="submit"
         disabled={saving}
         className="px-5 py-2 rounded-lg text-white font-semibold text-sm disabled:opacity-50"
-        style={{ background: '#1A4731' }}
+        style={{ background: '#6B1D2A' }}
       >
         {saving ? 'Saving…' : 'Index Article'}
       </button>

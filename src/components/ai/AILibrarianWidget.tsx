@@ -5,7 +5,7 @@ import { institutionConfig } from '@config/institution.config';
 import { SUPABASE_PUBLISHABLE_KEY, supabaseFunctionUrl } from '@/lib/env';
 
 const LIBRARIAN_NAME = 'Lexis';
-const GOLD = '#C9A84C';
+const GOLD = '#D4A017';
 const NAVY = '#1F4E79';
 const TEAL = '#005F73';
 const EDGE_URL = supabaseFunctionUrl('ai-librarian');

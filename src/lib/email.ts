@@ -5,7 +5,7 @@ import { institutionConfig as cfg } from '@config/institution.config';
 
 const BRAND = {
   primary: cfg.primaryColour,        // header background + links
-  accent: '#C9A84C',                 // gold eyebrow accent
+  accent: '#D4A017',                 // gold eyebrow accent
   libraryName: cfg.libraryName,      // e.g. "ESUT Library"
   institution: cfg.name,             // full institution name
   location: cfg.state ? `${cfg.state} State, Nigeria` : 'Nigeria',
@@ -77,20 +77,20 @@ export async function sendWelcomeEmail(patron: {
   email: string; full_name: string; patron_id: string; faculty_name?: string;
 }) {
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Welcome to ESUT Library!</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Welcome to ESUT Library!</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>,</p>
     <p style="color:#374151">Your library account has been created. Here are your details:</p>
     <table style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:6px 12px;color:#64748b;font-size:14px">Patron ID</td><td style="padding:6px 12px;font-weight:700;font-family:monospace;color:#1A4731;font-size:15px">${patron.patron_id}</td></tr>
+      <tr><td style="padding:6px 12px;color:#64748b;font-size:14px">Patron ID</td><td style="padding:6px 12px;font-weight:700;font-family:monospace;color:#6B1D2A;font-size:15px">${patron.patron_id}</td></tr>
       ${patron.faculty_name ? `<tr><td style="padding:6px 12px;color:#64748b;font-size:14px">Faculty</td><td style="padding:6px 12px;color:#1e293b;font-size:14px">${patron.faculty_name}</td></tr>` : ''}
     </table>
-    <a href="https://esutlibrary.edu.ng/dashboard/library-card" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View Your Library Card</a>
+    <a href="https://esutlibrary.edu.ng/dashboard/library-card" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View Your Library Card</a>
     <p style="color:#374151;margin-top:20px"><strong>Getting started:</strong></p>
     <ul style="color:#374151;line-height:1.8">
-      <li>Browse the <a href="https://esutlibrary.edu.ng/catalogue" style="color:#1A4731">online catalogue</a></li>
-      <li>Check your <a href="https://esutlibrary.edu.ng/dashboard/reading-lists" style="color:#1A4731">course reading lists</a></li>
-      <li>Search <a href="https://esutlibrary.edu.ng/search/global" style="color:#1A4731">250M+ academic works</a> from global databases</li>
-      <li>Submit your research to the <a href="https://esutlibrary.edu.ng/repository/submit" style="color:#1A4731">institutional repository</a></li>
+      <li>Browse the <a href="https://esutlibrary.edu.ng/catalogue" style="color:#6B1D2A">online catalogue</a></li>
+      <li>Check your <a href="https://esutlibrary.edu.ng/dashboard/reading-lists" style="color:#6B1D2A">course reading lists</a></li>
+      <li>Search <a href="https://esutlibrary.edu.ng/search/global" style="color:#6B1D2A">250M+ academic works</a> from global databases</li>
+      <li>Submit your research to the <a href="https://esutlibrary.edu.ng/repository/submit" style="color:#6B1D2A">institutional repository</a></li>
     </ul>
   `);
   await send(patron.email, patron.full_name, 'Welcome to ESUT Library', html);
@@ -103,12 +103,12 @@ export async function sendRegistrationVerificationEmail(patron: {
   expiresAt: string;
 }) {
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Verify Your ESUT Library Email</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Verify Your ESUT Library Email</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>,</p>
     <p style="color:#374151">Please confirm that this email address belongs to you before your library account is activated.</p>
-    <a href="${patron.verificationLink}" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:16px 0">Verify Email Address</a>
+    <a href="${patron.verificationLink}" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:16px 0">Verify Email Address</a>
     <p style="color:#374151">This verification link expires on <strong>${new Date(patron.expiresAt).toLocaleString('en-GB')}</strong>.</p>
-    <p style="color:#94a3b8;font-size:13px;line-height:1.6">If the button does not work, copy and paste this link into your browser:<br><a href="${patron.verificationLink}" style="color:#1A4731;word-break:break-all">${patron.verificationLink}</a></p>
+    <p style="color:#94a3b8;font-size:13px;line-height:1.6">If the button does not work, copy and paste this link into your browser:<br><a href="${patron.verificationLink}" style="color:#6B1D2A;word-break:break-all">${patron.verificationLink}</a></p>
   `);
   await send(patron.email, patron.full_name, 'Verify your ESUT Library email', html);
 }
@@ -117,11 +117,11 @@ export async function sendRegistrationVerificationEmail(patron: {
 
 export async function sendPasswordReset(email: string, resetLink: string) {
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Reset Your Password</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Reset Your Password</h2>
     <p style="color:#374151">We received a request to reset your ESUT Library account password.</p>
-    <a href="${resetLink}" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:16px 0">Reset Password</a>
+    <a href="${resetLink}" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:16px 0">Reset Password</a>
     <p style="color:#374151">This link expires in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email.</p>
-    <p style="color:#94a3b8;font-size:13px">If the button doesn't work, copy this link: <a href="${resetLink}" style="color:#1A4731">${resetLink}</a></p>
+    <p style="color:#94a3b8;font-size:13px">If the button doesn't work, copy this link: <a href="${resetLink}" style="color:#6B1D2A">${resetLink}</a></p>
   `);
   await send(email, email, 'Reset Your ESUT Library Password', html);
 }
@@ -137,13 +137,13 @@ export async function sendLoanDueReminder(
   ).join('');
 
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Library Items Due Soon</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Library Items Due Soon</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>, the following items are due for return within 3 days:</p>
     <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:16px 0">
       <thead><tr style="background:#f8fafc"><th style="padding:10px 12px;text-align:left;color:#64748b;font-size:13px">Item</th><th style="padding:10px 12px;text-align:left;color:#64748b;font-size:13px">Due Date</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p style="color:#374151">Please return items to the library circulation desk or <a href="https://esutlibrary.edu.ng/dashboard/loans" style="color:#1A4731">renew online</a> before the due date to avoid fines.</p>
+    <p style="color:#374151">Please return items to the library circulation desk or <a href="https://esutlibrary.edu.ng/dashboard/loans" style="color:#6B1D2A">renew online</a> before the due date to avoid fines.</p>
   `);
   await send(patron.email, patron.full_name, 'Library Items Due Soon', html);
 }
@@ -216,7 +216,7 @@ export async function sendRepositoryReturned(
       <p style="margin:0 0 6px;font-weight:700;color:#92400e;font-size:13px">Revision Notes from Librarian</p>
       <p style="margin:0;color:#78350f">${notes}</p>
     </div>
-    <a href="https://esutlibrary.edu.ng/repository/submit" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Resubmit</a>
+    <a href="https://esutlibrary.edu.ng/repository/submit" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Resubmit</a>
   `);
   await send(submitter.email, submitter.full_name, `Revision Requested — ${item.title}`, html);
 }
@@ -239,7 +239,7 @@ export async function sendThesisStatusUpdate(
 ) {
   const info = THESIS_STAGES[stage] ?? { name: stage, step: 1, next: '' };
   const progress = [1, 2, 3, 4].map(n =>
-    `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-weight:700;font-size:14px;${n <= info.step ? 'background:#1A4731;color:#fff' : 'background:#e2e8f0;color:#94a3b8'}">${n}</span>`
+    `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-weight:700;font-size:14px;${n <= info.step ? 'background:#6B1D2A;color:#fff' : 'background:#e2e8f0;color:#94a3b8'}">${n}</span>`
   ).join('<span style="display:inline-block;width:20px;height:2px;background:#e2e8f0;vertical-align:middle;margin:0 4px"></span>');
 
   const notesBlock = notes
@@ -247,9 +247,9 @@ export async function sendThesisStatusUpdate(
     : '';
 
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Thesis/Project Update — Stage ${info.step} of 4</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Thesis/Project Update — Stage ${info.step} of 4</h2>
     <p style="color:#374151">Dear <strong>${student.full_name}</strong>,</p>
-    <p style="color:#374151">Your submission <strong>${thesis.title}</strong> <span style="font-family:monospace;color:#1A4731">(${thesis.reference_no})</span> has been updated.</p>
+    <p style="color:#374151">Your submission <strong>${thesis.title}</strong> <span style="font-family:monospace;color:#6B1D2A">(${thesis.reference_no})</span> has been updated.</p>
     <div style="text-align:center;margin:24px 0">${progress}</div>
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin:16px 0">
       <p style="margin:0 0 4px;font-weight:700;color:#0369a1;font-size:13px">Current Stage</p>
@@ -257,7 +257,7 @@ export async function sendThesisStatusUpdate(
       ${info.next ? `<p style="margin:6px 0 0;color:#0369a1;font-size:13px">${info.next}</p>` : ''}
     </div>
     ${notesBlock}
-    <a href="https://esutlibrary.edu.ng/thesis/status" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Check Status</a>
+    <a href="https://esutlibrary.edu.ng/thesis/status" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Check Status</a>
   `);
   await send(student.email, student.full_name, `Thesis/Project Update — Stage ${info.step} of 4 — ${thesis.reference_no}`, html);
 }
@@ -282,7 +282,7 @@ export async function sendHighDemandAlert(
       <li>Request additional copies via acquisitions</li>
       <li>Contact the lecturer to provide alternative online access</li>
     </ul>
-    <a href="https://esutlibrary.edu.ng/admin/catalogue/${item.id}" style="display:inline-block;background:#1A4731;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View in Admin Catalogue</a>
+    <a href="https://esutlibrary.edu.ng/admin/catalogue/${item.id}" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View in Admin Catalogue</a>
   `);
   await send(librarian.email, librarian.full_name, `High Demand Alert — ${item.title}`, html);
 }
@@ -301,7 +301,7 @@ export async function sendEventReminder(
     : '';
 
   const html = template(`
-    <h2 style="color:#1A4731;margin-top:0">Reminder: ${event.title} — Tomorrow</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Reminder: ${event.title} — Tomorrow</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>, this is a reminder for an upcoming library event.</p>
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px;font-weight:700;color:#0369a1;font-size:18px">${event.title}</p>
@@ -322,7 +322,7 @@ type CirculationItem = { title: string; authors?: string; call_number?: string |
 function circulationItemBlock(item: CirculationItem) {
   return `
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0">
-      <p style="margin:0 0 6px;font-weight:700;color:#1A4731;font-size:16px">${item.title}</p>
+      <p style="margin:0 0 6px;font-weight:700;color:#6B1D2A;font-size:16px">${item.title}</p>
       ${item.authors ? `<p style="margin:4px 0;color:#475569;font-size:14px"><strong>Author(s):</strong> ${item.authors}</p>` : ''}
       ${item.call_number ? `<p style="margin:4px 0;color:#475569;font-size:14px"><strong>Call number:</strong> <span style="font-family:monospace">${item.call_number}</span></p>` : ''}
     </div>`;
@@ -330,7 +330,7 @@ function circulationItemBlock(item: CirculationItem) {
 
 export function emailCatalogueReservationSubmitted(patron: CirculationPatron, item: CirculationItem, expiresAt: string): string {
   return template(`
-    <h2 style="color:#1A4731;margin-top:0">Reservation Request Received</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Reservation Request Received</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>, your reservation request has been submitted for librarian confirmation.</p>
     ${circulationItemBlock(item)}
     <p style="color:#92400e"><strong>Collection deadline:</strong> ${new Date(expiresAt).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
@@ -339,7 +339,7 @@ export function emailCatalogueReservationSubmitted(patron: CirculationPatron, it
 
 export function emailCatalogueBorrowSubmitted(patron: CirculationPatron, item: CirculationItem, expectedDueDate: string, fineRatePerDay: number): string {
   return template(`
-    <h2 style="color:#1A4731;margin-top:0">Borrow Request Received</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Borrow Request Received</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>, your borrow request has been sent to the circulation desk.</p>
     ${circulationItemBlock(item)}
     <p style="color:#374151"><strong>Expected due date if approved today:</strong> ${new Date(expectedDueDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
@@ -349,7 +349,7 @@ export function emailCatalogueBorrowSubmitted(patron: CirculationPatron, item: C
 
 export function emailCatalogueLoanConfirmed(patron: CirculationPatron, item: CirculationItem, dueDate: string, fineRatePerDay: number): string {
   return template(`
-    <h2 style="color:#1A4731;margin-top:0">Library Loan Confirmed</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Library Loan Confirmed</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>, this item has been checked out to your library account.</p>
     ${circulationItemBlock(item)}
     <p style="color:#b45309"><strong>Due date:</strong> ${new Date(dueDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
@@ -361,7 +361,7 @@ export function emailCatalogueReturnSubmitted(patron: CirculationPatron, item: C
     ? `<p style="color:#92400e"><strong>Estimated fine:</strong> ₦${estimatedFine.toLocaleString()}</p>`
     : `<p style="color:#64748b">The circulation desk will calculate any applicable fine after confirming the return.</p>`;
   return template(`
-    <h2 style="color:#1A4731;margin-top:0">Return Request Received</h2>
+    <h2 style="color:#6B1D2A;margin-top:0">Return Request Received</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>, your return request has been sent to the circulation desk.</p>
     ${circulationItemBlock(item)}
     <p style="color:#374151"><strong>Return date:</strong> ${new Date(returnDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
@@ -376,9 +376,9 @@ export { send as sendEmail };
 export function emailRequestConfirmation(refNo: string, requestText: string, neededBy: string | null): string {
   const deadline = neededBy ? `<p style="margin:8px 0"><strong>Needed by:</strong> ${new Date(neededBy).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>` : '';
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Request Received — ${refNo}</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Request Received — ${refNo}</h3>
     <p>Thank you for submitting a resource request. Your reference number is:</p>
-    <p style="font-size:22px;font-weight:bold;color:#1A4731;letter-spacing:1px">${refNo}</p>
+    <p style="font-size:22px;font-weight:bold;color:#6B1D2A;letter-spacing:1px">${refNo}</p>
     <p><strong>You requested:</strong> ${requestText}</p>
     ${deadline}
     <p>The library will respond within <strong>2 working days</strong>.</p>`);
@@ -386,7 +386,7 @@ export function emailRequestConfirmation(refNo: string, requestText: string, nee
 
 export function emailBeingSourced(refNo: string, requestText: string): string {
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Update on Request ${refNo}</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Update on Request ${refNo}</h3>
     <p>Your request is now being actively sourced by our library team.</p>
     <p><strong>Request:</strong> ${requestText}</p>
     <p>We will notify you as soon as the item is ready.</p>`);
@@ -395,7 +395,7 @@ export function emailBeingSourced(refNo: string, requestText: string): string {
 export function emailReadyForCollection(refNo: string, requestText: string, location: string, collectByDate: string): string {
   const byDate = new Date(collectByDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Ready for Collection — ${refNo}</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Ready for Collection — ${refNo}</h3>
     <p>Great news! The item you requested is ready for collection.</p>
     <p><strong>Request:</strong> ${requestText}</p>
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0">
@@ -407,9 +407,9 @@ export function emailReadyForCollection(refNo: string, requestText: string, loca
 
 export function emailRepositoryRejected(title: string, reason: string): string {
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Update on Your Repository Submission</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Update on Your Repository Submission</h3>
     <p>We are unable to approve the following submission at this time:</p>
-    <p style="font-weight:bold;color:#1A4731">${title}</p>
+    <p style="font-weight:bold;color:#6B1D2A">${title}</p>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 4px;font-weight:bold;color:#991b1b">Reason for Rejection</p>
       <p style="margin:0">${reason}</p>
@@ -420,16 +420,16 @@ export function emailRepositoryRejected(title: string, reason: string): string {
 export function emailRepositoryPublished(title: string, doi: string): string {
   const doiBlock = doi ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0"><p style="margin:0 0 4px;font-weight:bold;color:#166534">Your DOI</p><p style="margin:0"><a href="https://doi.org/${doi}" style="color:#166534">https://doi.org/${doi}</a></p></div>` : '';
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Your Work Has Been Published!</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Your Work Has Been Published!</h3>
     <p>Congratulations! Your submission is now published in the ESUT Digital Repository.</p>
-    <p style="font-weight:bold;color:#1A4731">${title}</p>
+    <p style="font-weight:bold;color:#6B1D2A">${title}</p>
     ${doiBlock}
     <p>Your work is now accessible to researchers worldwide.</p>`);
 }
 
 export function emailThesisSupervisorNotification(title: string, refNo: string, supervisorName: string): string {
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">New Thesis Submitted for Your Supervision — ${refNo}</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">New Thesis Submitted for Your Supervision — ${refNo}</h3>
     <p>Dear ${supervisorName},</p>
     <p>A student has submitted an academic work for your supervision.</p>
     <p><strong>Title:</strong> ${title}</p>
@@ -438,7 +438,7 @@ export function emailThesisSupervisorNotification(title: string, refNo: string, 
 
 export function emailThesisReturnedToStudent(title: string, refNo: string, revisionNotes: string): string {
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Revision Required — ${refNo}</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Revision Required — ${refNo}</h3>
     <p>Your submission requires revisions before it can proceed.</p>
     <p><strong>Title:</strong> ${title}</p>
     <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin:16px 0">
@@ -450,17 +450,17 @@ export function emailThesisReturnedToStudent(title: string, refNo: string, revis
 export function emailThesisPublished(title: string, refNo: string, doi: string): string {
   const doiBlock = doi ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0"><p style="margin:0 0 4px;font-weight:bold;color:#166534">DOI</p><p style="margin:0"><a href="https://doi.org/${doi}" style="color:#15803d">https://doi.org/${doi}</a></p></div>` : '';
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Congratulations — Your Work is Published!</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Congratulations — Your Work is Published!</h3>
     <p>Your academic submission is now published in the ESUT institutional repository.</p>
     <p><strong>Title:</strong> ${title}</p>
-    <p style="font-family:monospace;color:#1A4731">${refNo}</p>
+    <p style="font-family:monospace;color:#6B1D2A">${refNo}</p>
     ${doiBlock}`);
 }
 
 export function emailHighDemandAlert(courseCode: string, courseTitle: string, itemTitles: string[]): string {
   const itemList = itemTitles.map(t => `<li>${t}</li>`).join('');
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">High-Demand Alert: ${courseCode} Reading List</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">High-Demand Alert: ${courseCode} Reading List</h3>
     <p>The following items on your course reading list are experiencing high demand:</p>
     <p><strong>${courseCode} — ${courseTitle}</strong></p>
     <ul style="margin:12px 0;padding-left:20px">${itemList}</ul>`);
@@ -468,7 +468,7 @@ export function emailHighDemandAlert(courseCode: string, courseTitle: string, it
 
 export function emailCannotFulfil(refNo: string, requestText: string, reason: string): string {
   return template(`
-    <h3 style="color:#1A4731;margin-top:0">Update on Request ${refNo}</h3>
+    <h3 style="color:#6B1D2A;margin-top:0">Update on Request ${refNo}</h3>
     <p>We regret that we are unable to fulfil your request at this time.</p>
     <p><strong>Request:</strong> ${requestText}</p>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0">

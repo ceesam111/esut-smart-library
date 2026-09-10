@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import ShareButtons from '@/components/ShareButtons';
 
-const GOLD = '#C9A84C';
+const GOLD = '#D4A017';
 
 const QUICK_LINKS = [
   { label: 'Home',                    href: '/' },
@@ -227,7 +227,7 @@ export default function Footer() {
 
       {/* ── Layer 3: Copyright bar ──────────────────────────────── */}
       <div style={{
-        background: '#1A4731',
+        background: '#6B1D2A',
         padding: '16px 24px',
         flexShrink: 0,
         width: '100%',

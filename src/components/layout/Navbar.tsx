@@ -117,8 +117,8 @@ const NAV_ITEMS = [
 ];
 
 // ── Colour constants ──────────────────────────────────────────────────────────
-const GREEN = '#1A4731';
-const GOLD  = '#C9A84C';
+const GREEN = '#6B1D2A';
+const GOLD  = '#D4A017';
 
 // ── Desktop dropdown ──────────────────────────────────────────────────────────
 

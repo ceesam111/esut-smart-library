@@ -74,7 +74,7 @@ export default function LibraryCard() {
       ctx.fill();
 
       // Institution name (gold)
-      ctx.fillStyle = '#C9A84C';
+      ctx.fillStyle = '#D4A017';
       ctx.font = 'bold 18px Inter, sans-serif';
       ctx.fillText(institutionConfig.name, 40, 50);
 
@@ -225,7 +225,7 @@ export default function LibraryCard() {
               <div>
                 <p
                   className="text-sm font-semibold mb-3"
-                  style={{ color: '#C9A84C' }}
+                  style={{ color: '#D4A017' }}
                 >
                   {institutionConfig.name}
                 </p>

@@ -573,11 +573,11 @@ export default function CatalogueItem() {
                     {locationGroups.map((loc, i) => (
                       <div
                         key={i}
-                        style={{ background: '#E8F5EE', borderColor: '#1A4731' }}
+                        style={{ background: '#fdf2f4', borderColor: '#6B1D2A' }}
                         className="rounded-xl border p-4 space-y-2"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="font-semibold text-sm" style={{ color: '#1A4731' }}>{loc.libraryName}</p>
+                          <p className="font-semibold text-sm" style={{ color: '#6B1D2A' }}>{loc.libraryName}</p>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${loc.available > 0 ? 'bg-success-100 text-success-700' : 'bg-error-100 text-error-600'}`}>
                             {loc.available > 0 ? `${loc.available} available` : 'On loan'}
                           </span>
@@ -586,7 +586,7 @@ export default function CatalogueItem() {
                         {loc.shelfCode && (
                           <>
                             <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                              <span className="font-mono font-bold text-xs px-2 py-0.5 rounded" style={{ background: '#1A4731', color: '#fff' }}>
+                              <span className="font-mono font-bold text-xs px-2 py-0.5 rounded" style={{ background: '#6B1D2A', color: '#fff' }}>
                                 {loc.shelfCode}
                               </span>
                             </div>
@@ -626,11 +626,11 @@ export default function CatalogueItem() {
                 ) : (
                   <div className="p-4">
                     <div
-                      style={{ background: '#E8F5EE', borderColor: '#1A4731' }}
+                      style={{ background: '#fdf2f4', borderColor: '#6B1D2A' }}
                       className="rounded-xl border p-4 space-y-2"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-sm" style={{ color: '#1A4731' }}>Main Library</p>
+                        <p className="font-semibold text-sm" style={{ color: '#6B1D2A' }}>Main Library</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${item.available_copies > 0 ? 'bg-success-100 text-success-700' : 'bg-error-100 text-error-600'}`}>
                           {item.available_copies > 0 ? `${item.available_copies} available` : 'On loan'}
                         </span>

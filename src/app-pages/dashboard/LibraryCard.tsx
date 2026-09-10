@@ -51,7 +51,7 @@ export default function LibraryCard() {
     g.addColorStop(1, institutionConfig.secondaryColour);
     ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(0, 0, canvas.width, canvas.height, 24); ctx.fill();
 
-    ctx.fillStyle = '#C9A84C'; ctx.font = 'bold 18px Inter, sans-serif';
+    ctx.fillStyle = '#D4A017'; ctx.font = 'bold 18px Inter, sans-serif';
     ctx.fillText(institutionConfig.name, 40, 50);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 34px Georgia, serif';
     ctx.fillText(cardName, 40, 108);
@@ -144,7 +144,7 @@ export default function LibraryCard() {
       </div>
       <div className="relative z-10 p-6 h-full flex flex-col justify-between text-white" style={{ fontSize: `${scale}rem` }}>
         <div>
-          <p className="text-sm font-semibold mb-3 pr-16" style={{ color: '#C9A84C' }}>{institutionConfig.name}</p>
+          <p className="text-sm font-semibold mb-3 pr-16" style={{ color: '#D4A017' }}>{institutionConfig.name}</p>
           <h2 className="text-2xl font-serif font-bold leading-tight mb-1">{cardName}</h2>
           <p className="text-sm text-white/80">{[profile.department, profile.faculty_name].filter(Boolean).join(' • ') || profile.institution}</p>
           <div className="inline-flex items-center mt-2 px-2.5 py-1 rounded-md bg-white/15 text-xs font-medium">{profile.patron_category}</div>

@@ -7,7 +7,7 @@ import {
 import { institutionConfig } from '@config/institution.config';
 import { registerAccount, type RegisterResult } from '@/lib/registration';
 
-const GREEN = '#1A4731';
+const GREEN = '#6B1D2A';
 
 export default function StudentForm({ onSuccess, turnstileToken, turnstileRequired, turnstileWidget }: { onSuccess: (result: RegisterResult) => void; turnstileToken?: string | null; turnstileRequired?: boolean; turnstileWidget?: ReactNode }) {
   const [loading, setLoading] = useState(false);

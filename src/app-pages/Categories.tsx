@@ -315,7 +315,7 @@ export default function Categories() {
                           `${(counts[category.slug] ?? 0).toLocaleString()} items`
                         )}
                       </p>
-                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: '#1A4731' }}>
+                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: '#6B1D2A' }}>
                         Browse →
                       </span>
                     </div>

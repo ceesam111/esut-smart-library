@@ -27,7 +27,7 @@ function renderBlock(block: Block) {
           style={{
             background: d.bg_image
               ? `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url(${d.bg_image}) center/cover no-repeat`
-              : '#1A4731',
+              : '#6B1D2A',
             minHeight: d.height || '400px',
           }}
         >

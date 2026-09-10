@@ -129,7 +129,7 @@ export default function Tutorial() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="pt-20" style={{ background: '#1A4731' }}>
+      <div className="pt-20" style={{ background: '#6B1D2A' }}>
         <div className="max-w-4xl mx-auto px-6 py-14 text-center text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">How to Use ESUT Smart Library</h1>
           <p className="text-lg text-white/80">Step-by-step guides for patrons and library staff.</p>
@@ -144,7 +144,7 @@ export default function Tutorial() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors ${tab === t ? 'text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
-              style={tab === t ? { background: '#1A4731' } : {}}
+              style={tab === t ? { background: '#6B1D2A' } : {}}
             >
               {t === 'patrons' ? '🎓 For Patrons' : '⚙️ For Library Staff'}
             </button>
@@ -173,7 +173,7 @@ export default function Tutorial() {
                     <Link
                       to={step.link}
                       className="shrink-0 px-4 py-1.5 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition-opacity"
-                      style={{ background: '#1A4731' }}
+                      style={{ background: '#6B1D2A' }}
                     >
                       {step.linkLabel} →
                     </Link>
@@ -187,11 +187,11 @@ export default function Tutorial() {
           <div className="mt-12 p-6 rounded-2xl text-center bg-neutral-50 border border-neutral-200">
             <p className="text-sm text-neutral-600">
               Need more help? Ask{' '}
-              <Link to="/ai-librarian" className="font-semibold hover:underline" style={{ color: '#1A4731' }}>
+              <Link to="/ai-librarian" className="font-semibold hover:underline" style={{ color: '#6B1D2A' }}>
                 Lexis the AI Reference Librarian
               </Link>{' '}
               or{' '}
-              <Link to="/contact" className="font-semibold hover:underline" style={{ color: '#1A4731' }}>
+              <Link to="/contact" className="font-semibold hover:underline" style={{ color: '#6B1D2A' }}>
                 contact our librarians
               </Link>.
             </p>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { newspapersData, flagFor, type Newspaper } from '@/data/newspapers';
 
-const GREEN = '#1A4731';
+const GREEN = '#6B1D2A';
 const uniqueSorted = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b));
 
 const CATEGORY_COLORS: Record<string, string> = {

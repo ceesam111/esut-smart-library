@@ -107,7 +107,7 @@ export default function Admin() {
       if (settingsValue) setRules((prev) => ({ ...prev, ...settingsValue }));
 
       setKpis([
-        { label: 'Catalogue Items',    value: (items ?? 0).toLocaleString(),   icon: '📚', color: '#1A4731', link: '/admin/catalogue' },
+        { label: 'Catalogue Items',    value: (items ?? 0).toLocaleString(),   icon: '📚', color: '#6B1D2A', link: '/admin/catalogue' },
         { label: 'Registered Patrons', value: (patrons ?? 0).toLocaleString(), icon: '👥', color: '#005F73', link: '/admin/patrons' },
         { label: 'Pending Repository', value: pendingRepo ?? 0,                icon: '📂', color: (pendingRepo ?? 0) > 0 ? '#B5451B' : '#2D6A4F', link: '/admin/repository' },
         { label: 'Pending Requests',   value: pendingRequests ?? 0,            icon: '📩', color: (pendingRequests ?? 0) > 0 ? '#B5451B' : '#2D6A4F', link: '/admin/ill' },

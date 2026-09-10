@@ -172,7 +172,7 @@ export default function Blog() {
                 </div>
                 <div className="p-7 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-bold text-white px-2.5 py-1 rounded-full" style={{ background: '#1A4731' }}>
+                    <span className="text-xs font-bold text-white px-2.5 py-1 rounded-full" style={{ background: '#6B1D2A' }}>
                       Featured
                     </span>
                     {featuredPost.category && (

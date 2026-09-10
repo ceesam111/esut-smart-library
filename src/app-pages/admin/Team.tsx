@@ -145,7 +145,7 @@ export default function AdminTeam() {
             {form.photo_url ? (
               <img src={form.photo_url} alt="" className="w-20 h-20 rounded-full object-cover border" />
             ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-lg font-bold" style={{ background: '#1A4731' }}>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-lg font-bold" style={{ background: '#6B1D2A' }}>
                 {form.initials || initialsFrom(form.name) || '?'}
               </div>
             )}
@@ -228,7 +228,7 @@ export default function AdminTeam() {
               {m.photo_url ? (
                 <img src={m.photo_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
               ) : (
-                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: '#1A4731' }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: '#6B1D2A' }}>
                   {m.initials}
                 </div>
               )}

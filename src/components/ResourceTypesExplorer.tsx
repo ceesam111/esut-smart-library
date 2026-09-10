@@ -166,7 +166,7 @@ export default function ResourceTypesExplorer() {
                 <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">{r.access}</span>
                 <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">{r.availability}</span>
               </div>
-              <Link to={r.link} className="mt-auto text-center text-sm font-semibold py-2 rounded-lg text-white transition-opacity hover:opacity-90" style={{ background: '#1A4731' }}>
+              <Link to={r.link} className="mt-auto text-center text-sm font-semibold py-2 rounded-lg text-white transition-opacity hover:opacity-90" style={{ background: '#6B1D2A' }}>
                 Browse {r.name} →
               </Link>
             </div>

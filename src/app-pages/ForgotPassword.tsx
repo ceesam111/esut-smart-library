@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 
-const GREEN = '#1A4731';
+const GREEN = '#6B1D2A';
 
 export default function ForgotPassword() {
   const [email, setEmail]     = useState('');

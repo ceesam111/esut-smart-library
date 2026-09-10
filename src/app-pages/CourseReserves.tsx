@@ -5,7 +5,7 @@ import BackButton from '@/components/BackButton';
 
 const NAVY = '#1F4E79';
 const TEAL = '#005F73';
-const GOLD = '#C9A84C';
+const GOLD = '#D4A017';
 
 const wa = `https://wa.me/${institutionConfig.whatsappNumber.replace(/\D/g, '')}`;
 const tel = `tel:${institutionConfig.contactPhone}`;
@@ -82,7 +82,7 @@ export default function CourseReserves() {
     <div className="page">
 
       {/* Hero */}
-      <section className="pt-8 pb-12" style={{ background: '#1A4731' }}>
+      <section className="pt-8 pb-12" style={{ background: '#6B1D2A' }}>
         <div className="section">
           <BackButton />
           <div className="max-w-2xl">

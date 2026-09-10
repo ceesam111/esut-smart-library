@@ -8,7 +8,7 @@ import {
   LineChart, Line,
 } from 'recharts';
 
-const COLORS = ['#1F4E79', '#C9A84C', '#005F73', '#2D6A4F', '#6B4226', '#7B3F84', '#B5451B', '#1B4F72'];
+const COLORS = ['#1F4E79', '#D4A017', '#005F73', '#2D6A4F', '#6B4226', '#7B3F84', '#B5451B', '#1B4F72'];
 
 interface TypeCount    { type: string;   count: number }
 interface FacultyCount { faculty: string; count: number }
@@ -211,7 +211,7 @@ export default function RepositoryStats() {
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="downloads" name="Downloads" stroke="#C9A84C" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="downloads" name="Downloads" stroke="#D4A017" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
