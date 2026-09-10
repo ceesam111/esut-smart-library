@@ -1,6 +1,6 @@
 // Guarded service-worker registration.
 //
-// Service workers must NEVER run inside the Lovable editor preview, an iframe,
+// Service workers must NEVER run inside an iframe,
 // or in dev — they cache HTML and can serve stale builds. We only register the
 // worker on the real published site. In every refused context we proactively
 // unregister any stale worker so previews stay clean.
@@ -16,7 +16,7 @@ function isRefusedContext(): boolean {
     /* ignore */
   }
 
-  // Inside an iframe (Lovable preview embeds the app)
+  // skip iframe previews
   try {
     if (window.self !== window.top) return true;
   } catch {
@@ -28,13 +28,7 @@ function isRefusedContext(): boolean {
     host === 'localhost' ||
     host === '127.0.0.1' ||
     host.startsWith('id-preview--') ||
-    host.startsWith('preview--') ||
-    host === 'lovableproject.com' ||
-    host.endsWith('.lovableproject.com') ||
-    host === 'lovableproject-dev.com' ||
-    host.endsWith('.lovableproject-dev.com') ||
-    host === 'beta.lovable.dev' ||
-    host.endsWith('.beta.lovable.dev')
+    host.startsWith('preview--')
   ) {
     return true;
   }

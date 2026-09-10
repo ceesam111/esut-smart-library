@@ -213,7 +213,7 @@ export default function Footer() {
         <ShareButtons
           title="ESUT Library — Enugu State University of Science and Technology"
           text="Explore the ESUT Library: catalogue, e-books, research and more."
-          url={typeof window !== 'undefined' ? window.location.origin : 'https://esutsmartlibrary.lovable.app'}
+          url={typeof window !== 'undefined' ? window.location.origin : 'https://virtuallibrary.esut.edu.ng'}
         />
       </div>
 

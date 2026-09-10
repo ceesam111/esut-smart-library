@@ -32,7 +32,7 @@ Scope: ESUT Smart Library app, Supabase migrations/functions, Backblaze B2 integ
 | Barcode scanner | Pass | Scanner docs, utilities, tests, manual fallback, iOS-safe camera approach exist. | Run device tests on iOS Safari and Android Chrome. |
 | Auto resource harvest | Pass with restrictions | External adapters, staging, dedupe, rights policy, logs, admin review exist. | Do not enable auto-publish until policy is approved and tested. |
 | B2 storage | Pass with operations dependency | Signed upload/download routes and metadata table exist. | Verify bucket policies, lifecycle, encryption/protection, and restore access. |
-| AI Gateway | Pass with legacy risk | New server AI Brain logs and redacts. Older Edge Functions still call Lovable AI Gateway directly. | Review/replace legacy AI functions before launch. |
+| AI Gateway | Pass with legacy risk | New server AI Brain logs and redacts. Older Edge Functions still call external AI Gateway directly. | Review/replace legacy AI functions before launch. |
 | Worker jobs | Pass | `agent_jobs`, atomic claim RPC, Dockerfile.worker, health endpoint, retry tests exist. | Deploy as separate Coolify service and test locking with two replicas. |
 | 3D UI cards | Pass | Components integrated and build passes. | Run accessibility/browser visual QA. |
 | Backups/restore | Partial | B2 backup docs exist. Restore drill not yet executed. | Execute documented restore drill before launch. |

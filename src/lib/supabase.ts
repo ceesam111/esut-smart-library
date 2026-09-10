@@ -1,4 +1,4 @@
-// Re-export the Lovable Cloud Supabase client so existing app imports
+// Re-export the Supabase client so existing app imports
 // (`@/lib/supabase`) keep working while using the managed client.
 // Cast to an untyped client: the imported app was written against an
 // untyped supabase client and queries many tables by name, so we expose
