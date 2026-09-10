@@ -44,7 +44,7 @@ const searchData = [
   { rank: 10, query: 'thesis samples', count: 287 },
 ];
 
-const COLORS = ['#1A5C32', '#2D9756', '#6FC08A', '#A8D8B9'];
+const COLORS = ['#6B1D2A', '#CC0000', '#df4468', '#f4a3b3'];
 
 export default function Analytics() {
   const [activeTab, setActiveTab] = useState<'network' | 'branch' | 'resources'>('network');

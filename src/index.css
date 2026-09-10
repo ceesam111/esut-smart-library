@@ -4,8 +4,8 @@
 
 /* CSS custom properties — injected from institutionConfig at runtime via ThemeProvider */
 :root {
-  --color-primary:   #1A5C32;
-  --color-secondary: #2D9756;
+  --color-primary:   #6B1D2A;
+  --color-secondary: #CC0000;
   --color-gold:      #D4A017;
   --color-bg:        #F8F9FA;
 }

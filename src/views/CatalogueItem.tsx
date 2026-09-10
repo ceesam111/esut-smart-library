@@ -61,7 +61,7 @@ export default function CatalogueItem() {
 
         // Generate QR code
         const url = window.location.href;
-        const qr = await QRCode.toDataURL(url, { width: 120, margin: 1, color: { dark: '#1A5C32' } });
+        const qr = await QRCode.toDataURL(url, { width: 120, margin: 1, color: { dark: '#6B1D2A' } });
         setQrUrl(qr);
       }
 

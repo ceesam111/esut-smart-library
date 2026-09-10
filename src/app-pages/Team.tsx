@@ -15,7 +15,7 @@ interface Member {
 }
 
 const AVATAR_COLORS = [
-  '#1A4731', '#2D6A4F', '#1A5C32', '#237e45',
+  '#6B1D2A', '#8f173b', '#ab1842', '#cc2252',
   '#194f2f', '#0a2e16', '#134524', '#2D6A4F',
 ];
 

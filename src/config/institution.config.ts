@@ -8,8 +8,8 @@ export const institutionConfig = {
   domain: "https://virtuallibrary.esut.edu.ng",
 
   // ── Branding ──────────────────────────────────────────────────────────────
-  primaryColour: "#00529B",
-  secondaryColour: "#D4A017",
+  primaryColour: "#6B1D2A",
+  secondaryColour: "#CC0000",
   logo: "/assets/esut-logo.png",
   favicon: "/assets/esut-favicon.png",
 

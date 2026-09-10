@@ -59,7 +59,7 @@ export default function ColourMatch() {
       </div>
 
       <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Tap the colour named</p>
-      <div className="text-3xl font-bold mb-6" style={{ color: feedback === 'wrong' ? '#dc2626' : '#1A5C32' }}>
+      <div className="text-3xl font-bold mb-6" style={{ color: feedback === 'wrong' ? '#dc2626' : '#6B1D2A' }}>
         {target.name}
       </div>
 
