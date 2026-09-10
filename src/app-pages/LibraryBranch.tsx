@@ -251,7 +251,7 @@ function BranchLayout({ library, kind }: { library: BaseLibrary; kind: LibraryKi
                 <span
                   key={tag}
                   className="px-2.5 py-1 rounded-full text-xs font-medium"
-                  style={{ background: 'rgba(26,71,49,0.08)', color: GREEN }}
+                  style={{ background: 'rgba(61,17,34,0.08)', color: GREEN }}
                 >
                   {tag}
                 </span>
@@ -491,7 +491,7 @@ function FacultyLayout({ library }: { library: FacultyLibrary }) {
                   {item.publication_year && (
                     <span
                       className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: 'rgba(26,71,49,0.08)', color: GREEN }}
+                      style={{ background: 'rgba(61,17,34,0.08)', color: GREEN }}
                     >
                       {item.publication_year}
                     </span>
@@ -545,7 +545,7 @@ function FacultyLayout({ library }: { library: FacultyLibrary }) {
                   {cl.semester && (
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: 'rgba(26,71,49,0.08)', color: GREEN }}
+                      style={{ background: 'rgba(61,17,34,0.08)', color: GREEN }}
                     >
                       {cl.semester}
                     </span>
@@ -573,7 +573,7 @@ function FacultyLayout({ library }: { library: FacultyLibrary }) {
                 <span
                   key={tag}
                   className="px-2.5 py-1 rounded-full text-xs font-medium"
-                  style={{ background: 'rgba(26,71,49,0.08)', color: GREEN }}
+                  style={{ background: 'rgba(61,17,34,0.08)', color: GREEN }}
                 >
                   {tag}
                 </span>

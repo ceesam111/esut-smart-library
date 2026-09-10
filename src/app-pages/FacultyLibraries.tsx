@@ -118,7 +118,7 @@ export default function FacultyLibraries() {
         </div>
 
         {/* Union catalogue note */}
-        <div className="mt-10 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4" style={{ background: 'rgba(26,71,49,0.06)', border: '1px solid rgba(26,71,49,0.12)' }}>
+        <div className="mt-10 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4" style={{ background: 'rgba(61,17,34,0.06)', border: '1px solid rgba(61,17,34,0.12)' }}>
           <span className="text-3xl" aria-hidden>🔗</span>
           <p className="text-sm text-neutral-700 leading-relaxed flex-1">
             Resources catalogued in any faculty library are discoverable across all branches through our{' '}

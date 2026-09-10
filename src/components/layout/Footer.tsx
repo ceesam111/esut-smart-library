@@ -50,7 +50,7 @@ export default function Footer() {
     <footer style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'static', zIndex: 1 }}>
 
       {/* ── Layer 1: Main body ──────────────────────────────────── */}
-      <div style={{ background: '#0F2318', flexGrow: 1 }} className="text-white">
+      <div style={{ background: '#2A0B12', flexGrow: 1 }} className="text-white">
         <div style={{
           maxWidth: 1280,
           margin: '0 auto',
@@ -200,7 +200,7 @@ export default function Footer() {
 
       {/* ── Layer 2: Share bar ──────────────────────────────────── */}
       <div style={{
-        background: '#0F2318',
+        background: '#2A0B12',
         borderTop: '1px solid rgba(201,168,76,0.18)',
         padding: '18px 24px',
         flexShrink: 0,
@@ -220,7 +220,7 @@ export default function Footer() {
       {/* ── Layer 2b: Divider ───────────────────────────────────── */}
       <div style={{
         borderTop: '1px solid rgba(201,168,76,0.18)',
-        background: '#0F2318',
+        background: '#2A0B12',
         flexShrink: 0,
         width: '100%',
       }} />

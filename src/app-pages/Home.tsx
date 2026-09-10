@@ -267,7 +267,7 @@ function Hero() {
       {/* RIGHT COLUMN — 45% */}
       <div
         className="flex items-center justify-center flex-1 lg:w-[45%] py-16 relative overflow-hidden"
-        style={{ background: '#1E5438' }}
+        style={{ background: '#3D1122' }}
       >
         {/* Subtle radial glow */}
         <div
@@ -307,7 +307,7 @@ function Hero() {
                   className="absolute flex flex-col items-center justify-center rounded-xl border transition-all hover:scale-105"
                   style={{
                     left: x, top: y, width: 88, height: 56,
-                    background: 'rgba(26,71,49,0.9)',
+                    background: 'rgba(61,17,34,0.9)',
                     border: '1px solid rgba(201,168,76,0.35)',
                     transform: `rotate(${-angle}deg)`,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
@@ -324,7 +324,7 @@ function Hero() {
         {/* Open Access pill */}
         <div
           className="absolute bottom-8 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-semibold border"
-          style={{ background: 'rgba(26,71,49,0.8)', border: '1px solid rgba(201,168,76,0.4)', color: '#D4A017' }}
+          style={{ background: 'rgba(61,17,34,0.8)', border: '1px solid rgba(201,168,76,0.4)', color: '#D4A017' }}
         >
           Open Access Available
         </div>

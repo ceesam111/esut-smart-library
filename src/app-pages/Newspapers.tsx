@@ -26,7 +26,7 @@ function NewspaperCard({ paper }: { paper: Newspaper }) {
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5 mb-3">
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(26,71,49,0.08)', color: GREEN }}>{paper.zone}</span>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(61,17,34,0.08)', color: GREEN }}>{paper.zone}</span>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[paper.category] ?? 'bg-neutral-100 text-neutral-600'}`}>{paper.category}</span>
       </div>
       <p className="text-sm text-neutral-600 leading-relaxed flex-1">{paper.description}</p>
