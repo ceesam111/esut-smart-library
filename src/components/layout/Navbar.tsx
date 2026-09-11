@@ -326,7 +326,7 @@ export default function Navbar() {
             {/* ── Logo + wordmark ──────────────────────────────────── */}
             <Link to="/" className="flex items-center gap-2.5 shrink-0 min-w-0">
               <img
-                src="/assets/logo.png"
+                src="/assets/esut-logo.png"
                 alt="ESUT Library"
                 className="w-9 h-9 rounded-lg object-contain"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}

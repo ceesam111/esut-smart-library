@@ -1,93 +1,78 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 interface Member {
   id: string;
   name: string;
   title: string;
-  qual: string;
-  bio: string;
-  email: string;
-  initials: string;
-  photo_url: string | null;
+  photo: string;
 }
 
-const AVATAR_COLORS = [
-  '#6B1D2A', '#8f173b', '#ab1842', '#cc2252',
-  '#194f2f', '#0a2e16', '#134524', '#2D6A4F',
+const TEAM: Member[] = [
+  {
+    id: '1',
+    name: 'Prof. Aloysius-Michaels Okolie',
+    title: 'Vice-Chancellor',
+    photo: '/assets/staff/vice_chancellor.jpeg',
+  },
+  {
+    id: '2',
+    name: 'Prof. Chike E. Nwoha',
+    title: 'Deputy Vice-Chancellor',
+    photo: '/assets/staff/deputy_vice_chancellor.jpeg',
+  },
+  {
+    id: '3',
+    name: 'Dr. Uzoamaka Ogwo',
+    title: 'University Librarian',
+    photo: '/assets/staff/university_librarian.jpeg',
+  },
+  {
+    id: '4',
+    name: 'Dr. Augustine Ikechukwu Ojeh',
+    title: 'Bursar',
+    photo: '/assets/staff/bursar.jpeg',
+  },
+  {
+    id: '5',
+    name: 'Mr. Ambrose G. Ugwu',
+    title: 'Registrar',
+    photo: '/assets/staff/registrar.jpeg',
+  },
 ];
 
 export default function Team() {
-  usePageTitle('Meet Our Library Team');
-  const [team, setTeam] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.rpc('list_team_members_public');
-      setTeam((data as Member[]) ?? []);
-      setLoading(false);
-    })();
-  }, []);
+  usePageTitle('Our Library Leadership');
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero */}
       <div className="pt-20" style={{ background: '#6B1D2A' }}>
         <div className="max-w-4xl mx-auto px-6 py-16 text-center text-white">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">Meet Our Library Team</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-3">Our Library Leadership</h1>
           <p className="text-lg text-white/80">The dedicated professionals behind ESUT Smart Library</p>
         </div>
       </div>
 
-      {/* Team grid */}
       <section className="py-16 px-6">
-        <div className="max-w-5xl mx-auto">
-          {loading ? (
-            <p className="text-center text-neutral-400 text-sm">Loading team…</p>
-          ) : team.length === 0 ? (
-            <p className="text-center text-neutral-400 text-sm">Team members will be listed here soon.</p>
-          ) : (
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-              {team.map((m, i) => (
-                <div key={m.id} className="flex flex-col items-center text-center group">
-                  {m.photo_url ? (
-                    <img
-                      src={m.photo_url}
-                      alt={m.name}
-                      className="w-24 h-24 rounded-full object-cover shadow-md mb-4 transition-transform group-hover:scale-105"
-                    />
-                  ) : (
-                    <div
-                      className="w-24 h-24 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-md mb-4 transition-transform group-hover:scale-105"
-                      style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-                    >
-                      {m.initials}
-                    </div>
-                  )}
-                  <p className="font-bold text-neutral-900 text-sm leading-tight">{m.name}</p>
-                  <p className="text-xs font-semibold mt-0.5" style={{ color: '#6B1D2A' }}>{m.title}</p>
-                  {m.qual && <p className="text-xs text-neutral-400 mt-1">{m.qual}</p>}
-                  {m.bio && <p className="text-xs text-neutral-600 mt-2 leading-relaxed">{m.bio}</p>}
-                  {m.email && (
-                    <a
-                      href={`mailto:${m.email}`}
-                      className="text-xs mt-2 hover:underline"
-                      style={{ color: '#6B1D2A' }}
-                    >
-                      {m.email}
-                    </a>
-                  )}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {TEAM.map((m) => (
+              <div key={m.id} className="flex flex-col items-center text-center group">
+                <div className="w-32 h-32 rounded-full overflow-hidden shadow-md mb-4 border-3 border-white ring-2 transition-transform group-hover:scale-105" style={{ borderColor: '#6B1D2A', ringColor: '#6B1D2A' }}>
+                  <img
+                    src={m.photo}
+                    alt={m.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="font-bold text-neutral-900 text-sm leading-tight">{m.name}</p>
+                <p className="text-xs font-semibold mt-1" style={{ color: '#6B1D2A' }}>{m.title}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Join the team CTA */}
       <section className="py-12 px-6 bg-neutral-50 text-center">
         <div className="max-w-xl mx-auto">
           <h2 className="text-xl font-bold text-neutral-900 mb-2">Work With Us</h2>
