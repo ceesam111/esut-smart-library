@@ -36,8 +36,8 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_SUPABASE_URL=https://rnnjspkdhojoigncdgmy.supabase.co
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJubmpzcGtkaG9qb2lnbmNkZ215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MTQ3NTEsImV4cCI6MjEwNDM5MDc1MX0.AQB1LBmLVuvMFT66ez-9LTLj5R8jofXhc5GGR8tKsBY
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_g_qPBuwhIOs3Z3GJ66OZnw_ZgUvxWKP
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
