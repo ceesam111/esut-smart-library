@@ -15,7 +15,6 @@ ARG NEXT_PUBLIC_APP_BASE_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-ARG BUILD_REVISION=1
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_BASE_URL=$NEXT_PUBLIC_APP_BASE_URL
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
@@ -24,6 +23,7 @@ ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ARG CACHE_BUST=1
 RUN (while true; do echo 'next build still running...'; sleep 20; done) & heartbeat=$!; npm run build; status=$?; kill "$heartbeat" >/dev/null 2>&1 || true; wait "$heartbeat" 2>/dev/null || true; exit "$status"
 
 FROM node:22-alpine AS runner
