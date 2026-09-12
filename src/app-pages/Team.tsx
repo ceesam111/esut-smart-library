@@ -62,7 +62,7 @@ export default function Team() {
                   <img
                     src={m.photo}
                     alt={m.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                 </div>
                 <p className="font-bold text-neutral-900 text-sm leading-tight">{m.name}</p>

@@ -602,6 +602,7 @@ export default function Home() {
       </section>
 
       {/* Faculty grid */}
+      {institutionConfig.facultyLibraries.length > 0 && (
       <section className="py-14 bg-neutral-50">
         <div className="section">
           <div className="flex items-center justify-between mb-8">
@@ -619,6 +620,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Loan rules quick reference */}
       <section className="py-14 bg-white">

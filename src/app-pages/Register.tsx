@@ -39,7 +39,7 @@ export default function Register() {
     <div className="min-h-screen bg-neutral-50 py-10 px-4">
       <div className="max-w-[560px] mx-auto">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-bold font-mono mx-auto mb-3" style={{ background: GREEN }}>AFL</div>
+          <img src="/assets/esut-logo.png" alt="ESUT Logo" className="w-14 h-14 mx-auto mb-3 rounded-lg object-contain" />
           <h1 className="text-2xl font-serif font-semibold text-neutral-900">Join ESUT Smart Library</h1>
           <p className="text-sm text-neutral-500 mt-1">{institutionConfig.name}</p>
         </div>

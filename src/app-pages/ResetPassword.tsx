@@ -78,12 +78,7 @@ export default function ResetPassword() {
       <div className="w-full max-w-[480px]">
         {/* Wordmark */}
         <div className="text-center mb-8">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-bold font-mono mx-auto mb-3"
-            style={{ background: GREEN }}
-          >
-            AFL
-          </div>
+          <img src="/assets/esut-logo.png" alt="ESUT Logo" className="w-14 h-14 mx-auto mb-3 rounded-lg object-contain" />
           <h1 className="text-2xl font-serif font-semibold text-neutral-900">Set New Password</h1>
           <p className="text-sm text-neutral-500 mt-1">{institutionConfig.name}</p>
         </div>

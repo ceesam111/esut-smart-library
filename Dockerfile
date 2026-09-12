@@ -24,7 +24,7 @@ ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG CACHE_BUST=1
-RUN echo "Cache bust: $CACHE_BUST" && (while true; do echo 'next build still running...'; sleep 20; done) & heartbeat=$!; npm run build; status=$?; kill "$heartbeat" >/dev/null 2>&1 || true; wait "$heartbeat" 2>/dev/null || true; exit "$status"
+RUN echo "Rebuilding: $CACHE_BUST $(date)" && (while true; do echo 'next build still running...'; sleep 20; done) & heartbeat=$!; npm run build; status=$?; kill "$heartbeat" >/dev/null 2>&1 || true; wait "$heartbeat" 2>/dev/null || true; exit "$status"
 
 FROM node:22-alpine AS runner
 WORKDIR /app
