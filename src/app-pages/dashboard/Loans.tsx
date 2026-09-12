@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { institutionConfig } from '@config/institution.config';
 import BackButton from '@/components/BackButton';
 
 interface Loan {
@@ -30,6 +31,7 @@ export default function Loans() {
   const [patronId, setPatronId] = useState<string | null>(null);
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const [fineRate, setFineRate] = useState(DEFAULT_FINE_RATE);
+  const [patronCategory, setPatronCategory] = useState<string>('undergraduate');
 
   useEffect(() => {
     const fetchPatronAndLoans = async () => {
@@ -42,12 +44,13 @@ export default function Loans() {
 
         const { data: patronData, error: patronError } = await supabase
           .from('patrons')
-          .select('id')
+          .select('id, patron_category')
           .eq('user_id', userData.user.id)
           .single();
 
         if (patronError) throw patronError;
         setPatronId(patronData.id);
+        setPatronCategory(patronData.patron_category || 'undergraduate');
 
         const [loansResult, rulesResult, finesResult] = await Promise.all([
           supabase
@@ -77,18 +80,23 @@ export default function Loans() {
     fetchPatronAndLoans();
   }, [navigate]);
 
+  const loanRule = institutionConfig.loanRules[patronCategory as keyof typeof institutionConfig.loanRules] ?? institutionConfig.loanRules.undergraduate;
+  const maxRenewals = loanRule.renewals;
+  const renewalDays = loanRule.durationDays;
+
   const handleRenew = async (loanId: string) => {
     setRenewingId(loanId);
     try {
+      const newDueDate = new Date();
+      newDueDate.setDate(newDueDate.getDate() + renewalDays);
+
       const { error } = await supabase
         .from('loans')
         .update({
           renewed_count: (
             loans.find((l) => l.id === loanId)?.renewed_count || 0
           ) + 1,
-          due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0],
+          due_date: newDueDate.toISOString().split('T')[0],
         })
         .eq('id', loanId);
 
@@ -100,9 +108,7 @@ export default function Loans() {
             ? {
                 ...loan,
                 renewed_count: (loan.renewed_count ?? 0) + 1,
-                due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split('T')[0],
+                due_date: newDueDate.toISOString().split('T')[0],
               }
             : loan
         )
@@ -186,7 +192,7 @@ export default function Loans() {
                   const daysUntilDue = getDaysUntilDue(loan.due_date);
                   const canRenew =
                     activeTab === 'active' &&
-                    (loan.renewed_count ?? 0) < 2 &&
+                    (loan.renewed_count ?? 0) < maxRenewals &&
                     !overdue;
                   const item = relatedOne(loan.catalogue_items);
                   const fine = (loan.fines ?? []).find((f) => f.status === 'unpaid' || f.status === 'outstanding');
@@ -254,7 +260,7 @@ export default function Loans() {
                             Renewals
                           </div>
                           <div className="text-sm font-semibold text-gray-900 mt-1">
-                            {loan.renewed_count ?? 0}/2
+                            {loan.renewed_count ?? 0}/{maxRenewals}
                           </div>
                         </div>
                         <div>
@@ -306,7 +312,7 @@ export default function Loans() {
                           )}
                           {!canRenew && activeTab === 'active' && (
                             <div className="text-sm text-gray-600">
-                              {(loan.renewed_count ?? 0) >= 2
+                              {(loan.renewed_count ?? 0) >= maxRenewals
                                 ? 'No renewals remaining'
                                 : overdue
                                   ? 'Cannot renew overdue items'

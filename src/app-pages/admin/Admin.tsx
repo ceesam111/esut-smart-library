@@ -47,6 +47,8 @@ const QUICK_ACTIONS = [
   { label: 'Deposit to Repository',    href: '/admin/ir/deposit',     icon: '⬆️' },
   { label: 'Process IR Queue',         href: '/admin/repository',     icon: '📂' },
   { label: 'Circulation Desk',         href: '/admin/circulation',    icon: '🔄' },
+  { label: 'Manage Fines',             href: '/admin/fines',          icon: '💰' },
+  { label: 'Communities',              href: '/admin/communities',    icon: '🏛️' },
   { label: 'View Analytics',           href: '/admin/analytics',      icon: '📈' },
   { label: 'Generate Reports',         href: '/admin/reports',        icon: '📊' },
   { label: 'Manage Patrons',           href: '/admin/patrons',        icon: '👥' },

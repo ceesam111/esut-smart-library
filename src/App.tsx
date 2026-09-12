@@ -69,7 +69,8 @@ const Loans                    = lazy(() => import('@/pages/dashboard/Loans'));
 const ILLHistory               = lazy(() => import('@/pages/dashboard/ILLHistory'));
 const ReadingLists             = lazy(() => import('@/pages/dashboard/ReadingLists'));
 const PatronRequests           = lazy(() => import('@/pages/dashboard/Requests'));
-const MyProfile                = lazy(() => import('@/pages/dashboard/MyProfile'));
+const MyProfile              = lazy(() => import('@/pages/dashboard/MyProfile'));
+const PatronProfile          = lazy(() => import('@/pages/dashboard/PatronProfile'));
 const DashboardThesis          = lazy(() => import('@/pages/dashboard/DashboardThesis'));
 const DashboardCourseReserves  = lazy(() => import('@/pages/dashboard/DashboardCourseReserves'));
 const DashboardSettings        = lazy(() => import('@/pages/dashboard/Settings'));
@@ -117,10 +118,12 @@ const AdminNewspaperIndex = lazy(() => import('@/pages/admin/NewspaperIndex'));
 const AdminRequests       = lazy(() => import('@/pages/admin/Requests'));
 const AdminTheses         = lazy(() => import('@/pages/admin/Theses'));
 const AdminCirculation    = lazy(() => import('@/pages/admin/Circulation'));
+const AdminFines          = lazy(() => import('@/pages/admin/Fines'));
 const AdminCatalogueAuthorities = lazy(() => import('@/pages/admin/CatalogueAuthorities'));
 const AdminCatalogueStats = lazy(() => import('@/pages/admin/CatalogueStats'));
 const AdminShelves        = lazy(() => import('@/pages/admin/Shelves'));
 const AdminConsortium     = lazy(() => import('@/pages/admin/Consortium'));
+const AdminCommunities    = lazy(() => import('@/pages/admin/Communities'));
 const AdminCatalogueAdopt = lazy(() => import('@/pages/admin/CatalogueAdopt'));
 const AdminTeam           = lazy(() => import('@/pages/admin/Team'));
 const AdminAccounts       = lazy(() => import('@/pages/admin/Accounts'));
@@ -220,6 +223,7 @@ export default function App() {
             <Route path="/dashboard/reading-lists" element={<ReadingLists />} />
             <Route path="/dashboard/requests" element={<PatronRequests />} />
             <Route path="/dashboard/my-profile" element={<MyProfile />} />
+            <Route path="/dashboard/profile" element={<PatronProfile />} />
             <Route path="/dashboard/thesis" element={<FeatureRoute feature="thesisPortal"><DashboardThesis /></FeatureRoute>} />
             <Route path="/dashboard/course-reserves" element={<FeatureRoute feature="courseReserves"><DashboardCourseReserves /></FeatureRoute>} />
             <Route path="/dashboard/settings" element={<DashboardSettings />} />
@@ -243,6 +247,7 @@ export default function App() {
             <Route path="/admin/catalogue/staging" element={<AdminCatalogueStaging />} />
             <Route path="/admin/catalogue/adopt" element={<AdminCatalogueAdopt />} />
             <Route path="/admin/consortium" element={<AdminConsortium />} />
+            <Route path="/admin/communities" element={<AdminCommunities />} />
             <Route path="/admin/catalogue/scan" element={<AdminCatalogueScan />} />
             <Route path="/admin/barcodes" element={<AdminBarcodes />} />
             <Route path="/admin/harvest" element={<AdminHarvest />} />
@@ -269,6 +274,7 @@ export default function App() {
             <Route path="/admin/requests" element={<AdminRequests />} />
             <Route path="/admin/theses" element={<AdminTheses />} />
             <Route path="/admin/circulation" element={<AdminCirculation />} />
+            <Route path="/admin/fines" element={<AdminFines />} />
             <Route path="/admin/catalogue/authorities" element={<AdminCatalogueAuthorities />} />
             <Route path="/admin/catalogue/stats" element={<AdminCatalogueStats />} />
             <Route path="/admin/shelves" element={<AdminShelves />} />

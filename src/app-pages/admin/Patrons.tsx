@@ -683,8 +683,34 @@ export default function Patrons() {
 
             {/* Footer */}
             <div className="border-t border-neutral-200 p-4 flex gap-3">
-              <button className="btn-outline flex-1">Suspend Account</button>
-              <button className="btn-primary flex-1">Renew Membership</button>
+              <button
+                className="btn-outline flex-1"
+                onClick={() => {
+                  if (!selectedPatron) return;
+                  if (selectedPatron.status === 'suspended') {
+                    updatePatronStatus(selectedPatron, 'active');
+                  } else {
+                    updatePatronStatus(selectedPatron, 'suspended');
+                  }
+                }}
+              >
+                {selectedPatron?.status === 'suspended' ? 'Reactivate Account' : 'Suspend Account'}
+              </button>
+              <button
+                className="btn-primary flex-1"
+                onClick={async () => {
+                  if (!selectedPatron) return;
+                  const currentExpiry = selectedPatron.membership_expires_at ? new Date(selectedPatron.membership_expires_at) : new Date();
+                  const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+                  const newExpiry = new Date(baseDate);
+                  newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+                  await supabase.from('patrons').update({ membership_expires_at: newExpiry.toISOString() }).eq('id', selectedPatron.id);
+                  setPatrons((prev) => prev.map((p) => p.id === selectedPatron.id ? { ...p, membership_expires_at: newExpiry.toISOString() } : p));
+                  setSelectedPatron({ ...selectedPatron, membership_expires_at: newExpiry.toISOString() });
+                }}
+              >
+                Renew Membership (+1 Year)
+              </button>
             </div>
           </div>
         </div>

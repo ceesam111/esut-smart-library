@@ -452,13 +452,34 @@ export default function Catalogue() {
   };
 
   const toggleStatus = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    let newStatus: string;
+    if (currentStatus === 'active') {
+      newStatus = 'inactive';
+    } else if (currentStatus === 'inactive' || currentStatus === 'withdrawn') {
+      newStatus = 'active';
+    } else {
+      newStatus = 'active';
+    }
     try {
       const { error } = await supabase.from('catalogue_items').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
       fetchItems();
     } catch (error) {
       console.error('Error updating item status:', error);
+    }
+  };
+
+  const withdrawItem = async (id: string) => {
+    if (!confirm('Withdraw this item from circulation? It will no longer be available for checkout.')) return;
+    try {
+      const { error } = await supabase.from('catalogue_items').update({
+        status: 'withdrawn',
+        available_copies: 0,
+      }).eq('id', id);
+      if (error) throw error;
+      fetchItems();
+    } catch (error) {
+      console.error('Error withdrawing item:', error);
     }
   };
 
@@ -634,7 +655,11 @@ export default function Catalogue() {
                   </span>
                 </td>
                 <td className="p-3">
-                  <span className={`badge ${item.status === 'active' ? 'badge-success' : 'badge-error'}`}>
+                  <span className={`badge ${
+                    item.status === 'active' ? 'badge-success' :
+                    item.status === 'withdrawn' ? 'badge-error' :
+                    'badge-secondary'
+                  }`}>
                     {item.status}
                   </span>
                 </td>
@@ -651,12 +676,29 @@ export default function Catalogue() {
                   >
                     Copies / Shelving
                   </button>
-                  <button
-                    onClick={() => toggleStatus(item.id, item.status)}
-                    className="btn-outline text-xs py-1 px-2 w-full"
-                  >
-                    {item.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </button>
+                  {item.status !== 'withdrawn' ? (
+                    <>
+                      <button
+                        onClick={() => toggleStatus(item.id, item.status)}
+                        className="btn-outline text-xs py-1 px-2 w-full"
+                      >
+                        {item.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => withdrawItem(item.id)}
+                        className="text-xs py-1 px-2 w-full rounded border border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        Withdraw
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => toggleStatus(item.id, item.status)}
+                      className="btn-primary text-xs py-1 px-2 w-full"
+                    >
+                      Reinstate
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

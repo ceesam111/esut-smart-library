@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import { format, differenceInDays } from 'date-fns';
+import { logCirculationEvent } from '@/lib/audit';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Patron {
@@ -51,7 +52,14 @@ const LOAN_DAYS: Record<string, number> = {
   academic_staff:     institutionConfig.loanRules.academic_staff.durationDays,
   non_academic_staff: institutionConfig.loanRules.non_academic_staff.durationDays,
 };
+const MAX_ITEMS: Record<string, number> = {
+  undergraduate:      institutionConfig.loanRules.undergraduate.maxItems,
+  postgraduate:       institutionConfig.loanRules.postgraduate.maxItems,
+  academic_staff:     institutionConfig.loanRules.academic_staff.maxItems,
+  non_academic_staff: institutionConfig.loanRules.non_academic_staff.maxItems,
+};
 const defaultLoanDays = 14;
+const defaultMaxItems = 4;
 
 const OFFLINE_KEY = 'circ_offline_queue';
 
@@ -168,6 +176,18 @@ export default function Circulation() {
       if ((selectedItem.available_copies ?? 0) <= 0) {
         throw new Error('No copies available. Place a hold instead.');
       }
+
+      const maxAllowed = MAX_ITEMS[selectedPatron.patron_category] ?? defaultMaxItems;
+      const { count: activeLoanCount, error: countErr } = await supabase
+        .from('loans')
+        .select('id', { count: 'exact', head: true })
+        .eq('patron_id', selectedPatron.id)
+        .eq('status', 'active');
+      if (countErr) throw countErr;
+      if ((activeLoanCount ?? 0) >= maxAllowed) {
+        throw new Error(`${selectedPatron.full_name} already has ${activeLoanCount} active loan(s). Maximum allowed for ${selectedPatron.patron_category} is ${maxAllowed}.`);
+      }
+
       const { data: loan, error: loanErr } = await supabase.from('loans').insert({
         patron_id: selectedPatron.id,
         catalogue_item_id: selectedItem.id,
@@ -187,6 +207,14 @@ export default function Circulation() {
         catalogue_item_id: selectedItem.id,
         loan_id: loan.id,
         offline_id: tx.offline_id,
+      });
+
+      await logCirculationEvent({
+        action: 'checkout',
+        patron_id: selectedPatron.id,
+        catalogue_item_id: selectedItem.id,
+        loan_id: loan.id,
+        metadata: { due_date: due, title: selectedItem.title },
       });
 
       setCoAlert({ type: 'success', msg: `Checked out "${selectedItem.title}" to ${selectedPatron.full_name}. Due: ${due}.` });
@@ -277,6 +305,14 @@ export default function Circulation() {
         loan_id: loan.id,
         offline_id: crypto.randomUUID(),
         notes: fine > 0 ? `Fine applied: ₦${fine}` : '',
+      });
+
+      await logCirculationEvent({
+        action: 'checkin',
+        patron_id: loan.patron_id,
+        catalogue_item_id: loan.catalogue_item_id,
+        loan_id: loan.id,
+        metadata: { fine: fine > 0 ? fine : null, title: loan.catalogue_items?.title },
       });
 
       // Notify next patron in hold queue
