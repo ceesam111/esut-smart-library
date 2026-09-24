@@ -4,6 +4,7 @@ import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import NotificationBell from '@/components/NotificationBell';
 import { getDashboardLabel, getDashboardPath, type AppRole } from '@/config/roles.config';
+import { OPAC_URL } from '@/config/libraryResources.config';
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
       { label: 'Search Books & Journals', href: '/catalog' },
       { label: 'New Arrivals',           href: '/catalogue?filter=new' },
       { label: 'Browse by Subject',      href: '/categories' },
+      { label: 'OPAC',                   href: OPAC_URL, external: true },
       { label: 'Reference Services',      href: '/course-reserves' },
       { label: 'Request a Resource',     href: '/dashboard/requests' },
     ],
@@ -48,7 +50,7 @@ const NAV_ITEMS = [
       { label: 'Submit a Work',          href: '/repository/submit' },
       { label: 'Theses & Dissertations', href: '/theses' },
       { label: 'Projects & Reports',     href: '/theses' },
-      { label: 'Open Access Resources',  href: '/categories' },
+      { label: 'Open Access Databases',  href: '/open-access-databases' },
     ],
   },
   {
@@ -58,9 +60,11 @@ const NAV_ITEMS = [
       { label: 'Ask Lexis — AI Reference Librarian', href: '/ai-librarian' },
       { label: 'Library AI Tools',          href: '/ai-tools' },
       { label: 'Federated Search',          href: '/search/global' },
+      { label: 'Subscribed Databases',      href: '/subscribed-databases' },
+      { label: 'Open Access Databases',     href: '/open-access-databases' },
       { label: 'Licensed Databases',        href: '/databases' },
+      { label: 'OPAC',                      href: OPAC_URL, external: true },
       { label: 'Newspapers',                href: '/newspapers' },
-      { label: 'Open Access Resources',     href: '/categories' },
       { label: 'Theses & Projects',         href: '/theses' },
       { label: 'Our Researchers',           href: '/lecturers' },
     ],
@@ -159,7 +163,46 @@ function DesktopDropdown({
   );
 }
 
-function DropdownItem({ href, children }: { href: string; children: React.ReactNode }) {
+function DropdownItem({
+  href,
+  external,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  children: React.ReactNode;
+}) {
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block text-sm font-medium transition-colors duration-100"
+        style={{
+          display: 'block',
+          padding: '10px 20px',
+          fontSize: 14,
+          color: '#1A1A1A',
+          background: 'transparent',
+          borderRadius: 6,
+          margin: '1px 6px',
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget as HTMLAnchorElement;
+          el.style.background = GREEN;
+          el.style.color = '#ffffff';
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget as HTMLAnchorElement;
+          el.style.background = 'transparent';
+          el.style.color = '#1A1A1A';
+        }}
+      >
+        {children} <span aria-hidden="true" style={{ fontSize: 10 }}>↗</span>
+      </a>
+    );
+  }
   return (
     <NavLink
       to={href}
@@ -398,7 +441,13 @@ export default function Navbar() {
                       onLeave={scheduleClose}
                     >
                       {item.links.map((link) => (
-                        <DropdownItem key={link.label} href={link.href}>{link.label}</DropdownItem>
+                        <DropdownItem
+                          key={link.label}
+                          href={link.href}
+                          external={'external' in link ? link.external : undefined}
+                        >
+                          {link.label}
+                        </DropdownItem>
                       ))}
                     </DesktopDropdown>
                   )}
@@ -585,7 +634,13 @@ export default function Navbar() {
                   onToggle={() => setMobileSection(mobileSection === item.dropdown ? null : item.dropdown)}
                 >
                   {item.links?.map((link) => (
-                    <MobileLink key={link.label} href={link.href}>{link.label}</MobileLink>
+                    <MobileLink
+                      key={link.label}
+                      href={link.href}
+                      external={'external' in link ? link.external : undefined}
+                    >
+                      {link.label}
+                    </MobileLink>
                   ))}
                 </MobileSection>
               ))}
@@ -682,7 +737,27 @@ function MobileSection({
   );
 }
 
-function MobileLink({ href, children }: { href: string; children: React.ReactNode }) {
+function MobileLink({
+  href,
+  external,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  children: React.ReactNode;
+}) {
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block px-7 py-2.5 text-sm text-white/75 hover:text-white transition-colors duration-100"
+      >
+        {children} <span aria-hidden="true" style={{ fontSize: 10 }}>↗</span>
+      </a>
+    );
+  }
   return (
     <NavLink
       to={href}

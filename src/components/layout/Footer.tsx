@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import ShareButtons from '@/components/ShareButtons';
+import { OPAC_URL } from '@/config/libraryResources.config';
 
 const GOLD = '#D4A017';
 
@@ -19,6 +20,8 @@ const SERVICES_LINKS = [
   { label: 'Borrow & Return',     href: '/catalogue' },
   { label: 'Request a Resource',  href: '/dashboard/requests' },
   { label: 'Research Guides',     href: '/blog?category=research-guide' },
+  { label: 'Subscribed Databases', href: '/subscribed-databases' },
+  { label: 'Open Access Databases', href: '/open-access-databases' },
   { label: 'Database Access',     href: '/databases' },
   { label: 'Tutorial Guides',     href: '/tutorial' },
   { label: 'Privacy Policy',      href: '/privacy' },
@@ -160,6 +163,16 @@ export default function Footer() {
                     {l.label}
                   </Link>
                 ))}
+                <a
+                  href={OPAC_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, padding: '4px 0', display: 'block', lineHeight: 1.5 }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = GOLD)}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)')}
+                >
+                  OPAC ↗
+                </a>
               </div>
 
               <span style={headingStyle}>Contact</span>

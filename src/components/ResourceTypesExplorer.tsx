@@ -53,7 +53,7 @@ export const RESOURCE_TYPES: ResourceType[] = [
   { name: 'Podcasts', group: 'Digital', icon: '🎙️', description: 'Episodic audio programmes and series.', discipline: 'General', access: 'Open Access', availability: 'Available', link: q('podcast') },
   { name: 'Datasets', group: 'Digital', icon: '📊', description: 'Research data and statistical collections.', discipline: 'Sciences', access: 'Open Access', availability: 'Available', link: '/repository' },
   { name: 'Preprints', group: 'Digital', icon: '⚛️', description: 'Pre-publication research manuscripts.', discipline: 'Sciences', access: 'Open Access', availability: 'Available', link: '/categories' },
-  { name: 'Open Access Resources', group: 'Digital', icon: '🌐', description: 'Freely available scholarly content worldwide.', discipline: 'General', access: 'Open Access', availability: 'Available', link: '/categories' },
+  { name: 'Open Access Resources', group: 'Digital', icon: '🌐', description: 'Freely available scholarly content worldwide.', discipline: 'General', access: 'Open Access', availability: 'Available', link: '/open-access-databases' },
 
   // ── Audiovisual ────────────────────────────────────────
   { name: 'DVDs', group: 'Audiovisual', icon: '📀', description: 'Film, documentary and instructional discs.', discipline: 'Arts', access: 'On-site', availability: 'Available', link: q('dvd') },

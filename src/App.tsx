@@ -28,6 +28,8 @@ const Tutorial             = lazy(() => import('@/pages/Tutorial'));
 const Researchers          = lazy(() => import('@/pages/Researchers'));
 const ResearcherProfile    = lazy(() => import('@/pages/ResearcherProfile'));
 const Databases            = lazy(() => import('@/pages/Databases'));
+const SubscribedDatabases  = lazy(() => import('@/pages/SubscribedDatabases'));
+const OpenAccessDatabases  = lazy(() => import('@/pages/OpenAccessDatabases'));
 const AILibrarian          = lazy(() => import('@/pages/AILibrarian'));
 const CourseReserves       = lazy(() => import('@/pages/CourseReserves'));
 const Thesis               = lazy(() => import('@/pages/Thesis'));
@@ -171,6 +173,8 @@ export default function App() {
             <Route path="/researchers" element={<FeatureRoute feature="researcherProfiles"><Researchers /></FeatureRoute>} />
             <Route path="/researchers/:slug" element={<FeatureRoute feature="researcherProfiles"><ResearcherProfile /></FeatureRoute>} />
             <Route path="/databases" element={<Databases />} />
+            <Route path="/subscribed-databases" element={<SubscribedDatabases />} />
+            <Route path="/open-access-databases" element={<OpenAccessDatabases />} />
             <Route path="/ai-librarian" element={<AILibrarian />} />
             <Route path="/course-reserves" element={<FeatureRoute feature="courseReserves"><CourseReserves /></FeatureRoute>} />
             <Route path="/thesis" element={<FeatureRoute feature="thesisPortal"><Thesis /></FeatureRoute>} />
