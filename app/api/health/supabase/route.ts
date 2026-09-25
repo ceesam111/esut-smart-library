@@ -14,7 +14,7 @@ export async function GET() {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/`, {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/catalogue_items?select=id&limit=1`, {
       method: 'GET',
       headers: {
         apikey: anonKey,

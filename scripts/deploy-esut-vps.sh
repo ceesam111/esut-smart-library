@@ -38,6 +38,17 @@ docker build \
 echo '== prepare runtime env from current container =='
 docker inspect "$CONTAINER" --format '{{range .Config.Env}}{{println .}}{{end}}' > /tmp/esut-runtime.env
 grep -v '^PATH=' /tmp/esut-runtime.env | grep -v '^NODE_VERSION=' | grep -v '^YARN_VERSION=' > /tmp/esut-run.env
+
+if [ -f /root/esut-extra.env ]; then
+  echo '== merging /root/esut-extra.env =='
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key=${line%%=*}
+    grep -v "^${key}=" /tmp/esut-run.env > /tmp/esut-run.tmp || true
+    mv /tmp/esut-run.tmp /tmp/esut-run.env
+  done < /root/esut-extra.env
+  cat /root/esut-extra.env >> /tmp/esut-run.env
+fi
 wc -l /tmp/esut-run.env
 
 echo '== swap containers =='

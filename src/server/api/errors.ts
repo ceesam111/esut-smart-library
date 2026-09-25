@@ -11,7 +11,7 @@ export function normalizeError(error: unknown) {
   if (error instanceof ApiError) return error;
   if (error instanceof Error) {
     if (error.message === 'Forbidden.') return new ApiError('FORBIDDEN', 'Forbidden.', 403);
-    if (/authorization|unauthorized|not authenticated/i.test(error.message)) return new ApiError('UNAUTHORIZED', 'Unauthorized.', 401);
+    if (/^Authentication required\.$|^Invalid or expired session\.$|authorization|unauthorized|not authenticated|authentication required|invalid or expired session/i.test(error.message)) return new ApiError('UNAUTHORIZED', 'Unauthorized.', 401);
     return new ApiError('INTERNAL_ERROR', error.message || 'Unexpected error', 500);
   }
   return new ApiError('INTERNAL_ERROR', 'Unexpected error', 500);

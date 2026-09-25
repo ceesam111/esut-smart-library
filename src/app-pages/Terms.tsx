@@ -67,17 +67,18 @@ export default function Terms() {
                   </tr>
                 </thead>
                 <tbody className="text-neutral-600">
-                  {[
-                    ['Undergraduate', '4 items', '2 weeks', '1 renewal', '₦50'],
-                    ['Postgraduate', '6 items', '4 weeks', '2 renewals', '₦50'],
-                    ['Academic Staff', '10 items', '12 weeks', '3 renewals', 'Nil'],
-                    ['Administrative Staff', '4 items', '4 weeks', '1 renewal', '₦50'],
-                    ['Alumni', '2 items', '2 weeks', 'None', '₦100'],
-                  ].map((row, i) => (
+                  {([
+                    ['Undergraduate', institutionConfig.loanRules.undergraduate],
+                    ['Postgraduate', institutionConfig.loanRules.postgraduate],
+                    ['Academic Staff', institutionConfig.loanRules.academic_staff],
+                    ['Non-Academic Staff', institutionConfig.loanRules.non_academic_staff],
+                  ] as [string, { maxItems: number; durationDays: number; renewals: number }][]).map(([label, rules], i) => (
                     <tr key={i} className="border-b border-neutral-100 hover:bg-neutral-50">
-                      {row.map((cell, j) => (
-                        <td key={j} className="p-3 border border-neutral-200">{cell}</td>
-                      ))}
+                      <td className="p-3 border border-neutral-200">{label}</td>
+                      <td className="p-3 border border-neutral-200">{rules.maxItems} items</td>
+                      <td className="p-3 border border-neutral-200">{rules.durationDays} days</td>
+                      <td className="p-3 border border-neutral-200">{rules.renewals} renewal{rules.renewals === 1 ? '' : 's'}</td>
+                      <td className="p-3 border border-neutral-200">₦{institutionConfig.fineRatePerDay}</td>
                     </tr>
                   ))}
                 </tbody>
