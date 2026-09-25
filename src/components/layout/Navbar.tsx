@@ -677,15 +677,15 @@ export default function Navbar() {
               </div>
               <div className="flex items-center gap-4 pt-1">
                 <a
-                  href="tel:+2347030162879"
+                  href="tel:+2348039473344"
                   className="flex items-center gap-1.5 text-sm font-medium"
                   style={{ color: GOLD }}
                 >
-                  📞 +234 703 016 2879
+                  📞 +234 803 947 3344
                 </a>
               </div>
               <a
-                href="https://wa.me/2347030162879"
+                href="https://wa.me/2348039473344"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-sm font-medium"

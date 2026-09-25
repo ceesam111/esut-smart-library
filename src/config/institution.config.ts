@@ -16,8 +16,8 @@ export const institutionConfig = {
   // ── Contact ───────────────────────────────────────────────────────────────
   primaryDomain: "virtuallibrary.esut.edu.ng",
   supportEmail: "library@esut.edu.ng",
-  contactPhone: "+2347030162879",
-  whatsappNumber: "+2347030162879",
+  contactPhone: "+2348039473344",
+  whatsappNumber: "+2348039473344",
   alternatePhone: "+2348113693804",
   address: "Enugu State University of Science and Technology, P.M.B. 01660, Enugu, Enugu State, Nigeria",
   state: "Enugu",

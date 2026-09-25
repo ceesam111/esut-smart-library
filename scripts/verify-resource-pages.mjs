@@ -25,7 +25,7 @@ const checks = {
   'Nav has OPAC external': nav.includes('OPAC_URL') && nav.includes('external: true'),
   'App routes registered': app.includes('/subscribed-databases') && app.includes('/open-access-databases'),
   'Footer links': foot.includes('/subscribed-databases') && foot.includes('/open-access-databases') && foot.includes('OPAC'),
-  'WhatsApp official number': cfg.includes('2347030162879') && inst.includes('+2347030162879'),
+  'WhatsApp official number': cfg.includes('2348039473344') && inst.includes('+2348039473344'),
   'OPAC exact URL': cfg.includes('https://esutlibrary.librarika.com'),
   'WhatsApp prefilled message': cfg.includes('Hello Librarian, I need access details'),
   'Repo nav Open Access updated': !nav.includes("label: 'Open Access Resources',  href: '/categories'"),

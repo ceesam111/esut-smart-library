@@ -34,7 +34,7 @@ export interface LibraryResource {
 export const OPAC_URL = 'https://esutlibrary.librarika.com';
 
 /** Official ESUT Librarian WhatsApp — verified via product owner */
-export const LIBRARIAN_WHATSAPP_NUMBER = '2347030162879';
+export const LIBRARIAN_WHATSAPP_NUMBER = '2348039473344';
 
 export const LIBRARIAN_WHATSAPP_MESSAGE =
   'Hello Librarian, I need access details for the subscribed databases on ESUT Smart Library.';

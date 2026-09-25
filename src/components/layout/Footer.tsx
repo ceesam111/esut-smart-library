@@ -88,12 +88,12 @@ export default function Footer() {
                 Your gateway to knowledge, research and discovery.
               </div>
               <div className="flex gap-4 mt-5">
-                <a href="tel:+2347030162879" title="+234 703 016 2879"
+                <a href="tel:+2348039473344" title="+234 803 947 3344"
                   className="text-xl transition-opacity hover:opacity-75" style={{ color: GOLD }}>
                   📞
                 </a>
-                <a href="https://wa.me/2347030162879" target="_blank" rel="noopener noreferrer"
-                  title="WhatsApp: +234 703 016 2879"
+                <a href="https://wa.me/2348039473344" target="_blank" rel="noopener noreferrer"
+                  title="WhatsApp: +234 803 947 3344"
                   className="text-xl transition-opacity hover:opacity-75" style={{ color: GOLD }}>
                   💬
                 </a>
@@ -183,14 +183,14 @@ export default function Footer() {
                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 1.6 }}>
                   📍 Enugu, Enugu State, Nigeria
                 </span>
-                <a href="tel:+2347030162879"
+                <a href="tel:+2348039473344"
                   style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 1.6, display: 'block' }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = GOLD)}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.7)')}
                 >
-                  📞 +234 703 016 2879
+                  📞 +234 803 947 3344
                 </a>
-                <a href="https://wa.me/2347030162879" target="_blank" rel="noopener noreferrer"
+                <a href="https://wa.me/2348039473344" target="_blank" rel="noopener noreferrer"
                   style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 1.6, display: 'block' }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = GOLD)}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.7)')}

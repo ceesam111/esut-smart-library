@@ -33,7 +33,7 @@ export default function Layout() {
 
       {/* Floating click-to-call — mobile only */}
       <a
-        href="tel:+2347030162879"
+        href="tel:+2348039473344"
         aria-label="Call Us"
         className="md:hidden fixed right-6 flex items-center justify-center w-13 h-13 rounded-full shadow-lg transition-opacity hover:opacity-90"
         style={{ bottom: '80px', zIndex: 39, background: '#6B1D2A', width: '52px', height: '52px' }}

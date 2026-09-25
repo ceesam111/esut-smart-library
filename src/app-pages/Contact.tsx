@@ -119,8 +119,8 @@ export default function Contact() {
                   <span className="text-xl shrink-0">📞</span>
                   <div>
                     <p className="font-semibold text-neutral-800 text-sm">Telephone</p>
-                    <a href="tel:+2347030162879" className="text-sm hover:underline" style={{ color: '#6B1D2A' }}>
-                      +234 703 016 2879
+                    <a href="tel:+2348039473344" className="text-sm hover:underline" style={{ color: '#6B1D2A' }}>
+                      +234 803 947 3344
                     </a>
                   </div>
                 </div>
@@ -128,7 +128,7 @@ export default function Contact() {
                   <span className="text-xl shrink-0">💬</span>
                   <div>
                     <p className="font-semibold text-neutral-800 text-sm">WhatsApp</p>
-                    <a href="https://wa.me/2347030162879" target="_blank" rel="noopener noreferrer"
+                    <a href="https://wa.me/2348039473344" target="_blank" rel="noopener noreferrer"
                       className="text-sm hover:underline" style={{ color: '#6B1D2A' }}>
                       Chat on WhatsApp
                     </a>
