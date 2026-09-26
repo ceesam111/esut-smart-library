@@ -27,7 +27,14 @@ export function verifyRecoveryReceipt(receipt: string | null | undefined, userId
   if (!key || !receipt || !userId) return false;
   try {
     const raw = Buffer.from(receipt, 'base64url').toString('utf8');
-    const [purpose, uid, issuedAt, signature] = raw.split(':');
+    const parts = raw.split(':');
+    if (parts.length < 4) return false;
+    // The purpose itself contains colons ("registration:profile-recovery:v1"),
+    // so the fields are read from the end instead of destructuring in order.
+    const signature = parts[parts.length - 1];
+    const issuedAt = parts[parts.length - 2];
+    const uid = parts[parts.length - 3];
+    const purpose = parts.slice(0, parts.length - 3).join(':');
     if (purpose !== PURPOSE || uid !== userId || !signature) return false;
     const issued = Number(issuedAt);
     if (!Number.isFinite(issued)) return false;

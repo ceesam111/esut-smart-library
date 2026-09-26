@@ -60,6 +60,9 @@ export async function POST(request: NextRequest) {
     if (!proof.ok) {
       return NextResponse.json({ ok: false, error: proof.error }, { status: 401 });
     }
+    if (!proof.receipt) {
+      return NextResponse.json({ ok: false, error: 'Could not verify your password right now. Please try again.' }, { status: 500 });
+    }
     return NextResponse.json({ ok: true, receipt: proof.receipt, confirmed: proof.confirmed, userId: proof.userId });
   } catch {
     return NextResponse.json({ ok: false, error: 'Could not verify your password right now. Please try again.' }, { status: 500 });
