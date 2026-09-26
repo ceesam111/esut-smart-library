@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { getBearerToken } from '@/server/auth/requireUser';
 import { institutionConfig } from '@config/institution.config';
 
 export const dynamic = 'force-dynamic';
+
+const SIGNUP_PROOF_WINDOW_MS = 30 * 60 * 1000;
 
 /**
  * Server-side patron profile creation.
@@ -82,6 +85,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Registration email does not match the created account.' }, { status: 400 });
     }
 
+    const authorized = await isCallerAuthorized(request, supabase, userId, authUser.user);
+    if (!authorized) {
+      return NextResponse.json({ ok: false, error: 'Registration session expired. Please start your registration again.' }, { status: 401 });
+    }
+
     const { data: existing } = await supabase
       .from('patrons')
       .select('id, patron_id, status')
@@ -141,7 +149,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * The client has no session after signUp (email confirmation is on), so this
+ * route accepts one of two proofs:
+ * 1. A valid bearer access token belonging to the same auth user (recovery path).
+ * 2. An auth user that is still unconfirmed and was created within the last
+ *    30 minutes (fresh signup), which is the state right after signUp().
+ */
+async function isCallerAuthorized(
+  request: NextRequest,
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  userId: string,
+  authUser: { email_confirmed_at?: string | null; created_at?: string | null },
+) {
+  const token = getBearerToken(request);
+  if (token) {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (!error && data.user?.id === userId) return true;
+  }
+  if (authUser.email_confirmed_at) return false;
+  const createdAt = authUser.created_at ? Date.parse(authUser.created_at) : NaN;
+  if (!Number.isFinite(createdAt)) return false;
+  return Date.now() - createdAt <= SIGNUP_PROOF_WINDOW_MS;
+}
+
 function friendlyPatronError(message: string) {
+
   if (/row-level security|permission denied|42501/i.test(message)) {
     return 'Your profile could not be saved due to a permissions issue. The library team has been informed — please try again shortly.';
   }
