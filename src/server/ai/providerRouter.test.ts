@@ -217,6 +217,7 @@ describe('routeChatCompletion', () => {
 describe('failure classification', () => {
   it('maps HTTP statuses to reason codes', () => {
     expect(classifyHttpStatus(401)).toBe('auth_failed');
+    expect(classifyHttpStatus(402)).toBe('insufficient_credit');
     expect(classifyHttpStatus(429)).toBe('rate_limited');
     expect(classifyHttpStatus(500)).toBe('server_error');
     expect(classifyHttpStatus(400)).toBe('invalid_request');

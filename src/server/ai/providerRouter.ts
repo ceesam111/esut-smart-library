@@ -24,6 +24,7 @@ export type FallbackReason =
   | 'timeout'
   | 'rate_limited'
   | 'auth_failed'
+  | 'insufficient_credit'
   | 'invalid_request'
   | 'server_error'
   | 'network'
@@ -265,6 +266,7 @@ export function resetAiRouterState() {
 
 export function classifyHttpStatus(status: number): FallbackReason {
   if (status === 401 || status === 403) return 'auth_failed';
+  if (status === 402) return 'insufficient_credit';
   if (status === 429) return 'rate_limited';
   if (status === 408) return 'timeout';
   if (status >= 500) return 'server_error';

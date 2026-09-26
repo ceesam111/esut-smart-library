@@ -46,10 +46,24 @@ ollama (local, free) → gemini (free tier) → groq (free tier)
   (`getAiProviderHealth()`, also exposed by `GET /api/ai/providers`).
 - **Timeout:** each attempt uses `timeoutMs` (default 30 s).
 - **Fallback reason codes:** `not_configured`, `circuit_open`, `timeout`,
-  `rate_limited`, `auth_failed`, `invalid_request`, `server_error`, `network`,
+  `rate_limited`, `auth_failed`, `insufficient_credit` (HTTP 402), 
+  `invalid_request`, `server_error`, `network`,
   `empty_response`, `policy_local_only`, `unknown`.
 - When every provider fails, `AiRoutingError` carries the full attempt list;
   Lexis falls back to its limited-mode answer instead of erroring.
+
+## Activating free providers (no paid gateway needed)
+
+1. Create a key at https://aistudio.google.com/apikey (Gemini free tier) and/or
+   https://console.groq.com/keys (Groq free tier).
+2. Add `GEMINI_API_KEY=...` and/or `GROQ_API_KEY=...` to `/root/esut-extra.env`
+   on the VPS (never to Git) and redeploy, or set them in local `.env`.
+3. Check status: `GET /api/ai/providers` (global admin only) shows each
+   provider's `configured` flag and last failure reason.
+
+If only the paid gateway is configured and it returns `insufficient_credit`
+(HTTP 402), either add free-tier keys as above or top up the gateway account —
+until then Lexis answers in limited fallback mode.
 
 ## Configuration
 
