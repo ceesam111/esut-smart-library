@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { institutionConfig } from '@config/institution.config';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLE_LABELS, type AppRole } from '@/config/roles.config';
+import { ROLE_LABELS, GENDERS, CURRENT_LEVELS, PREFERRED_BRANCHES, type AppRole } from '@/config/roles.config';
 import HandbookSection from '@/components/dashboard/HandbookSection';
 import BackButton from '@/components/BackButton';
 
@@ -25,49 +28,86 @@ function Item({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+interface FieldProps {
+  id: string;
+  label: string;
+  value: string | null;
+  editing: boolean;
+  type?: 'text' | 'tel' | 'date' | 'textarea' | 'select';
+  options?: string[];
+}
+
+function Field({ id, label, value, editing, type = 'text', options }: FieldProps) {
+  if (!editing) return <Item label={label} value={value} />;
+  const className = 'input w-full';
+  return (
+    <div>
+      <label className="label" htmlFor={id}>{label}</label>
+      {type === 'textarea' ? (
+        <textarea id={id} className={`${className} min-h-[90px]`} defaultValue={value ?? ''} />
+      ) : type === 'select' ? (
+        <select id={id} className={className} defaultValue={value ?? ''}>
+          <option value="">Select…</option>
+          {(options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+      ) : (
+        <input id={id} type={type} className={className} defaultValue={value ?? ''} />
+      )}
+    </div>
+  );
+}
+
 export default function Account() {
-  const { loading, profile, role, roles } = useAuth();
+  const { loading, profile, role, roles, user, reload } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  const handleCancel = () => {
+    setEditing(false);
+    setSaveMsg('');
+    setSaveError('');
+  };
 
   const handleSave = async () => {
-    if (!patron) return;
+    if (!user) return;
+    const el = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+    const val = (id: string) => (el(id)?.value ?? '').trim();
+
+    setSaving(true);
     setSaveMsg('');
-    setProfileError('');
-    const getInput = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
-    const update: Record<string, unknown> = {
-      full_name: (getInput('acct-fullname')?.value ?? '').trim() || null,
-      surname: (getInput('acct-surname')?.value ?? '').trim() || null,
-      other_names: (getInput('acct-othernames')?.value ?? '').trim() || null,
-      phone: (getInput('acct-phone')?.value ?? '').trim() || null,
-      date_of_birth: (getInput('acct-dob')?.value ?? '').trim() || null,
-      gender: (getInput('acct-gender')?.value ?? '').trim() || null,
-      institution: (getInput('acct-institution')?.value ?? institutionConfig.name).trim() || institutionConfig.name,
-      faculty_code: (getInput('acct-facultycode')?.value ?? '').trim() || null,
-      faculty_name: (getInput('acct-facultyname')?.value ?? '').trim() || null,
-      department: (getInput('acct-department')?.value ?? '').trim() || null,
-      programme: (getInput('acct-programme')?.value ?? '').trim() || null,
-      current_level: (getInput('acct-currentlevel')?.value ?? '').trim() || null,
-      level: (getInput('acct-currentlevel')?.value ?? '').trim() || null,
-      matric_number: (getInput('acct-matric')?.value ?? '').trim() || null,
-      staff_id: (getInput('acct-staffid')?.value ?? '').trim() || null,
-      rank: (getInput('acct-rank')?.value ?? '').trim() || null,
-      preferred_branch: (getInput('acct-prefbranch')?.value ?? '').trim() || null,
-      short_bio: (getInput('acct-shortbio')?.value ?? '').trim() || null,
-    };
+    setSaveError('');
     try {
-      const { data, error } = await supabase
-        .from('patrons')
-        .update(update)
-        .eq('id', (patron as { id: string }).id)
-        .select('*')
-        .single();
+      const update: Record<string, string | null> = {
+        surname: val('acct-surname') || null,
+        other_names: val('acct-othernames') || null,
+        full_name: val('acct-fullname') || null,
+        gender: val('acct-gender') || null,
+        date_of_birth: val('acct-dob') || null,
+        phone: val('acct-phone') || null,
+        institution: val('acct-institution') || institutionConfig.name,
+        faculty_name: val('acct-facultyname') || null,
+        department: val('acct-department') || null,
+        programme: val('acct-programme') || null,
+        current_level: val('acct-currentlevel') || null,
+        matric_number: val('acct-matric') || null,
+        staff_id: val('acct-staffid') || null,
+        preferred_branch: val('acct-prefbranch') || null,
+        short_bio: val('acct-shortbio') || null,
+      };
+
+      const { error } = await supabase.from('patrons').update(update).eq('user_id', user.id);
       if (error) throw error;
-      setPatron(data);
+
+      await reload();
+      setEditing(false);
       setSaveMsg('Profile updated.');
-      setTimeout(() => setSaveMsg(''), 3000);
-    } catch (error) {
-      setProfileError(error instanceof Error ? error.message : 'Could not update your profile.');
+      setTimeout(() => setSaveMsg(''), 4000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not update your profile.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -97,6 +137,7 @@ export default function Account() {
   const pending = profile.status === 'pending';
 
   const roleLabel = ROLE_LABELS[(role as AppRole) ?? 'guest'];
+  const showAcademic = isStudent || isAcademic || isLibrarian;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -107,13 +148,36 @@ export default function Account() {
             <h1 className="text-2xl font-serif font-semibold text-primary-800">My Account</h1>
             <p className="text-neutral-500 text-sm mt-1">{roleLabel}</p>
           </div>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-            profile.status === 'active' ? 'bg-green-100 text-green-700'
-            : pending ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-600'
-          }`}>
-            {profile.status === 'active' ? 'Active' : pending ? 'Pending Approval' : profile.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+              profile.status === 'active' ? 'bg-green-100 text-green-700'
+              : pending ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-600'
+            }`}>
+              {profile.status === 'active' ? 'Active' : pending ? 'Pending Approval' : profile.status}
+            </span>
+            {!editing ? (
+              <button type="button" className="btn-outline text-sm px-4 py-2" onClick={() => setEditing(true)}>
+                Edit Profile
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button type="button" className="btn-outline text-sm px-4 py-2" onClick={handleCancel} disabled={saving}>
+                  Cancel
+                </button>
+                <button type="button" className="btn-primary text-sm px-4 py-2" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+        {saveMsg && <div className="mt-3 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">{saveMsg}</div>}
+        {saveError && <div className="mt-3 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{saveError}</div>}
+        {editing && (
+          <div className="mt-3 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+            Editing your profile. Library Number, Patron ID, account status and email are managed by the library and cannot be changed here.
+          </div>
+        )}
       </div>
 
       {pending && (
@@ -124,19 +188,19 @@ export default function Account() {
       )}
 
       <Section icon="🧾" title="Identity">
-        <Item label="Surname" value={profile.surname} />
-        <Item label="Other Names" value={profile.other_names} />
-        <Item label="Full Name" value={profile.full_name} />
-        <Item label="Gender" value={profile.gender} />
-        <Item label="Date of Birth" value={profile.date_of_birth} />
+        <Field id="acct-surname" label="Surname" value={profile.surname} editing={editing} />
+        <Field id="acct-othernames" label="Other Names" value={profile.other_names} editing={editing} />
+        <Field id="acct-fullname" label="Full Name" value={profile.full_name} editing={editing} />
+        <Field id="acct-gender" label="Gender" value={profile.gender} editing={editing} type="select" options={GENDERS} />
+        <Field id="acct-dob" label="Date of Birth" value={profile.date_of_birth} editing={editing} type="date" />
         <Item label="Account Type" value={roleLabel} />
       </Section>
 
       <Section icon="📇" title="Library Membership">
-        <Item label="Library Number" value={profile.library_number ?? '— issued on approval —'} />
+        <Item label="Library Number" value={profile.library_number ?? (pending ? '— issued on approval —' : '—')} />
         <Item label="Patron ID" value={profile.patron_id} />
         <Item label="Status" value={profile.status} />
-        <Item label="Preferred Branch" value={profile.preferred_branch} />
+        <Field id="acct-prefbranch" label="Preferred Branch" value={profile.preferred_branch} editing={editing} type="select" options={PREFERRED_BRANCHES} />
         <Item label="Member Since" value={profile.approved_at ? new Date(profile.approved_at).toLocaleDateString() : null} />
         {profile.membership_expires_at && (
           <Item label="Valid Until" value={new Date(profile.membership_expires_at).toLocaleDateString()} />
@@ -145,20 +209,20 @@ export default function Account() {
 
       <Section icon="📞" title="Contact">
         <Item label="Email" value={profile.email} />
-        <Item label="Phone" value={profile.phone} />
-        <Item label="Institution" value={profile.institution} />
+        <Field id="acct-phone" label="Phone" value={profile.phone} editing={editing} type="tel" />
+        <Field id="acct-institution" label="Institution" value={profile.institution ?? institutionConfig.name} editing={editing} />
       </Section>
 
-      {(isStudent || isAcademic || isLibrarian) && (
+      {showAcademic && (
         <Section icon="🎓" title="Academic">
-          <Item label="Faculty" value={profile.faculty_name} />
-          <Item label="Department" value={profile.department} />
+          <Field id="acct-facultyname" label="Faculty" value={profile.faculty_name} editing={editing} />
+          <Field id="acct-department" label="Department" value={profile.department} editing={editing} />
+          {isStudent && <Field id="acct-programme" label="Programme" value={profile.programme} editing={editing} />}
+          {isStudent && <Field id="acct-currentlevel" label="Current Level" value={profile.current_level} editing={editing} type="select" options={CURRENT_LEVELS} />}
+          {isStudent && <Field id="acct-matric" label="Matriculation Number" value={profile.matric_number} editing={editing} />}
           {isStudent && <Item label="Student Type" value={profile.student_type} />}
-          {isStudent && <Item label="Programme" value={profile.programme} />}
           {isStudent && <Item label="Duration (years)" value={profile.duration_years} />}
-          {isStudent && <Item label="Current Level" value={profile.current_level} />}
-          {isStudent && <Item label="Matriculation Number" value={profile.matric_number} />}
-          {(isAcademic || isLibrarian) && <Item label="Staff ID" value={profile.staff_id} />}
+          {(isAcademic || isLibrarian) && <Field id="acct-staffid" label="Staff ID" value={profile.staff_id} editing={editing} />}
           {isAcademic && <Item label="Academic Rank" value={profile.academic_rank} />}
           {isAcademic && <Item label="Highest Qualification" value={profile.highest_qualification} />}
         </Section>
@@ -174,8 +238,8 @@ export default function Account() {
 
       {isStaff && (
         <Section icon="🗂️" title="Employment">
-          <Item label="Staff ID" value={profile.staff_id} />
-          <Item label="Department / Unit" value={profile.department} />
+          <Field id="acct-staffid" label="Staff ID" value={profile.staff_id} editing={editing} />
+          <Field id="acct-department" label="Department / Unit" value={profile.department} editing={editing} />
           <Item label="Job Title" value={profile.job_title} />
         </Section>
       )}
@@ -191,10 +255,14 @@ export default function Account() {
         </div>
       )}
 
-      {profile.short_bio && (
+      {(editing || profile.short_bio) && (
         <div className="card p-6">
           <h2 className="font-semibold text-neutral-800 mb-3 flex items-center gap-2"><span>✍️</span> Short Bio</h2>
-          <p className="text-neutral-700 text-sm leading-relaxed">{profile.short_bio}</p>
+          {editing ? (
+            <textarea id="acct-shortbio" className="input w-full min-h-[90px]" defaultValue={profile.short_bio ?? ''} />
+          ) : (
+            <p className="text-neutral-700 text-sm leading-relaxed">{profile.short_bio}</p>
+          )}
         </div>
       )}
 

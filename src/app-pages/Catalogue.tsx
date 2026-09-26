@@ -108,7 +108,23 @@ function sourceKey(sourceName: string) {
 }
 
 function emptyEbookResponse(): EbookResponse {
-  return { gutenberg: [], openlibrary: [], oapen: [], doab: [], google: [], all: [] };
+  return {
+    gutenberg: [],
+    openlibrary: [],
+    oapen: [],
+    doab: [],
+    google: [],
+    openalex: [],
+    crossref: [],
+    pubmed: [],
+    doaj: [],
+    hathitrust: [],
+    'standard ebooks': [],
+    'internet archive': [],
+    base: [],
+    core: [],
+    all: [],
+  };
 }
 
 function mapResourceSearchToEbooks(data: any): EbookResponse {

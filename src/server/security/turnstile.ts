@@ -6,8 +6,18 @@ export function getTurnstileSecretKey() {
   return process.env.CLOUDFLARE_SECRET_KEY || '';
 }
 
-export async function verifyTurnstileToken(token: string | null | undefined, remoteIp?: string | null, expectedAction?: string | null) {
-  // ⚡️ Temporarily disabled for development — always accept (no Cloudflare call)
-  if (!getTurnstileSiteKey()) return { success: true, skipped: true };
+export interface TurnstileVerifyResult {
+  success: boolean;
+  skipped?: boolean;
+  error?: string;
+}
+
+export async function verifyTurnstileToken(
+  _token?: string | null,
+  _remoteIp?: string | null,
+  _expectedAction?: string | null,
+): Promise<TurnstileVerifyResult> {
+  // TEMPORARILY DISABLED for development — always accept without calling Cloudflare.
+  // Re-enable by calling Cloudflare's siteverify endpoint with getTurnstileSecretKey().
   return { success: true, skipped: true };
 }
