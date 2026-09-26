@@ -228,8 +228,9 @@ function loadImage(src: string) {
 
 function formatCardName(profile: { surname?: string | null; other_names?: string | null; full_name: string }) {
   if (profile.surname) return `${profile.surname.toUpperCase()}${profile.other_names ? `, ${profile.other_names}` : ''}`;
-  const [first, ...rest] = profile.full_name.trim().split(/\s+/);
-  return rest.length ? `${first.toUpperCase()}, ${rest.join(' ')}` : profile.full_name.toUpperCase();
+  const parts = profile.full_name.trim().split(/\s+/);
+  const last = parts.pop();
+  return last ? `${last.toUpperCase()}, ${parts.join(' ')}` : profile.full_name.toUpperCase();
 }
 
 function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
