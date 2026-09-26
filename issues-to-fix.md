@@ -129,3 +129,23 @@ What changed:
 Verification evidence (2026-09-26): `next build` OK; vitest 52/52; `verify-resource-pages.mjs` 18/18; `tsc --noEmit` = 64 errors, exactly the pre-existing baseline; built chunks contain **0** matches for `Security verification` and **0** for `challenges.cloudflare.com`; live `/api/security/turnstile/config` → `{"siteKey":null}`; `/register` and `/login` → 200; production E2E 13/13; both role migrations applied to the hosted Supabase database (enum now has 10 labels; `is_library_staff` includes `catalog_admin`; librarian insert policy updated); app container healthy.
 
 Not tested: an actual end-to-end login/registration as a `catalog_admin` user (no such account exists yet) and librarian-vs-super-admin role-grant behaviour through the UI.
+
+
+## Session status 2026-09-26 (part 5 - email service failure never blocks login; modal stacking fix)
+
+Commits: `d6dbc5f` (code), pushed to `ceesam111/esut-smart-library` master and deployed to the VPS.
+
+**Problem reported by the product owner:** after registering, the success card claimed "we sent a verification link" while also saying email was paused, the modal rendered *behind* the fixed navigation bar, and a user who never receives the email can never sign in. Live evidence: `POST /api/registration/send-verification` returned `202 {"sent":false,"reason":"send_failed"}` - the Resend path is not delivering at all, so every self-registered account would stay stuck at GoTrue's "Email not confirmed".
+
+**Fix 1 - skip email verification when the email service fails.**
+
+- `app/api/registration/send-verification/route.ts` - new `autoVerifyRegistration()` runs after delivery fails: `auth.admin.updateUserById(email_confirm:true)`, sets `email_verified_at`/`main_library_access_at` (plus `status='active'`, `approved_at` only when the policy does not require branch approval), and grants the patron role when no approval is pending - the same state machine as `/api/registration/verify`. Response becomes `202 {"sent":false,"autoVerified":true,"reason":...,"policy":...}`; only if that also fails does it fall back to the old retryable paused response.
+- `src/lib/registration.ts` - `RegisterResult.autoVerified`; `send-verification` is retried once on a network failure; the notice copy now says verification was skipped and the account can be signed in immediately.
+- `src/components/auth/RegistrationSuccessModal.tsx` - dedicated blue "Good to know" panel and a green `Email verification skipped` status row for `autoVerified`, instead of the misleading "link sent" / amber paused wording.
+- `src/components/layout/DashboardLayout.tsx` - the in-dashboard resend button no longer reports "sent" when nothing was sent; it distinguishes `sent`, `autoVerified` and busy.
+
+**Fix 2 - modal behind the navbar.** `src/components/layout/Layout.tsx` renders `<main style={{zIndex:2}}>`, which creates a stacking context, so a modal inside the page can never outrank the `fixed z-50` header regardless of its own z-index. The modal is now portalled to `document.body` (`createPortal`) with `z-[9999]` and a `mounted` guard.
+
+Verification evidence (2026-09-26): `tsc --noEmit` = 64 errors (pre-existing baseline); vitest 52/52; `next build` OK; `verify-resource-pages.mjs` 18/18; production E2E 13/13; `verify-rate-limit.mjs` 5/5 including `send-verification -> 202 {"sent":false,"autoVerified":true,"reason":"send_failed"}`; deployed chunk `1921.fd6efc78a99ce4ee.js` contains `Email verification skipped`, `z-[9999]` and `createPortal`; `/register`, `/login` and `/api/health` all 200; container healthy after cutover.
+
+Not tested: a full browser-level registration (no headless browser available here) and the underlying Resend delivery failure, which is a separate fix (API key / From-domain) still outstanding. Two stranded unconfirmed accounts from earlier remain in `auth.users` with no profile (`u***@esut.edu.ng`, `s***@gmail.com`).
