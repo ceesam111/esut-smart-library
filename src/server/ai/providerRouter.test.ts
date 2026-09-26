@@ -187,9 +187,34 @@ describe('routeChatCompletion', () => {
     const error = await routeChatCompletion({ messages: MESSAGES, privacy: 'local' }).catch((e: AiRoutingError) => e);
 
     expect(error).toBeInstanceOf(AiRoutingError);
-    expect((error as AiRoutingError).attempts.map((a) => a.provider)).toEqual(['ollama']);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const providers = (error as AiRoutingError).attempts.map((a) => a.provider);
+    // 503 is candidate-retryable, so Ollama walks its own model list — but the
+    // chain must never leave the local provider under `privacy: 'local'`.
+    expect(providers.length).toBeGreaterThan(0);
+    expect([...new Set(providers)]).toEqual(['ollama']);
+    expect(providers.every((p) => p === 'ollama')).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(providers.length);
     expect((error as AiRoutingError).attempts[0].reason).toBe('server_error');
+  });
+
+  it('falls through the model candidate list when a model id is retired (404)', async () => {
+    process.env.GEMINI_API_KEY = 'gem-key';
+    process.env.AI_PROVIDER_ORDER = 'gemini,gateway';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'model not found' } }, 404))
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: 'OK' } }] }, 200));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await routeChatCompletion({ messages: MESSAGES });
+
+    expect(result.provider).toBe('gemini');
+    expect(result.text).toBe('OK');
+    expect(result.attempts[0]).toMatchObject({ ok: false, status: 404, reason: 'invalid_request' });
+    expect(result.attempts[1]).toMatchObject({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const sentModels = fetchMock.mock.calls.map((call: any[]) => JSON.parse(String(call[1]?.body)).model as string);
+    expect(new Set(sentModels).size).toBe(2);
   });
 
   it('reports a local-only configuration error when Ollama is not enabled', async () => {

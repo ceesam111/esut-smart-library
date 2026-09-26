@@ -137,9 +137,9 @@ export function resolveProviders(): ProviderDefinition[] {
       baseUrl: geminiBase,
       apiKey: env('GEMINI_API_KEY') ?? null,
       models: {
-        default: env('GEMINI_MODEL') || 'gemini-2.0-flash',
-        fast: env('GEMINI_FAST_MODEL') || env('GEMINI_MODEL') || 'gemini-2.0-flash',
-        reasoning: env('GEMINI_REASONING_MODEL') || env('GEMINI_MODEL') || 'gemini-2.5-flash',
+        default: env('GEMINI_MODEL') || 'gemini-3.8-flash',
+        fast: env('GEMINI_FAST_MODEL') || env('GEMINI_MODEL') || 'gemini-3.8-flash',
+        reasoning: env('GEMINI_REASONING_MODEL') || env('GEMINI_MODEL') || 'gemini-3.8-flash',
       },
     },
     groq: {
@@ -150,9 +150,9 @@ export function resolveProviders(): ProviderDefinition[] {
       baseUrl: groqBase,
       apiKey: env('GROQ_API_KEY') ?? null,
       models: {
-        default: env('GROQ_MODEL') || 'llama-3.3-70b-versatile',
-        fast: env('GROQ_FAST_MODEL') || env('GROQ_MODEL') || 'llama-3.3-70b-versatile',
-        reasoning: env('GROQ_REASONING_MODEL') || env('GROQ_MODEL') || 'llama-3.3-70b-versatile',
+        default: env('GROQ_MODEL') || 'qwen/qwen3.8-27b',
+        fast: env('GROQ_FAST_MODEL') || env('GROQ_MODEL') || 'qwen/qwen3.8-27b',
+        reasoning: env('GROQ_REASONING_MODEL') || env('GROQ_MODEL') || 'openai/gpt-oss-120b',
       },
     },
     nvidia: {
@@ -298,6 +298,33 @@ function modelFor(provider: ProviderDefinition, kind: AiModelKind, explicit?: st
   return provider.models[kind];
 }
 
+/**
+ * Model catalogs churn: retired ids return 404, hot models return 503, and
+ * some models emit empty content when the token budget is consumed by
+ * reasoning. Each provider therefore keeps a candidate list — the router
+ * walks it (primary first) before abandoning the provider, so a catalog
+ * change can never permanently break Lexis or the agent workers.
+ */
+const MODEL_CANDIDATES: Record<ProviderId, string[]> = {
+  ollama: ['llama3.2', 'llama3.1', 'qwen2.5:7b'],
+  gemini: ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash'],
+  groq: ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'allam-2-7b', 'llama-3.1-8b-instant'],
+  nvidia: ['meta/llama-3.1-70b-instruct', 'deepseek-ai/deepseek-r1', 'qwen/qwen3-32b'],
+  gateway: [],
+};
+
+function modelCandidates(provider: ProviderDefinition, kind: AiModelKind, explicit?: string): string[] {
+  const primary = modelFor(provider, kind, explicit);
+  if (explicit) return [primary];
+  return [...new Set([primary, ...(MODEL_CANDIDATES[provider.id] ?? [])])];
+}
+
+/** Statuses that mean "this model id/availability is the problem, try the next candidate". */
+function isCandidateRetryable(reason: FallbackReason, status?: number) {
+  if (reason === 'empty_response') return true;
+  return status === 404 || status === 503;
+}
+
 export async function routeChatCompletion(input: RouteChatInput): Promise<RouteChatResult> {
   const kind: AiModelKind = input.modelKind ?? 'default';
   const maxTokens = input.maxTokens ?? Number(env('AI_MAX_TOKENS_DEFAULT') || 1024);
@@ -313,7 +340,8 @@ export async function routeChatCompletion(input: RouteChatInput): Promise<RouteC
   }
 
   for (const provider of chain) {
-    const model = modelFor(provider, kind, input.model);
+    const candidates = modelCandidates(provider, kind, input.model);
+    const model = candidates[0];
     const startedAt = Date.now();
 
     if (localOnly && !provider.local) {
@@ -331,58 +359,63 @@ export async function routeChatCompletion(input: RouteChatInput): Promise<RouteC
       continue;
     }
 
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (provider.apiKey) headers.Authorization = `Bearer ${provider.apiKey}`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (provider.apiKey) headers.Authorization = `Bearer ${provider.apiKey}`;
 
-      const response = await fetchWithTimeout(
-        `${provider.baseUrl}/chat/completions`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            model,
-            messages: input.messages,
-            max_tokens: maxTokens,
-            temperature,
-          }),
-        },
-        timeoutMs,
-      );
+    for (const candidate of candidates) {
+      const attemptStart = Date.now();
+      try {
+        const response = await fetchWithTimeout(
+          `${provider.baseUrl}/chat/completions`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              model: candidate,
+              messages: input.messages,
+              max_tokens: maxTokens,
+              temperature,
+            }),
+          },
+          timeoutMs,
+        );
 
-      if (!response.ok) {
-        const reason = classifyHttpStatus(response.status);
-        recordFailure(provider.id, reason, response.status);
-        attempts.push({ provider: provider.id, model, ok: false, reason, status: response.status, ms: Date.now() - startedAt });
-        continue;
+        if (!response.ok) {
+          const reason = classifyHttpStatus(response.status);
+          recordFailure(provider.id, reason, response.status);
+          attempts.push({ provider: provider.id, model: candidate, ok: false, reason, status: response.status, ms: Date.now() - attemptStart });
+          if (isCandidateRetryable(reason, response.status)) continue;
+          break;
+        }
+
+        const raw = await response.json();
+        const text: string = raw?.choices?.[0]?.message?.content ?? '';
+        if (!text.trim()) {
+          recordFailure(provider.id, 'empty_response', response.status);
+          attempts.push({ provider: provider.id, model: candidate, ok: false, reason: 'empty_response', status: response.status, ms: Date.now() - attemptStart });
+          continue;
+        }
+
+        recordSuccess(provider.id);
+        attempts.push({ provider: provider.id, model: candidate, ok: true, status: response.status, ms: Date.now() - attemptStart });
+        return {
+          text,
+          provider: provider.id,
+          providerLabel: provider.label,
+          model: candidate,
+          attempts,
+          usage: {
+            inputTokens: raw?.usage?.prompt_tokens ?? 0,
+            outputTokens: raw?.usage?.completion_tokens ?? 0,
+          },
+          raw,
+        };
+      } catch (error) {
+        const reason = classifyError(error);
+        recordFailure(provider.id, reason);
+        attempts.push({ provider: provider.id, model: candidate, ok: false, reason, ms: Date.now() - attemptStart });
+        break; // timeouts and network errors are provider-level, not model-level
       }
-
-      const raw = await response.json();
-      const text: string = raw?.choices?.[0]?.message?.content ?? '';
-      if (!text.trim()) {
-        recordFailure(provider.id, 'empty_response', response.status);
-        attempts.push({ provider: provider.id, model, ok: false, reason: 'empty_response', status: response.status, ms: Date.now() - startedAt });
-        continue;
-      }
-
-      recordSuccess(provider.id);
-      attempts.push({ provider: provider.id, model, ok: true, status: response.status, ms: Date.now() - startedAt });
-      return {
-        text,
-        provider: provider.id,
-        providerLabel: provider.label,
-        model,
-        attempts,
-        usage: {
-          inputTokens: raw?.usage?.prompt_tokens ?? 0,
-          outputTokens: raw?.usage?.completion_tokens ?? 0,
-        },
-        raw,
-      };
-    } catch (error) {
-      const reason = classifyError(error);
-      recordFailure(provider.id, reason);
-      attempts.push({ provider: provider.id, model, ok: false, reason, ms: Date.now() - startedAt });
     }
   }
 
