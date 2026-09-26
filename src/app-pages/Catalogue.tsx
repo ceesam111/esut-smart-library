@@ -38,6 +38,15 @@ interface EbookResponse {
   oapen: EbookResult[];
   doab: EbookResult[];
   google: EbookResult[];
+  openalex: EbookResult[];
+  crossref: EbookResult[];
+  pubmed: EbookResult[];
+  doaj: EbookResult[];
+  hathitrust: EbookResult[];
+  'standard ebooks': EbookResult[];
+  'internet archive': EbookResult[];
+  base: EbookResult[];
+  core: EbookResult[];
   all: EbookResult[];
 }
 
@@ -49,15 +58,33 @@ const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
   oapen:       { label: 'OAPEN',             cls: 'bg-teal-100 text-teal-800 border border-teal-200' },
   doab:        { label: 'DOAB',              cls: 'bg-cyan-100 text-cyan-800 border border-cyan-200' },
   google:      { label: 'Google Books',      cls: 'bg-red-100 text-red-800 border border-red-200' },
+  openalex:    { label: 'OpenAlex',        cls: 'bg-green-100 text-green-800 border border-green-200' },
+  crossref:    { label: 'Crossref',        cls: 'bg-primary-100 text-primary-800 border border-primary-200' },
+  pubmed:      { label: 'PubMed',          cls: 'bg-red-100 text-red-800 border border-red-200' },
+  doaj:        { label: 'DOAJ',            cls: 'bg-lime-100 text-lime-800 border border-lime-200' },
+  hathitrust:  { label: 'HathiTrust',      cls: 'bg-amber-100 text-amber-800 border border-amber-200' },
+  'standard ebooks': { label: 'Standard Ebooks', cls: 'bg-violet-100 text-violet-800 border border-violet-200' },
+  'internet archive': { label: 'Internet Archive', cls: 'bg-amber-100 text-amber-800 border border-amber-200' },
+  base:        { label: 'BASE',            cls: 'bg-rose-100 text-rose-800 border border-rose-200' },
+  core:        { label: 'CORE',            cls: 'bg-emerald-100 text-emerald-800 border border-emerald-200' },
 };
 
 const SOURCE_FILTER_LABELS: { key: string; label: string }[] = [
   { key: 'all',        label: 'All' },
-  { key: 'gutenberg',  label: 'Gutenberg' },
+  { key: 'gutenberg',  label: 'Project Gutenberg' },
   { key: 'openlibrary',label: 'Open Library' },
   { key: 'oapen',     label: 'OAPEN' },
   { key: 'doab',      label: 'DOAB' },
   { key: 'google',    label: 'Google Books' },
+  { key: 'openalex',  label: 'OpenAlex' },
+  { key: 'crossref',  label: 'Crossref' },
+  { key: 'pubmed',    label: 'PubMed' },
+  { key: 'doaj',      label: 'DOAJ' },
+  { key: 'hathitrust',label: 'HathiTrust' },
+  { key: 'standard ebooks', label: 'Standard Ebooks' },
+  { key: 'internet archive', label: 'Internet Archive' },
+  { key: 'base',      label: 'BASE' },
+  { key: 'core',      label: 'CORE' },
 ];
 
 function sourceKey(sourceName: string) {
@@ -67,7 +94,17 @@ function sourceKey(sourceName: string) {
   if (source.includes('doab')) return 'doab';
   if (source.includes('oapen')) return 'oapen';
   if (source.includes('gutenberg')) return 'gutenberg';
-  return 'openlibrary';
+  if (source.includes('openalex')) return 'openalex';
+  if (source.includes('crossref')) return 'crossref';
+  if (source.includes('pubmed')) return 'pubmed';
+  if (source.includes('doaj')) return 'doaj';
+  if (source.includes('hathitrust')) return 'hathitrust';
+  if (source.includes('standard ebooks')) return 'standard ebooks';
+  if (source.includes('internet archive')) return 'internet archive';
+  if (source.includes('base')) return 'base';
+  if (source.includes('core')) return 'core';
+  // fallback: use the raw source name as‑is (will be looked up in SOURCE_BADGE)
+  return source;
 }
 
 function emptyEbookResponse(): EbookResponse {
