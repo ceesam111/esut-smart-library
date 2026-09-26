@@ -27,6 +27,49 @@ function Item({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function Account() {
   const { loading, profile, role, roles } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  const handleSave = async () => {
+    if (!patron) return;
+    setSaveMsg('');
+    setProfileError('');
+    const getInput = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+    const update: Record<string, unknown> = {
+      full_name: (getInput('acct-fullname')?.value ?? '').trim() || null,
+      surname: (getInput('acct-surname')?.value ?? '').trim() || null,
+      other_names: (getInput('acct-othernames')?.value ?? '').trim() || null,
+      phone: (getInput('acct-phone')?.value ?? '').trim() || null,
+      date_of_birth: (getInput('acct-dob')?.value ?? '').trim() || null,
+      gender: (getInput('acct-gender')?.value ?? '').trim() || null,
+      institution: (getInput('acct-institution')?.value ?? institutionConfig.name).trim() || institutionConfig.name,
+      faculty_code: (getInput('acct-facultycode')?.value ?? '').trim() || null,
+      faculty_name: (getInput('acct-facultyname')?.value ?? '').trim() || null,
+      department: (getInput('acct-department')?.value ?? '').trim() || null,
+      programme: (getInput('acct-programme')?.value ?? '').trim() || null,
+      current_level: (getInput('acct-currentlevel')?.value ?? '').trim() || null,
+      level: (getInput('acct-currentlevel')?.value ?? '').trim() || null,
+      matric_number: (getInput('acct-matric')?.value ?? '').trim() || null,
+      staff_id: (getInput('acct-staffid')?.value ?? '').trim() || null,
+      rank: (getInput('acct-rank')?.value ?? '').trim() || null,
+      preferred_branch: (getInput('acct-prefbranch')?.value ?? '').trim() || null,
+      short_bio: (getInput('acct-shortbio')?.value ?? '').trim() || null,
+    };
+    try {
+      const { data, error } = await supabase
+        .from('patrons')
+        .update(update)
+        .eq('id', (patron as { id: string }).id)
+        .select('*')
+        .single();
+      if (error) throw error;
+      setPatron(data);
+      setSaveMsg('Profile updated.');
+      setTimeout(() => setSaveMsg(''), 3000);
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Could not update your profile.');
+    }
+  };
 
   if (loading) {
     return (
