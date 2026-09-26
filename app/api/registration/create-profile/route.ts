@@ -77,6 +77,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdminClient();
 
+    const describeKey = () => {
+      const raw = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+      let role = 'unparsable';
+      try { role = String(JSON.parse(Buffer.from(raw.split('.')[1] || '', 'base64').toString('utf8')).role); } catch { /* keep */ }
+      return `url=${process.env.SUPABASE_URL} keyLen=${raw.length} keyRole=${role}`;
+    };
+
     const { data: authUser, error: userErr } = await supabase.auth.admin.getUserById(userId);
     if (userErr || !authUser?.user) {
       return NextResponse.json({ ok: false, error: 'Registration session could not be verified. Please try again.' }, { status: 400 });
@@ -125,7 +132,7 @@ export async function POST(request: NextRequest) {
         .update(row)
         .eq('id', existing.id);
       if (updateErr) {
-        console.error('[create-profile] update failed:', updateErr.code, updateErr.message);
+        console.error('[create-profile] update failed:', updateErr.code, updateErr.message, '|', describeKey());
         return NextResponse.json({ ok: false, error: friendlyPatronError(updateErr.message) }, { status: 400 });
       }
       return NextResponse.json({ ok: true, patronRowId: existing.id, patronId: existing.patron_id, recovered: true });
@@ -146,7 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (insertErr) {
-      console.error('[create-profile] insert failed:', insertErr.code, insertErr.message);
+      console.error('[create-profile] insert failed:', insertErr.code, insertErr.message, '|', describeKey());
       return NextResponse.json({ ok: false, error: friendlyPatronError(insertErr.message) }, { status: 400 });
     }
 
@@ -193,7 +200,7 @@ async function isCallerAuthorized(
 function friendlyPatronError(message: string) {
 
   if (/row-level security|permission denied|42501/i.test(message)) {
-    return 'Your profile could not be saved due to a permissions issue. The library team has been informed â€” please try again shortly.';
+    return 'Your profile could not be saved due to a permissions issue. The library team has been informed Ã¢â‚¬â€ please try again shortly.';
   }
   if (/duplicate key|23505/i.test(message)) {
     return 'An account profile already exists for this user. Please sign in instead, or contact the library desk.';
