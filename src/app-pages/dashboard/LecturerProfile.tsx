@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import BackButton from '@/components/BackButton';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -466,6 +467,7 @@ export default function LecturerProfile() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-8">
+      <BackButton label="Back" />
       {/* Header + Progress */}
       <div>
         <div className="flex items-start justify-between gap-4 flex-wrap">

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import StudyBreakButton from '@/components/StudyBreakButton';
+import BackButton from '@/components/BackButton';
 
 interface PatronData {
   id: string;
@@ -172,6 +173,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
+        <BackButton label="Back" />
         {patron?.status === 'pending' && (
           <div className="mb-6 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
             Your account is <strong>pending approval</strong>. A librarian will review your registration and

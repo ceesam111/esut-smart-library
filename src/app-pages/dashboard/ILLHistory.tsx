@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import BackButton from '@/components/BackButton';
 
 interface ILLTicket {
   id: string;
@@ -107,6 +108,7 @@ export default function ILLHistory() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
+        <BackButton label="Back" />
         <div className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Inter-Library Loans</h1>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import BackButton from '@/components/BackButton';
 
 interface ReadingList {
   id: string;
@@ -117,6 +118,7 @@ export default function ReadingLists() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      <BackButton label="Back" />
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-serif font-semibold text-primary-800">Reading Lists</h1>

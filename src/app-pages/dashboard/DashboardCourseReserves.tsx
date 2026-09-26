@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import BackButton from '@/components/BackButton';
 
 interface CourseList {
   id: string;
@@ -117,6 +118,7 @@ export default function DashboardCourseReserves() {
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="max-w-4xl mx-auto">
+        <BackButton label="Back" />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-neutral-900">Course Reading Lists</h1>
           <p className="text-neutral-500 mt-2">Required and recommended materials for your courses.</p>
