@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
         .update(row)
         .eq('id', existing.id);
       if (updateErr) {
+        console.error('[create-profile] update failed:', updateErr.code, updateErr.message);
         return NextResponse.json({ ok: false, error: friendlyPatronError(updateErr.message) }, { status: 400 });
       }
       return NextResponse.json({ ok: true, patronRowId: existing.id, patronId: existing.patron_id, recovered: true });
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (insertErr) {
+      console.error('[create-profile] insert failed:', insertErr.code, insertErr.message);
       return NextResponse.json({ ok: false, error: friendlyPatronError(insertErr.message) }, { status: 400 });
     }
 
@@ -152,6 +154,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, patronRowId: created?.id ?? null, patronId });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
+    console.error('[create-profile] threw:', message);
     return NextResponse.json({ ok: false, error: friendlyPatronError(message) }, { status: 500 });
   }
 }
@@ -190,7 +193,7 @@ async function isCallerAuthorized(
 function friendlyPatronError(message: string) {
 
   if (/row-level security|permission denied|42501/i.test(message)) {
-    return 'Your profile could not be saved due to a permissions issue. The library team has been informed — please try again shortly.';
+    return 'Your profile could not be saved due to a permissions issue. The library team has been informed â€” please try again shortly.';
   }
   if (/duplicate key|23505/i.test(message)) {
     return 'An account profile already exists for this user. Please sign in instead, or contact the library desk.';
