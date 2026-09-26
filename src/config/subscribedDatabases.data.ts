@@ -119,4 +119,24 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
     status: 'active',
     verifiedDate: '2026-09-23',
   },
+  {
+    id: 'ebscohost',
+    name: 'EBSCOHOST via TERAS',
+    shortName: 'EBSCOHOST',
+    description:
+      "Access to EBSCOhost research databases — including academic journals, eBooks, magazines and periodicals — through Nigeria's Tertiary Education Resource Access System (TERAS). Coverage spans multidisciplinary, applied sciences, business, education and humanities collections, with full-text linking where the subscription allows.",
+    provider: 'EBSCO Information Services / TERAS Nigeria',
+    subjects: ['Multidisciplinary', 'Applied Sciences', 'Business', 'Education', 'Humanities', 'Health Sciences'],
+    resourceType: 'Research Database',
+    accessType: 'Institutional Subscription',
+    accessCode: 'SUBSCRIBED',
+    accessNote:
+      'Access is provided through the TERAS platform (teras.ng) using ESUT institutional entitlement. Sign in with your institutional credentials on TERAS.',
+    url: 'https://teras.ng',
+    imageUrl:
+      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fteras.ng',
+    isExternal: true,
+    status: 'active',
+    verifiedDate: '2026-09-25',
+  },
 ];

@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { routeChatCompletion, AiRoutingError } from '@/server/ai/providerRouter';
+import type { AiMessage } from '@/server/ai/aiGatewayClient';
 
 function systemPrompt() {
   return `You are Lexis, ESUT Library's AI Reference Librarian. Today's date is ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}. Answer questions from any field of endeavour, not only library topics. Give warm, practical, full answers that help the user understand the subject, apply it, and know what to do next.
@@ -15,36 +17,43 @@ Quality rules:
 - If a question is academic, include definitions, key points, examples, and study/research directions when useful.`;
 }
 
-function fallbackAnswer(messages: Array<{ role: string; content: string }>) {
+function fallbackAnswer(messages: Array<{ role: string; content: string }>, localOnly = false) {
   const question = messages.filter((message) => message.role === 'user').at(-1)?.content ?? '';
-  return `I can help with that, but I am temporarily using a limited response mode. I should not present detailed factual claims as fully validated while the AI gateway is unavailable. For a reliable answer, start from Global Search to check ESUT catalogue records, open-access resources, repository items, theses, and external academic sources. If a result needs librarian confirmation, use the resource request or review option so library staff can verify it.\n\nFor loans, thesis submission, interlibrary loan, reading lists, or account approval, use your dashboard because those services are tied to your patron profile. If the matter is urgent, contact the library desk or use the human librarian referral option.\n\nReferences\nESUT Smart Library catalogue, repository, thesis portal, and open-access search tools.\n\nYour question: ${question}`;
+  const modeNote = localOnly
+    ? 'The private local AI service is unavailable right now, and privacy settings prevent using a cloud AI for this request.'
+    : 'I am temporarily using a limited response mode because every AI provider is unavailable.';
+  return `I can help with that, but ${modeNote} I should not present detailed factual claims as fully validated in this mode. For a reliable answer, start from Global Search to check ESUT catalogue records, open-access resources, repository items, theses, and external academic sources. If a result needs librarian confirmation, use the resource request or review option so library staff can verify it.\n\nFor loans, thesis submission, interlibrary loan, reading lists, or account approval, use your dashboard because those services are tied to your patron profile. If the matter is urgent, contact the library desk or use the human librarian referral option.\n\nReferences\nESUT Smart Library catalogue, repository, thesis portal, and open-access search tools.\n\nYour question: ${question}`;
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const messages = Array.isArray(body.messages) ? body.messages : [];
-    const key = process.env.AI_GATEWAY_API_KEY;
-    const baseUrl = (process.env.AI_GATEWAY_BASE_URL || 'https://ai-gateway.vercel.sh/v1').replace(/\/$/, '');
-    const model = process.env.AI_FAST_MODEL || process.env.AI_DEFAULT_MODEL || 'openai/gpt-4o-mini';
+    const messages: AiMessage[] = Array.isArray(body.messages)
+      ? body.messages
+          .filter((m: { role?: string; content?: string }) => m && typeof m.role === 'string' && typeof m.content === 'string')
+          .map((m: { role: string; content: string }) => ({ role: m.role as AiMessage['role'], content: m.content }))
+      : [];
 
-    if (!key) {
-      return new Response(fallbackAnswer(messages), { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    try {
+      const result = await routeChatCompletion({
+        messages: [{ role: 'system', content: systemPrompt() }, ...messages],
+        modelKind: 'fast',
+        maxTokens: 2048,
+      });
+      return new Response(result.text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    } catch (error) {
+      const attempts = error instanceof AiRoutingError ? error.attempts : [];
+      const localOnly = attempts.some((attempt) => attempt.reason === 'policy_local_only');
+      const reasonText = attempts.length
+        ? ` (providers tried: ${attempts.map((a) => `${a.provider}=${a.reason ?? 'ok'}`).join(', ')})`
+        : '';
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[reference-librarian] AI unavailable${reasonText}`);
+      }
+      return new Response(fallbackAnswer(messages, localOnly), {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
     }
-
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, stream: false, messages: [{ role: 'system', content: systemPrompt() }, ...messages] }),
-    });
-
-    if (!response.ok) {
-      return new Response(fallbackAnswer(messages), { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-    }
-
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || fallbackAnswer(messages);
-    return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'AI unavailable' }, { status: 500 });
   }

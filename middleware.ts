@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const sensitivePrefixes = ['/api/auth', '/api/generate-questions', '/api/admin/catalogue/enrich-catalogue', '/api/admin/harvest', '/api/resource-requests/external'];
 const sensitiveExact = new Set(['/api/search/resources']);
-const csrfExemptPrefixes = ['/api/ai/', '/api/security/turnstile/'];
+const csrfExemptPrefixes = ['/api/ai/', '/api/security/turnstile/', '/api/registration/'];
 const devBuckets = new Map<string, { count: number; resetAt: number }>();
 
 const ajKey = process.env.ARCJET_KEY || process.env.ARC_JET || '';

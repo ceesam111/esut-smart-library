@@ -120,7 +120,8 @@ function SuccessScreen({ result }: { result: RegisterResult }) {
         </p>
         {result.requiresEmailVerification && !result.verificationEmailSent && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Your account was created, but the verification email could not be confirmed as sent. Please contact the library desk if it does not arrive shortly.
+            {result.emailNotice ||
+              'Your account was created, but the verification email could not be confirmed as sent. You can request a new link from the sign-in page, or contact the library desk if it does not arrive shortly.'}
           </div>
         )}
         <div className="space-y-3">

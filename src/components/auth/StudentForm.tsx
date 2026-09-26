@@ -30,7 +30,9 @@ export default function StudentForm({ onSuccess, turnstileToken, turnstileRequir
     if (!agreed) return setError('Please agree to the Terms and Privacy Policy.');
     if (turnstileRequired && !turnstileToken) return setError('Please complete the Cloudflare security verification before submitting.');
     setLoading(true);
-    const res = await registerAccount({
+    let res: RegisterResult;
+    try {
+      res = await registerAccount({
       role: 'student',
       email: f.email,
       password: f.password,
@@ -48,8 +50,12 @@ export default function StudentForm({ onSuccess, turnstileToken, turnstileRequir
         preferred_branch: f.branch, short_bio: f.bio || null,
         profile_photo_url: profilePhotoUrl,
       },
-    });
-    setLoading(false);
+      });
+    } catch {
+      res = { ok: false, error: 'Registration failed due to an unexpected error. Please try again.' };
+    } finally {
+      setLoading(false);
+    }
     if (!res.ok) return setError(res.error ?? 'Registration failed.');
     onSuccess(res);
   }

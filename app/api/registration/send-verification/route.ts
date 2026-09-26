@@ -67,14 +67,26 @@ export async function POST(request: NextRequest) {
     if (tokenError) throw new Error(tokenError.message);
 
     const origin = getPublicOrigin(request);
-    await sendRegistrationVerificationEmailServer({
-      email: patron.email,
-      full_name: patron.full_name,
-      verificationLink: `${origin}/api/registration/verify?token=${encodeURIComponent(token)}`,
-      expiresAt,
-    });
-
-    return NextResponse.json({ sent: true, expiresAt, policy });
+    try {
+      await sendRegistrationVerificationEmailServer({
+        email: patron.email,
+        full_name: patron.full_name,
+        verificationLink: `${origin}/api/registration/verify?token=${encodeURIComponent(token)}`,
+        expiresAt,
+      });
+      return NextResponse.json({ sent: true, expiresAt, policy });
+    } catch (emailError) {
+      // The verification token was created successfully. Email delivery is
+      // best-effort: provider rate limits must NOT block registration.
+      const code = (emailError as { code?: string })?.code;
+      const reason = code === 'rate_limited' ? 'rate_limited'
+        : code === 'not_configured' ? 'not_configured'
+        : 'send_failed';
+      return NextResponse.json(
+        { sent: false, reason, expiresAt, policy, retryable: true },
+        { status: 202 },
+      );
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
     return NextResponse.json({ error: message }, { status: 400 });

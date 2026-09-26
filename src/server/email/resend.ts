@@ -46,13 +46,36 @@ function template(content: string): string {
 </html>`;
 }
 
+export class EmailSendError extends Error {
+  constructor(message: string, public readonly code: 'rate_limited' | 'not_configured' | 'send_failed') {
+    super(message);
+    this.name = 'EmailSendError';
+  }
+}
+
+function classifySmtpError(error: unknown): EmailSendError {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const responseCode = (error as { responseCode?: number })?.responseCode;
+  const lower = raw.toLowerCase();
+  if (
+    responseCode === 421 || responseCode === 450 || responseCode === 451 || responseCode === 452 ||
+    /rate.?limit|too many|throttl|429|try again later|quota exceeded|exceeded a rate limit|temporarily rejected/i.test(lower)
+  ) {
+    return new EmailSendError(raw || 'Email provider rate limit reached.', 'rate_limited');
+  }
+  if (!process.env.RESEND_API_KEY || !(process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL)) {
+    return new EmailSendError(raw || 'Email service is not configured.', 'not_configured');
+  }
+  return new EmailSendError(raw || 'Email could not be sent.', 'send_failed');
+}
+
 async function sendEmail(to: string, toName: string, subject: string, html: string) {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL;
   const fromName = process.env.FROM_NAME || BRAND.libraryName;
 
-  if (!apiKey) throw new Error('RESEND_API_KEY is not configured.');
-  if (!fromEmail) throw new Error('FROM_EMAIL is not configured.');
+  if (!apiKey) throw new EmailSendError('RESEND_API_KEY is not configured.', 'not_configured');
+  if (!fromEmail) throw new EmailSendError('FROM_EMAIL is not configured.', 'not_configured');
 
   const port = Number(process.env.RESEND_SMTP_PORT || process.env.SMTP_PORT || 587);
   const transporter = nodemailer.createTransport({
@@ -64,14 +87,21 @@ async function sendEmail(to: string, toName: string, subject: string, html: stri
       user: process.env.RESEND_SMTP_USER || process.env.SMTP_USER || 'resend',
       pass: apiKey,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
   });
 
-  await transporter.sendMail({
-    from: `${fromName} <${fromEmail}>`,
-    to: toName ? `${toName} <${to}>` : to,
-    subject,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `${fromName} <${fromEmail}>`,
+      to: toName ? `${toName} <${to}>` : to,
+      subject,
+      html,
+    });
+  } catch (error) {
+    throw classifySmtpError(error);
+  }
 }
 
 export async function sendRegistrationVerificationEmailServer(patron: {

@@ -58,7 +58,7 @@ const NAV_ITEMS = [
     dropdown: 'research',
     links: [
       { label: 'Ask Lexis — AI Reference Librarian', href: '/ai-librarian' },
-      { label: 'Library AI Tools',          href: '/ai-tools' },
+      { label: 'AI Tools Directory',          href: '/ai-tools' },
       { label: 'Federated Search',          href: '/search/global' },
       { label: 'Subscribed Databases',      href: '/subscribed-databases' },
       { label: 'Open Access Databases',     href: '/open-access-databases' },

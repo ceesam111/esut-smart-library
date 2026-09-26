@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { getDashboardPath, type AppRole } from '@/config/roles.config';
@@ -81,6 +81,8 @@ function PasswordInput({
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const registrationStatus = new URLSearchParams(location.search).get('registration');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -176,6 +178,21 @@ export default function Login() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg border border-neutral-100 p-10">
+          {registrationStatus === 'verified' && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
+              Your email has been verified. Sign in to access your library dashboard.
+            </div>
+          )}
+          {registrationStatus === 'expired' && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              This verification link has expired. Sign in and request a new verification email from your dashboard.
+            </div>
+          )}
+          {registrationStatus === 'invalid' && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+              That verification link is invalid or has already been used. Sign in to continue.
+            </div>
+          )}
           {error && (
             <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
               {error}

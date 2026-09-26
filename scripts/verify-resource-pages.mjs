@@ -17,7 +17,8 @@ const checks = {
   'OA count=117': ids.length === 117,
   'OA unique ids': new Set(ids).size === 117,
   'No research4life umbrella id': !ids.includes('research4life'),
-  'Subscribed count=6': subIds.length === 6,
+  'Subscribed count=7': subIds.length === 7,
+  'EBSCOHOST via teras.ng present': subIds.includes('ebscohost') && sub.includes('https://teras.ng'),
   'R4L five present': r4l.every((id) => subIds.includes(id)),
   'No Research4Life seventh card': !subNames.some((n) => /^Research4Life$/i.test(n)),
   'Nav has Subscribed route': nav.includes('/subscribed-databases'),
@@ -29,6 +30,8 @@ const checks = {
   'OPAC exact URL': cfg.includes('https://esutlibrary.librarika.com'),
   'WhatsApp prefilled message': cfg.includes('Hello Librarian, I need access details'),
   'Repo nav Open Access updated': !nav.includes("label: 'Open Access Resources',  href: '/categories'"),
+  'AI Tools in nav and routes': nav.includes('/ai-tools') && app.includes('/ai-tools'),
+  'AI Tools directory data': fs.readFileSync('src/config/aiTools.data.ts', 'utf8').includes('export const AI_TOOLS'),
 };
 
 let fail = 0;

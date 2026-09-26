@@ -30,7 +30,7 @@ export async function startAiRunLog(input: AiRunLogStart) {
   return data as { id: string; tenant_id: string };
 }
 
-export async function completeAiRunLog(input: { runId: string; tenantId: string; purpose: string; model: string; output: unknown; inputTokens?: number; outputTokens?: number; estimatedCost?: number }) {
+export async function completeAiRunLog(input: { runId: string; tenantId: string; purpose: string; model: string; provider?: string; output: unknown; inputTokens?: number; outputTokens?: number; estimatedCost?: number }) {
   const supabase = getSupabaseAdminClient();
   await supabase.from('agent_runs').update({
     status: 'completed',
@@ -38,12 +38,13 @@ export async function completeAiRunLog(input: { runId: string; tenantId: string;
     input_tokens: input.inputTokens ?? 0,
     output_tokens: input.outputTokens ?? 0,
     estimated_cost: input.estimatedCost ?? 0,
+    ...(input.provider ? { ai_provider: input.provider } : {}),
     finished_at: new Date().toISOString(),
   }).eq('id', input.runId);
   await supabase.from('tenant_ai_usage').insert({
     tenant_id: input.tenantId,
     agent_run_id: input.runId,
-    provider: 'vercel-ai-gateway',
+    provider: input.provider ?? 'vercel-ai-gateway',
     model: input.model,
     input_tokens: input.inputTokens ?? 0,
     output_tokens: input.outputTokens ?? 0,

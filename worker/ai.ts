@@ -27,29 +27,26 @@ export async function workerJsonCompletion<T>(input: {
   maxTokens?: number;
   temperature?: number;
 }) {
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
-  if (!apiKey) return { data: input.fallback, usedAi: false, model: null as string | null };
-  const baseUrl = (process.env.AI_GATEWAY_BASE_URL || 'https://ai-gateway.vercel.sh/v1').replace(/\/$/, '');
-  const model = process.env.AI_FAST_MODEL || process.env.AI_DEFAULT_MODEL || 'openai/gpt-4o-mini';
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      max_tokens: input.maxTokens ?? 900,
+  // Free-first provider chain (Ollama → Gemini → Groq → NVIDIA NIM → paid
+  // gateway). If nothing is configured the worker continues with its fallback
+  // value instead of failing the job.
+  const { routeChatCompletion } = await import('../src/server/ai/providerRouter');
+  try {
+    const result = await routeChatCompletion({
+      modelKind: 'fast',
+      maxTokens: input.maxTokens ?? 900,
       temperature: input.temperature ?? 0.2,
       messages: [
         { role: 'system', content: `${BASE_JSON_PROMPT}\n${input.systemPrompt ?? ''}` },
         { role: 'user', content: input.userPrompt },
       ],
-    }),
-  });
-  if (!response.ok) return { data: input.fallback, usedAi: false, model };
-  const raw = await response.json();
-  const text = raw.choices?.[0]?.message?.content ?? '';
-  try {
-    return { data: JSON.parse(extractJson(text)) as T, usedAi: true, model };
+    });
+    try {
+      return { data: JSON.parse(extractJson(result.text)) as T, usedAi: true, model: result.model, provider: result.provider };
+    } catch {
+      return { data: input.fallback, usedAi: false, model: result.model, provider: result.provider };
+    }
   } catch {
-    return { data: input.fallback, usedAi: false, model };
+    return { data: input.fallback, usedAi: false, model: null as string | null, provider: null as string | null };
   }
 }
