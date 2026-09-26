@@ -20,7 +20,9 @@ const ASSIGNABLE: AssignableRole[] = [
 /** Admin-scoped roles only a super administrator may grant or revoke. */
 const SUPER_ONLY_ROLES: string[] = ADMIN_GRANT_ONLY_ROLES;
 
-type Tab = 'users' | 'invite' | 'registration' | 'audit';
+type Tab = 'users' | 'invite' | 'registration' | 'unconfirmed' | 'audit';
+
+type UnconfirmedRow = { id: string; email: string; created_at: string; provider: string; profile: boolean; roles: number };
 
 function Badge({ role }: { role: string }) {
   const isSuper = role === 'super_admin';
@@ -48,6 +50,8 @@ export default function AdminAccounts() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [search, setSearch] = useState('');
   const [registrationPolicy, setRegistrationPolicy] = useState<RegistrationAccessPolicy>('email_verification_with_branch_approval');
+  const [unconfirmed, setUnconfirmed] = useState<UnconfirmedRow[]>([]);
+  const [loadingUnconfirmed, setLoadingUnconfirmed] = useState(false);
 
   // invite form
   const [invEmail, setInvEmail] = useState('');
@@ -142,6 +146,33 @@ export default function AdminAccounts() {
     }, 'Registration access policy updated');
   }
 
+  async function loadUnconfirmed() {
+    setLoadingUnconfirmed(true);
+    try {
+      const json = await authFetch('/api/admin/unconfirmed-registrations');
+      setUnconfirmed(json.accounts ?? []);
+    } catch (e) {
+      flash('err', (e as Error).message);
+    } finally {
+      setLoadingUnconfirmed(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === 'unconfirmed' && isSuper) void loadUnconfirmed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, isSuper]);
+
+  async function purgeUnconfirmed(target: { userId?: string; all?: boolean }, key: string, okText: string) {
+    await run(key, async () => {
+      await authFetch('/api/admin/unconfirmed-registrations', {
+        method: 'POST',
+        body: JSON.stringify(target),
+      });
+      await loadUnconfirmed();
+    }, okText);
+  }
+
   if (authLoading) return <div className="text-sm text-neutral-500">Loading…</div>;
 
   if (!isAccountManager) {
@@ -193,7 +224,7 @@ export default function AdminAccounts() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-neutral-200 mb-4">
-        {([['users', 'Users & Roles'], ['invite', 'Invitations'], ...(isSuper ? [['registration', 'Registration Policy'], ['audit', 'Audit Log']] : [])] as [Tab, string][]).map(([k, label]) => (
+        {([['users', 'Users & Roles'], ['invite', 'Invitations'], ...(isSuper ? [['registration', 'Registration Policy'], ['unconfirmed', 'Unconfirmed'], ['audit', 'Audit Log']] : [])] as [Tab, string][]).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -393,6 +424,84 @@ export default function AdminAccounts() {
               </label>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Unconfirmed registrations ── */}
+      {tab === 'unconfirmed' && isSuper && (
+        <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h2 className="text-base font-semibold text-primary-900">Unconfirmed registrations</h2>
+              <p className="text-sm text-neutral-500 mt-1">
+                Accounts whose email was never verified. They cannot sign in and hold no access.
+                Removing one also deletes its profile and roles so the address can be registered again.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={loadUnconfirmed}
+                disabled={loadingUnconfirmed}
+                className="px-3 py-2 rounded-lg border border-neutral-300 text-xs font-semibold text-neutral-700 disabled:opacity-50"
+              >
+                {loadingUnconfirmed ? 'Loading…' : 'Refresh'}
+              </button>
+              <button
+                onClick={() => purgeUnconfirmed({ all: true }, 'purge-all', 'Unconfirmed registrations removed')}
+                disabled={busy === 'purge-all' || !unconfirmed.length}
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                style={{ background: '#991B1B' }}
+              >
+                {busy === 'purge-all' ? 'Removing…' : `Remove all (${unconfirmed.length})`}
+              </button>
+            </div>
+          </div>
+
+          {loadingUnconfirmed ? (
+            <div className="text-sm text-neutral-500">Loading unconfirmed registrations…</div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-neutral-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
+                    <th className="px-3 py-2">Email</th>
+                    <th className="px-3 py-2">Registered</th>
+                    <th className="px-3 py-2">Profile</th>
+                    <th className="px-3 py-2">Roles</th>
+                    <th className="px-3 py-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unconfirmed.map((row) => (
+                    <tr key={row.id} className="border-t border-neutral-100">
+                      <td className="px-3 py-2 text-neutral-800">{row.email}</td>
+                      <td className="px-3 py-2 text-xs text-neutral-500 whitespace-nowrap">
+                        {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-neutral-600">{row.profile ? 'Yes' : 'No'}</td>
+                      <td className="px-3 py-2 text-xs text-neutral-600">{row.roles}</td>
+                      <td className="px-3 py-2">
+                        <button
+                          onClick={() => purgeUnconfirmed({ userId: row.id }, `purge-${row.id}`, 'Registration removed')}
+                          disabled={busy === `purge-${row.id}`}
+                          className="px-2 py-1 rounded border border-red-200 text-[11px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {busy === `purge-${row.id}` ? 'Removing…' : 'Remove'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!unconfirmed.length && (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-6 text-center text-sm text-neutral-400">
+                        No unconfirmed registrations found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

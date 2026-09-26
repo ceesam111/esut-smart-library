@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { signRecoveryReceipt } from '@/server/registration/recoveryReceipt';
+import { findUserIdByEmail } from '@/server/auth/userLookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,26 +51,6 @@ function clientKey(request: NextRequest) {
 
 function isDuplicateEmailError(message: string) {
   return /already been registered|already registered|already exists/i.test(message);
-}
-
-type AdminClient = ReturnType<typeof getSupabaseAdminClient>;
-
-/** Prefers the indexed RPC, falls back to a paginated scan if it is missing. */
-async function findUserIdByEmail(supabase: AdminClient, email: string): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.rpc('auth_user_id_by_email', { p_email: email });
-    if (!error && typeof data === 'string' && data) return data;
-  } catch {
-    // RPC not applied yet — fall through to the scan.
-  }
-  for (let page = 1; page <= 10; page += 1) {
-    const { data: list, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
-    if (error || !list?.users?.length) return null;
-    const match = list.users.find((u) => (u.email || '').toLowerCase() === email);
-    if (match) return match.id;
-    if (list.users.length < 100) return null;
-  }
-  return null;
 }
 
 export async function POST(request: NextRequest) {

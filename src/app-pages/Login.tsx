@@ -113,7 +113,25 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    let { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err && /email not confirmed|confirm your email/i.test(err.message || '')) {
+      // Email verification must never lock a user out: prove the password to
+      // the server (it confirms the account when no email can be delivered),
+      // then sign in again.
+      const proof = await fetch('/api/registration/prove-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, confirm: true }),
+      }).catch(() => null);
+      const json = await proof?.json().catch(() => ({}));
+      if (proof?.ok && json?.ok) {
+        const retry = await supabase.auth.signInWithPassword({ email, password });
+        if (!retry.error) {
+          data = retry.data;
+          err = null;
+        }
+      }
+    }
     setLoading(false);
     if (err) {
       const record = getAttempts(email);

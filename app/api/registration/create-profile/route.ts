@@ -163,8 +163,8 @@ export async function POST(request: NextRequest) {
  * 2. An auth user that is still unconfirmed and was created within the last
  *    30 minutes (fresh signup), which is the state right after signUp().
  * 3. A signed recovery receipt minted by `/api/registration/create-auth-user`
- *    when a rate-limited sign-up left an unconfirmed account behind. Valid for
- *    one hour and bound to this exact auth user.
+ *    or `/api/registration/prove-password` once the caller proved the account
+ *    password. Valid for one hour and bound to this exact auth user.
  */
 async function isCallerAuthorized(
   request: NextRequest,
@@ -178,8 +178,10 @@ async function isCallerAuthorized(
     const { data, error } = await supabase.auth.getUser(token);
     if (!error && data.user?.id === userId) return true;
   }
-  if (authUser.email_confirmed_at) return false;
+  // A signed receipt proves the password was known, so it is accepted even
+  // for an account that was confirmed in the meantime (auto-verification).
   if (recoveryReceipt && verifyRecoveryReceipt(recoveryReceipt, userId)) return true;
+  if (authUser.email_confirmed_at) return false;
   const createdAt = authUser.created_at ? Date.parse(authUser.created_at) : NaN;
   if (!Number.isFinite(createdAt)) return false;
   return Date.now() - createdAt <= SIGNUP_PROOF_WINDOW_MS;

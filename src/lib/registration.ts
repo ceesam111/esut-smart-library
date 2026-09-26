@@ -46,6 +46,40 @@ type AuthUserFallback =
   | { ok: false; exists?: boolean; error?: string };
 
 /**
+ * Proves the account password to the server (GoTrue only reports
+ * `email_not_confirmed` after the password matched) and returns a signed
+ * receipt that `/api/registration/create-profile` and
+ * `/api/registration/send-verification` accept when the browser has no
+ * session — the normal state after `signUp()`. With `confirm`, email
+ * verification is completed too, so sign-in is never blocked when no email
+ * can be delivered.
+ */
+async function proveAccountPassword(
+  email: string,
+  password: string,
+  confirm: boolean,
+): Promise<{ receipt: string; userId: string; confirmed: boolean } | null> {
+  try {
+    const res = await fetch('/api/registration/prove-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, confirm }),
+    });
+    const json = await res.json().catch(() => ({}) as Record<string, unknown>);
+    if (res.ok && json.ok && typeof json.receipt === 'string' && json.receipt) {
+      return {
+        receipt: json.receipt,
+        userId: typeof json.userId === 'string' ? json.userId : '',
+        confirmed: !!json.confirmed,
+      };
+    }
+  } catch {
+    // Network problem — the caller falls back to the fresh-signup window.
+  }
+  return null;
+}
+
+/**
  * Last-resort account creation when `auth.signUp()` is rejected by the
  * provider's email rate limit. Creates the auth user server-side with no
  * provider email; verification is issued by our own token email instead.
@@ -191,15 +225,38 @@ async function runRegistration(opts: {
       if (signIn.error || !signIn.data.user) {
         const signInMessage = signIn.error?.message ?? '';
         const notConfirmed = /not confirmed|confirm your email/i.test(signInMessage);
-        return {
-          ok: false,
-          error: notConfirmed
-            ? 'An account with this email already exists but has not been verified yet. Enter the password you used when you first registered, or contact the library desk to reset it.'
-            : 'An account with this email already exists. Please sign in, or use a different email address.',
-        };
+        if (notConfirmed) {
+          // GoTrue only reports "not confirmed" after the password matched,
+          // so the password is proven: keep going with a signed receipt
+          // instead of telling the user to start registration over.
+          const proof = await proveAccountPassword(opts.email, opts.password, false);
+          if (proof) {
+            userId = proof.userId || userId;
+            recoveryReceipt = proof.receipt;
+          }
+        }
+        if (!recoveryReceipt) {
+          return {
+            ok: false,
+            error: notConfirmed
+              ? 'An account with this email already exists but has not been verified yet. Enter the password you used when you first registered, or contact the library desk to reset it.'
+              : 'An account with this email already exists. Please sign in, or use a different email address.',
+          };
+        }
+      } else {
+        userId = signIn.data.user.id;
       }
-      userId = signIn.data.user.id;
     }
+  }
+
+  // No session (the normal state after signUp(), and after a duplicate
+  // response that returned the existing user without a session) — prove the
+  // password once so profile creation and the verification email are always
+  // authorised, whatever the age of the account.
+  const sessionToken = (await supabase.auth.getSession()).data.session?.access_token ?? null;
+  if (!sessionToken && !recoveryReceipt) {
+    const proof = await proveAccountPassword(opts.email, opts.password, !requiresEmailVerification);
+    if (proof) recoveryReceipt = proof.receipt;
   }
 
   const profilePayload = { ...opts.profile, full_name: opts.fullName };
@@ -239,8 +296,7 @@ async function runRegistration(opts: {
   let emailNotice: string | undefined;
 
   if (requiresEmailVerification) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
+    const token = sessionToken;
     const sendOnce = () =>
       fetch('/api/registration/send-verification', {
         method: 'POST',
@@ -248,7 +304,11 @@ async function runRegistration(opts: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ userId, email: opts.email }),
+        body: JSON.stringify({
+          userId,
+          email: opts.email,
+          ...(token || !recoveryReceipt ? {} : { recoveryReceipt }),
+        }),
       }).catch(() => null);
 
     let res = await sendOnce();
