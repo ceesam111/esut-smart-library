@@ -66,5 +66,5 @@ Open items (need user action):
 1. ~~**Lexis limited-mode**~~ — resolved in part 2: free-tier `GEMINI_API_KEY`/`GROQ_API_KEY` added to `/root/esut-extra.env`, Lexis now answers via Gemini. Vercel AI Gateway still has no credit (harmless fallback).
 2. ~~Cloudflare Turnstile: no site/secret keys exist yet~~ — resolved in part 2: keys configured, site key served, verify endpoint rejects bad tokens with the real Cloudflare code.
 3. AFUED domain Cloudflare 403 (Under Attack / Bot Fight Mode) must be disabled by the account owner.
-4. Remaining items from the numbered list above (ILS loan, search ranking across sources, statistics, harvest, reserved-books workflow, etc.) not touched in this session — PDF bucket (issue 6) and Lyria voice (issue 10) fixed in part 2.
+4. Remaining items from the numbered list above (ILS loan, search ranking across sources, statistics, harvest, reserved-books workflow, etc.) not touched in this session — PDF bucket (issue 6) and Lyria voice (issue 10) fixed in part 2. ISSUE 22: MyProfile photo limits now fixed (max 150 KB, no 50 KB minimum; using shared `readProfilePhoto` helper).
 5. `npm run lint` still broken locally (pre-existing); project folder name `ESUT SMART LIBRARY` does not match the DWC registry slug `esut-smart-library`.
