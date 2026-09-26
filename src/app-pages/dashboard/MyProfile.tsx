@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import BackButton from '@/components/BackButton';
+import { readProfilePhoto } from '@/components/auth/ProfilePhotoInput';
 
 interface ResearcherProfile {
   id: string;
@@ -135,34 +136,12 @@ export default function MyProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
     setPhotoError(null);
-    if (!file.type.startsWith('image/') || !/\.(jpe?g|png|webp)$/i.test(file.name)) {
-      setPhotoError('Please choose a JPG, PNG, or WebP image.');
-      return;
-    }
-    const minBytes = 50 * 1024;
-    const maxBytes = 240 * 1024;
-
-    if (file.size < minBytes) {
-      setPhotoError(`Photo is too small (${Math.round(file.size / 1024)} KB). Minimum size is 50 KB.`);
-      return;
-    }
-    if (file.size > maxBytes) {
-      setPhotoError(`Photo is too large (${Math.round(file.size / 1024)} KB). Maximum size is 240 KB.`);
-      return;
-    }
-
     setUploadingPhoto(true);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error('Could not read selected image.'));
-        reader.readAsDataURL(file);
-      });
+      const dataUrl = await readProfilePhoto(file);
       setPhotoUrl(dataUrl);
       setProfile((prev) => (prev ? { ...prev, profile_photo_url: dataUrl } : prev));
     } catch (error) {
-      console.error('Error uploading photo:', error);
       setPhotoError(error instanceof Error ? error.message : 'Could not process that photo.');
     } finally {
       setUploadingPhoto(false);
@@ -275,13 +254,13 @@ export default function MyProfile() {
                 </label>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handlePhotoUpload}
                   disabled={uploadingPhoto}
                   className="input w-full text-sm text-gray-600"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  JPG, PNG, or WebP (50KB - 240KB)
+                  JPG, PNG, or WebP (max 150 KB — larger photos are compressed automatically)
                 </p>
                 {photoError && <p className="text-xs text-red-600 mt-2">{photoError}</p>}
               </div>
