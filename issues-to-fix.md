@@ -90,4 +90,42 @@ Verification evidence (2026-09-26): `next build` OK; vitest 52/52; `verify-resou
 
 Known gap (found while checking admin roles, not fixed here): `catalog_admin`, `ir_admin` and `dept_ir_officer` exist in the front-end `roles.config.ts` permission map but are **not** in the server-side `FoundationRole` / `LIBRARY_ADMIN_ROLES` in `src/server/auth/permissions.ts`, and are not in the assignable list in `Accounts.tsx`. A user granted one of them in the database would pass front-end gates but be rejected by `requireRole()` API calls.
 
-Still open from the numbered list: issues 3, 5, 7, 9, 11-19, 21 (ILL submit, resource labels/3D overflow, student-only route guards, repository header, news dates, researchers page, hold checkout, barcode, statistics, duplicate staging, harvest, content engine, Take-A-Break extras, reserved-books visibility). Turnstile verification stays temporarily disabled by directive — re-enable in `src/server/security/turnstile.ts` once final keys are issued.
+Still open from the numbered list: issues 3, 5, 7, 9, 11-19, 21 (ILL submit, resource labels/3D overflow, student-only route guards, repository header, news dates, researchers page, hold checkout, barcode, statistics, duplicate staging, harvest, content engine, Take-A-Break extras, reserved-books visibility). Turnstile verification stays temporarily disabled by directive — re-enable in `src/server/security/turnstile.ts` once final keys are issued. Note (part 4): the Cloudflare keys in `/root/esut-extra.env` belong to a **different** Cloudflare application, so the widget is now removed everywhere — see below.
+
+
+## Session status 2026-09-26 (part 4 — role model alignment + Turnstile removal)
+
+Commits: `52eb629` (code + migrations), pushed to `ceesam111/esut-smart-library` master and deployed to the VPS.
+
+**Problem found while answering "what admin types exist":** the role model disagreed with itself in three places.
+
+| Layer | Roles |
+|---|---|
+| Postgres enum `public.app_role` | 7: super_admin, librarian, faculty_librarian, student, researcher_lecturer, admin_staff, guest |
+| Server `src/server/auth/permissions.ts` | 8: the 7 above + a legacy `admin` that can never exist |
+| Front end `src/config/roles.config.ts` | 10: the 7 above + catalog_admin, ir_admin, dept_ir_officer |
+
+`catalog_admin`, `ir_admin` and `dept_ir_officer` were granted in the UI permission map, in `ADMIN_DASHBOARD_ROLES`, in `useAuth` priority/privileged lists and in page gates (`CatalogueNew`, `IrDeposit`), but they could not be stored in `user_roles` (enum) and were unknown to every `requireRole()` call — so a user holding one passed the front end and got `Forbidden.` from the API.
+
+**Chosen approach: promote the three roles to first-class rather than delete them**, because the front end already encodes a sensible least-privilege split (catalogue vs IR vs department IR) and deleting it would collapse every admin into super/librarian.
+
+What changed:
+
+- `supabase/migrations/20260926140000_app_role_alignment_enum.sql` — `ALTER TYPE public.app_role ADD VALUE` for the three roles.
+- `supabase/migrations/20260926140100_app_role_alignment_library_staff.sql` — `is_library_staff()` now includes `catalog_admin` (the admin pages query `reservations`, `resource_requests` etc. directly from the browser, so RLS is what actually gates them), and `user_roles_librarian_manage_non_super` now refuses `super_admin`, `catalog_admin`, `ir_admin`, `dept_ir_officer` so only a super administrator can mint admin roles at the database, not just in the UI.
+- `permissions.ts` — the three roles added to `FoundationRole`; `catalog_admin` added to `LIBRARY_ADMIN_ROLES` (catalogue, staging, approvals, harvest, barcodes, storage, agents); all three added to `PRIVILEGED_ROLES` to match `privilegedRoles` in `useAuth` (they may only come from `user_roles`, never from `patrons.account_role`); new `ADMIN_GRANT_ONLY_ROLES`.
+- `admin-accounts.functions.ts` — the three roles are assignable; `assertCanManageTarget` enforces super-admin-only for `ADMIN_GRANT_ONLY_ROLES` (the previous check only covered `super_admin`).
+- `Accounts.tsx` — the three roles appear in the add-role select and the invite select, hidden from non-super administrators; revoke buttons use the same rule.
+
+**Turnstile removal (keys belong to another Cloudflare application):**
+
+- `Login.tsx` — widget, token state and the `verifyTurnstileClient` call removed; sign-in is now just email + password.
+- `Register.tsx` — `Security verification` box, `turnstileRequired` config fetch, token state and `RegistrationTurnstile` removed; the four registration forms are called with only `onSuccess`.
+- `StudentForm` / `ResearcherForm` / `AdminStaffForm` / `LibrarianForm` — `turnstileToken` / `turnstileRequired` / `turnstileWidget` props, the "Please complete the Cloudflare security verification" guard and the `turnstileToken` payload field all removed.
+- `src/lib/registration.ts` — no longer imports or calls `verifyTurnstileClient`; `turnstileToken` removed from the option types.
+- Deleted `src/components/security/TurnstileWidget.tsx` and `src/lib/turnstileClient.ts` (now unreferenced).
+- `GET /api/security/turnstile/config` now always returns `{"siteKey":null}` so a stale cached bundle cannot load Cloudflare's challenge script with the wrong key; `POST /api/security/turnstile/verify` keeps returning `{"ok":true,"skipped":true}` so older bundles do not break.
+
+Verification evidence (2026-09-26): `next build` OK; vitest 52/52; `verify-resource-pages.mjs` 18/18; `tsc --noEmit` = 64 errors, exactly the pre-existing baseline; built chunks contain **0** matches for `Security verification` and **0** for `challenges.cloudflare.com`; live `/api/security/turnstile/config` → `{"siteKey":null}`; `/register` and `/login` → 200; production E2E 13/13; both role migrations applied to the hosted Supabase database (enum now has 10 labels; `is_library_staff` includes `catalog_admin`; librarian insert policy updated); app container healthy.
+
+Not tested: an actual end-to-end login/registration as a `catalog_admin` user (no such account exists yet) and librarian-vs-super-admin role-grant behaviour through the UI.
