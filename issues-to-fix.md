@@ -149,3 +149,28 @@ Commits: `d6dbc5f` (code), pushed to `ceesam111/esut-smart-library` master and d
 Verification evidence (2026-09-26): `tsc --noEmit` = 64 errors (pre-existing baseline); vitest 52/52; `next build` OK; `verify-resource-pages.mjs` 18/18; production E2E 13/13; `verify-rate-limit.mjs` 5/5 including `send-verification -> 202 {"sent":false,"autoVerified":true,"reason":"send_failed"}`; deployed chunk `1921.fd6efc78a99ce4ee.js` contains `Email verification skipped`, `z-[9999]` and `createPortal`; `/register`, `/login` and `/api/health` all 200; container healthy after cutover.
 
 Not tested: a full browser-level registration (no headless browser available here) and the underlying Resend delivery failure, which is a separate fix (API key / From-domain) still outstanding. Two stranded unconfirmed accounts from earlier remain in `auth.users` with no profile (`u***@esut.edu.ng`, `s***@gmail.com`).
+
+
+## Session status 2026-09-26 (part 6 - registration never fails, sign-in never blocked, unconfirmed accounts purged)
+
+Commits: `82baec2` (password proof + admin purge), `4ab12e8` (receipt verification bug), `4d5b86f` (persistence error logging), pushed to `ceesam111/esut-smart-library` master and deployed.
+
+**What the product owner reported:** registering again returned "Registration session expired. Please start your registration again.", signing in returned "Email not confirmed", and unconfirmed registrations had to be removed from admin.
+
+**Root cause of the "session expired" message — the recovery receipt never verified.** `src/server/registration/recoveryReceipt.ts` built the payload as `registration:profile-recovery:v1:<uid>:<iat>:<sig>` but `verifyRecoveryReceipt` did `const [purpose, uid, issuedAt, signature] = raw.split(":")`, so the purpose (which itself contains colons) shifted every field one place left and the HMAC comparison always failed. Every earlier "receipt accepted" test had actually passed through the 30-minute fresh-signup window. Accounts older than 30 minutes without a valid bearer token therefore got 401 — which is exactly the state a user reaches after a rate-limited sign-up, after a duplicate-signup response that returns the existing user without a session, or after a partially completed registration. Fixed by reading the fields from the end of the payload.
+
+**What else changed to make registration permanent-proof:**
+
+- New `POST /api/registration/prove-password` (rate-limited per IP+email) proves the password without changing anything and returns a signed receipt. GoTrue only reports `email_not_confirmed` after the password matched, so that error is itself the proof. With `confirm: true` it also completes verification (same transitions as the emailed link).
+- `src/server/registration/passwordProof.ts` (proof + optional confirmation) and `src/server/registration/completeEmailVerification.ts` (shared confirm/patron-sync/role-grant logic, now used by both `send-verification` and `prove-password`).
+- `src/server/auth/userLookup.ts` — `findUserIdByEmail` moved out of the create-auth-user route for reuse.
+- `src/lib/registration.ts` — whenever the browser has no session (the normal state after `signUp()`) it proves the password once and uses the receipt for `create-profile` and `send-verification`; a duplicate sign-up that lands on "not confirmed" now resumes the registration instead of telling the user to start over; when the policy does not require email verification the proof also confirms the account so sign-in works immediately.
+- `app/api/registration/create-profile` — a valid receipt is accepted **before** the `email_confirmed_at` check, so an account confirmed in the meantime can still be resumed.
+- `app/api/registration/send-verification` — a caller without a bearer token must present a receipt (proof), not just a userId.
+- `src/app-pages/Login.tsx` — on `Email not confirmed` the page calls `prove-password` with `confirm: true` and signs in again, so a user is never locked out when no verification email can arrive.
+
+**Admin cleanup:** new `GET/POST /api/admin/unconfirmed-registrations` (super-admin only) lists auth users with no confirmation (plus whether a profile/roles exist) and removes one or all, deleting the patron row and granted roles first so the address can be registered cleanly again. Account Management gained an **Unconfirmed** tab with per-row Remove and Remove all buttons, and an audit entry is written best-effort.
+
+**Verification evidence (2026-09-26):** `tsc --noEmit` = 64 errors (pre-existing baseline); vitest 52/52; `next build` OK; `verify-resource-pages.mjs` 18/18; production E2E 13/13; rate-limit suite 5/5 (the send-verification check now sends the receipt proof); a dedicated 12-check live script covering the reported flows all passed — fresh registration with no session, receipt-issued proof, create-profile (previously 401), send-verification auto-verifying on `send_failed`, sign-in after auto-confirm, duplicate registration resume, create-profile for a confirmed account with receipt, admin purge routes returning 401 without an admin, and **0 unconfirmed accounts remaining** after the purge. All 4 previously stranded unconfirmed registrations (including the half-finished librarian profile) were removed; the product owner must register that address again.
+
+Not tested: the Unconfirmed tab through a real browser session (no headless browser here) and Resend delivery itself, which still fails (`reason: send_failed`) and is a separate fix.
