@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { getBearerToken } from '@/server/auth/requireUser';
+import { verifyRecoveryReceipt } from '@/server/registration/recoveryReceipt';
 import { institutionConfig } from '@config/institution.config';
 
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Registration email does not match the created account.' }, { status: 400 });
     }
 
-    const authorized = await isCallerAuthorized(request, supabase, userId, authUser.user);
+    const authorized = await isCallerAuthorized(
+      request,
+      supabase,
+      userId,
+      authUser.user,
+      typeof body.recoveryReceipt === 'string' ? body.recoveryReceipt : null,
+    );
     if (!authorized) {
       return NextResponse.json({ ok: false, error: 'Registration session expired. Please start your registration again.' }, { status: 401 });
     }
@@ -151,16 +158,20 @@ export async function POST(request: NextRequest) {
 
 /**
  * The client has no session after signUp (email confirmation is on), so this
- * route accepts one of two proofs:
+ * route accepts one of three proofs:
  * 1. A valid bearer access token belonging to the same auth user (recovery path).
  * 2. An auth user that is still unconfirmed and was created within the last
  *    30 minutes (fresh signup), which is the state right after signUp().
+ * 3. A signed recovery receipt minted by `/api/registration/create-auth-user`
+ *    when a rate-limited sign-up left an unconfirmed account behind. Valid for
+ *    one hour and bound to this exact auth user.
  */
 async function isCallerAuthorized(
   request: NextRequest,
   supabase: ReturnType<typeof getSupabaseAdminClient>,
   userId: string,
   authUser: { email_confirmed_at?: string | null; created_at?: string | null },
+  recoveryReceipt: string | null = null,
 ) {
   const token = getBearerToken(request);
   if (token) {
@@ -168,6 +179,7 @@ async function isCallerAuthorized(
     if (!error && data.user?.id === userId) return true;
   }
   if (authUser.email_confirmed_at) return false;
+  if (recoveryReceipt && verifyRecoveryReceipt(recoveryReceipt, userId)) return true;
   const createdAt = authUser.created_at ? Date.parse(authUser.created_at) : NaN;
   if (!Number.isFinite(createdAt)) return false;
   return Date.now() - createdAt <= SIGNUP_PROOF_WINDOW_MS;

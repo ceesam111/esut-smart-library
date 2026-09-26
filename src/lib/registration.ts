@@ -24,13 +24,77 @@ export interface RegisterResult {
 }
 
 /**
+ * Detects provider-side email rate limiting ("Email rate limit exceeded",
+ * 429s, SMTP throttling). These must never fail a registration.
+ */
+export function isEmailRateLimitError(error: unknown): boolean {
+  const e = error as { message?: string; code?: string; status?: number } | null;
+  const message = String(e?.message ?? '').toLowerCase();
+  const code = String(e?.code ?? '').toLowerCase();
+  if (e?.status === 429) return true;
+  if (code.includes('rate_limit') || code.includes('rate limit') || code.includes('too_many')) return true;
+  return /rate.?limit|too many requests|throttl|try again later|quota exceeded|exceeded a rate limit/i.test(message);
+}
+
+type AuthUserFallback =
+  | { ok: true; userId: string; receipt?: string }
+  | { ok: false; exists?: boolean; error?: string };
+
+/**
+ * Last-resort account creation when `auth.signUp()` is rejected by the
+ * provider's email rate limit. Creates the auth user server-side with no
+ * provider email; verification is issued by our own token email instead.
+ * If a half-finished sign-up already exists for this address and the password
+ * matches, the server resumes it and returns a signed recovery receipt.
+ */
+async function createAuthUserWithoutProviderEmail(
+  email: string,
+  password: string,
+  fullName: string,
+): Promise<AuthUserFallback> {
+  const attempt = async (): Promise<AuthUserFallback> => {
+    try {
+      const res = await fetch('/api/registration/create-auth-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName }),
+      });
+      const json = await res.json().catch(() => ({}) as Record<string, unknown>);
+      if (res.ok && json.ok && typeof json.userId === 'string' && json.userId) {
+        return {
+          ok: true,
+          userId: json.userId,
+          receipt: typeof json.receipt === 'string' && json.receipt ? json.receipt : undefined,
+        };
+      }
+      if (res.ok && json.ok && json.exists) return { ok: false, exists: true };
+      return {
+        ok: false,
+        error: typeof json.error === 'string' && json.error ? json.error : undefined,
+      };
+    } catch {
+      return { ok: false, error: 'Could not reach the registration service.' };
+    }
+  };
+
+  const first = await attempt();
+  if (first.ok || first.exists) return first;
+  if (isEmailRateLimitError({ message: first.error })) {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    return attempt();
+  }
+  return first;
+}
+
+/**
  * Creates the auth user, then creates the patron profile through a
  * server-side endpoint (service role). The client-side insert path is
  * unusable because email confirmation means signUp() returns no session,
  * so any direct `patrons` insert would run as `anon` and be rejected by RLS.
  *
  * Email delivery failures (including provider rate limits) never fail the
- * registration itself — they are reported through `emailNotice`.
+ * registration itself — they are reported through `emailNotice`, and a
+ * rate-limited `signUp()` falls back to server-side account creation.
  */
 export async function registerAccount(opts: {
   role: AppRole;
@@ -43,6 +107,12 @@ export async function registerAccount(opts: {
   try {
     return await runRegistration(opts);
   } catch (error) {
+    if (isEmailRateLimitError(error)) {
+      return {
+        ok: false,
+        error: 'The email service is temporarily busy. Please wait about a minute and submit the form again.',
+      };
+    }
     return {
       ok: false,
       error: error instanceof Error && error.message
@@ -77,6 +147,7 @@ async function runRegistration(opts: {
   });
 
   let userId = authData?.user?.id ?? null;
+  let recoveryReceipt: string | undefined;
 
   if (authErr || !userId) {
     const message = (authErr?.message || '').toLowerCase();
@@ -84,21 +155,46 @@ async function runRegistration(opts: {
       message.includes('already registered') ||
       message.includes('already been registered') ||
       authErr?.status === 422;
+    let needsSignInRecovery = false;
 
-    if (!alreadyRegistered) {
+    if (alreadyRegistered) {
+      needsSignInRecovery = true;
+    } else if (isEmailRateLimitError(authErr)) {
+      // The provider's own confirmation email can be rate-limited. That must
+      // never block registration: fall back to creating the account without
+      // a provider email and let our own verification email handle delivery.
+      const fallback = await createAuthUserWithoutProviderEmail(opts.email, opts.password, opts.fullName);
+      if (fallback.ok) {
+        userId = fallback.userId;
+        recoveryReceipt = fallback.receipt;
+      } else if (fallback.exists || (fallback.error && /already/i.test(fallback.error))) {
+        needsSignInRecovery = true;
+      } else {
+        return {
+          ok: false,
+          error: fallback.error || 'We could not finish creating your account. Please try again in a moment.',
+        };
+      }
+    } else {
       return { ok: false, error: authErr?.message ?? 'Registration failed. Please try again.' };
     }
 
-    // The account already exists — still ensure the patron profile exists so a
-    // partial earlier attempt (signup succeeded, profile failed) can recover.
-    const signIn = await supabase.auth.signInWithPassword({ email: opts.email, password: opts.password });
-    if (signIn.error || !signIn.data.user) {
-      return {
-        ok: false,
-        error: 'An account with this email already exists. Please sign in, or use a different email address.',
-      };
+    if (needsSignInRecovery) {
+      // The account already exists — recover it so a partial earlier attempt
+      // (signup succeeded, profile failed) can still complete.
+      const signIn = await supabase.auth.signInWithPassword({ email: opts.email, password: opts.password });
+      if (signIn.error || !signIn.data.user) {
+        const signInMessage = signIn.error?.message ?? '';
+        const notConfirmed = /not confirmed|confirm your email/i.test(signInMessage);
+        return {
+          ok: false,
+          error: notConfirmed
+            ? 'An account with this email already exists but has not been verified yet. Enter the password you used when you first registered, or contact the library desk to reset it.'
+            : 'An account with this email already exists. Please sign in, or use a different email address.',
+        };
+      }
+      userId = signIn.data.user.id;
     }
-    userId = signIn.data.user.id;
   }
 
   const profilePayload = { ...opts.profile, full_name: opts.fullName };
@@ -112,6 +208,7 @@ async function runRegistration(opts: {
       fullName: opts.fullName,
       role: opts.role,
       patronCategory: opts.patronCategory,
+      ...(recoveryReceipt ? { recoveryReceipt } : {}),
       status: directAccess ? 'active' : 'pending',
       approvedAt: directAccess ? now : null,
       emailVerifiedAt: requiresEmailVerification ? null : now,
