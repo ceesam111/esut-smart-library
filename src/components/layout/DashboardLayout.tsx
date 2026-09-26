@@ -64,7 +64,15 @@ export default function DashboardLayout() {
       const token = data.session?.access_token;
       if (!token) return setVerificationNotice('Please sign in again before requesting a new verification email.');
       const res = await fetch('/api/registration/send-verification', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      setVerificationNotice(res.ok ? 'Verification email sent. Please check your inbox.' : 'Could not send verification email. Contact the library desk if this continues.');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return setVerificationNotice('Could not send verification email. Contact the library desk if this continues.');
+      setVerificationNotice(
+        json.sent
+          ? 'Verification email sent. Please check your inbox.'
+          : json.autoVerified
+            ? 'The email service is unavailable, so verification was completed automatically. You can continue now.'
+            : 'The email service is busy right now. Please try again in a few minutes.',
+      );
     };
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">

@@ -19,6 +19,11 @@ export interface RegisterResult {
   requiresBranchApproval?: boolean;
   directAccess?: boolean;
   verificationEmailSent?: boolean;
+  /**
+   * The email service could not deliver the link, so the server completed
+   * verification anyway — the user can sign in immediately.
+   */
+  autoVerified?: boolean;
   /** Friendly, non-blocking reason the verification email was not sent. */
   emailNotice?: string;
 }
@@ -230,37 +235,44 @@ async function runRegistration(opts: {
 
   // Email delivery is best-effort: registration succeeds regardless.
   let verificationEmailSent = false;
+  let autoVerified = false;
   let emailNotice: string | undefined;
 
   if (requiresEmailVerification) {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
-    const res = await fetch('/api/registration/send-verification', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ userId, email: opts.email }),
-    }).catch(() => null);
+    const sendOnce = () =>
+      fetch('/api/registration/send-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ userId, email: opts.email }),
+      }).catch(() => null);
+
+    let res = await sendOnce();
+    if (!res) res = await sendOnce();
 
     if (res?.ok) {
       const json = await res.json().catch(() => ({}));
       verificationEmailSent = !!json.sent;
-      if (!json.sent && json.reason === 'rate_limited') {
-        emailNotice = 'The email service is temporarily rate-limited. Your account was created — please request the verification link again in a few minutes from the sign-in page.';
-      } else if (!json.sent && json.reason === 'send_failed') {
-        emailNotice = 'Your account was created, but the verification email could not be sent right now. You can request it again shortly from the sign-in page.';
+      if (json.autoVerified) {
+        // Email could not be delivered, so the server completed verification.
+        autoVerified = true;
+        verificationEmailSent = false;
+        emailNotice =
+          'The email service is unavailable right now, so we skipped email verification and activated your account. You can sign in immediately.';
       } else if (!json.sent && json.verified) {
         verificationEmailSent = true;
-      }
-    } else {
-      const json = await res?.json().catch(() => ({}));
-      if (json?.reason === 'rate_limited') {
+      } else if (!json.sent && json.reason === 'rate_limited') {
         emailNotice = 'The email service is temporarily rate-limited. Your account was created — please request the verification link again in a few minutes from the sign-in page.';
-      } else {
+      } else if (!json.sent) {
         emailNotice = 'Your account was created, but the verification email could not be sent right now. You can request it again shortly from the sign-in page.';
       }
+    } else {
+      emailNotice =
+        'Your account was created, but we could not reach the email service. Try signing in now; if you are still asked to verify, request a new link from the sign-in page.';
     }
   } else {
     sendWelcomeEmail({
@@ -278,6 +290,7 @@ async function runRegistration(opts: {
     requiresBranchApproval,
     directAccess,
     verificationEmailSent,
+    autoVerified,
     emailNotice,
   };
 }

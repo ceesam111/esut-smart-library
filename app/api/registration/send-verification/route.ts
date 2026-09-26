@@ -3,7 +3,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getBearerToken, requireUser } from '@/server/auth/requireUser';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { getRegistrationPolicy } from '@/server/registration/policy';
-import { policyRequiresEmailVerification } from '@/lib/registrationPolicy';
+import {
+  isPrivilegedSelfRegistrationRole,
+  policyRequiresBranchApproval,
+  policyRequiresEmailVerification,
+  type RegistrationAccessPolicy,
+} from '@/lib/registrationPolicy';
 import { sendRegistrationVerificationEmailServer } from '@/server/email/resend';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +28,72 @@ function getPublicOrigin(request: NextRequest) {
   }
 
   return 'https://esutlibrary.edu.ng';
+}
+
+async function grantPatronRole(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  patron: { user_id: string; account_role: string | null; preferred_branch: string | null; tenant_id: string | null },
+) {
+  const role = patron.account_role;
+  if (!role || isPrivilegedSelfRegistrationRole(role)) return;
+  const { error } = await supabase.from('user_roles').insert({
+    user_id: patron.user_id,
+    role,
+    branch_code: patron.preferred_branch,
+    faculty_code: null,
+    tenant_id: patron.tenant_id,
+  });
+  if (error && !/duplicate|unique/i.test(error.message)) throw new Error(error.message);
+}
+
+/**
+ * Email delivery failed (rate limit, provider down, key missing). Product
+ * rule: registration must still succeed and the user must be able to sign in,
+ * so verification is completed server-side instead of waiting for a link that
+ * cannot arrive. The same status transitions as clicking the emailed link are
+ * applied — approval rules for privileged/branch accounts are unchanged.
+ */
+async function autoVerifyRegistration(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  userId: string,
+  patron: {
+    id: string;
+    account_role: string | null;
+    email_verified_at: string | null;
+    main_library_access_at: string | null;
+    approved_at: string | null;
+    preferred_branch: string | null;
+    tenant_id: string | null;
+  },
+  policy: RegistrationAccessPolicy,
+) {
+  const { error: confirmErr } = await supabase.auth.admin.updateUserById(userId, { email_confirm: true });
+  if (confirmErr) throw new Error(confirmErr.message);
+
+  const privileged = isPrivilegedSelfRegistrationRole(patron.account_role);
+  const needsApproval = policyRequiresBranchApproval(policy) || privileged;
+  const now = new Date().toISOString();
+  const update = needsApproval
+    ? {
+        email_verified_at: patron.email_verified_at ?? now,
+        main_library_access_at: privileged ? patron.main_library_access_at : (patron.main_library_access_at ?? now),
+      }
+    : {
+        email_verified_at: patron.email_verified_at ?? now,
+        main_library_access_at: patron.main_library_access_at ?? now,
+        status: 'active',
+        approved_at: patron.approved_at ?? now,
+      };
+
+  const { data: updated, error: updateErr } = await supabase
+    .from('patrons')
+    .update(update)
+    .eq('id', patron.id)
+    .select('id, user_id, account_role, preferred_branch, tenant_id')
+    .single();
+  if (updateErr) throw new Error(updateErr.message);
+
+  if (!needsApproval) await grantPatronRole(supabase, updated);
 }
 
 export async function POST(request: NextRequest) {
@@ -48,7 +119,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdminClient();
     const { data: patron, error } = await supabase
       .from('patrons')
-      .select('id,user_id,email,full_name,email_verified_at')
+      .select('id,user_id,email,full_name,email_verified_at,account_role,main_library_access_at,approved_at,preferred_branch,tenant_id')
       .eq('user_id', userId)
       .eq('email', email)
       .maybeSingle();
@@ -82,10 +153,21 @@ export async function POST(request: NextRequest) {
       const reason = code === 'rate_limited' ? 'rate_limited'
         : code === 'not_configured' ? 'not_configured'
         : 'send_failed';
-      return NextResponse.json(
-        { sent: false, reason, expiresAt, policy, retryable: true },
-        { status: 202 },
-      );
+
+      // Email cannot be delivered right now, so verification is completed
+      // immediately and the user can sign in without a link.
+      try {
+        await autoVerifyRegistration(supabase, userId, patron, policy);
+        return NextResponse.json(
+          { sent: false, autoVerified: true, reason, policy },
+          { status: 202 },
+        );
+      } catch {
+        return NextResponse.json(
+          { sent: false, reason, expiresAt, policy, retryable: true },
+          { status: 202 },
+        );
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';

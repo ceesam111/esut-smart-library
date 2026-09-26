@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import type { RegisterResult } from '@/lib/registration';
@@ -50,6 +51,9 @@ export default function RegistrationSuccessModal({
   result: RegisterResult;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -62,8 +66,9 @@ export default function RegistrationSuccessModal({
   }, [onClose]);
 
   const emailGate = !!result.requiresEmailVerification;
+  const autoVerified = !!result.autoVerified;
   const emailSent = !!result.verificationEmailSent;
-  const emailDeferred = emailGate && !emailSent;
+  const emailPaused = emailGate && !emailSent && !autoVerified;
 
   const title = result.directAccess
     ? 'Registration Complete'
@@ -73,13 +78,19 @@ export default function RegistrationSuccessModal({
 
   const lead = result.directAccess
     ? 'Your account is active. You can sign in and start using the library dashboard immediately.'
-    : emailGate
-      ? institutionCopy(result)
-      : 'Your account has been created and is pending library approval. You will be notified once it is active.';
+    : autoVerified
+      ? 'Your registration is complete and your account is ready. The email service is unavailable, so no verification link was sent — sign in now with your email and password.'
+      : emailGate
+        ? institutionCopy(result)
+        : 'Your account has been created and is pending library approval. You will be notified once it is active.';
 
-  return (
+  if (!mounted) return null;
+
+  // Portalled to document.body so the fixed navigation bar (z-50) and the
+  // page's own stacking context (main[style] z-index:2) cannot cover it.
+  return createPortal(
     <div
-      className="reg-fade fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-neutral-900/55 p-4 backdrop-blur-sm"
+      className="reg-fade fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-neutral-900/55 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <style>{ANIM_CSS}</style>
@@ -133,7 +144,12 @@ export default function RegistrationSuccessModal({
 
           <ul className="mb-5 space-y-3 rounded-2xl border border-neutral-100 bg-neutral-50/80 p-4">
             <StatusRow ok>Account created and your details saved securely.</StatusRow>
-            {emailGate ? (
+            {autoVerified ? (
+              <StatusRow ok>
+                <span className="font-medium text-neutral-800">Email verification skipped.</span>{' '}
+                The email service is unavailable, so no link was sent — your account is active and you can sign in now.
+              </StatusRow>
+            ) : emailGate ? (
               emailSent ? (
                 <StatusRow ok>Verification link sent to your email address.</StatusRow>
               ) : (
@@ -145,19 +161,27 @@ export default function RegistrationSuccessModal({
             ) : null}
             {result.requiresBranchApproval && (
               <StatusRow ok={false}>
-                {emailGate
-                  ? 'After you verify, the library team reviews and approves access.'
-                  : 'The library team reviews and approves your account before access is granted.'}
+                {autoVerified
+                  ? 'Sign-in works now; the library team reviews and approves access to privileged accounts.'
+                  : emailGate
+                    ? 'After you verify, the library team reviews and approves access.'
+                    : 'The library team reviews and approves your account before access is granted.'}
               </StatusRow>
             )}
           </ul>
 
-          {emailDeferred && (
+          {autoVerified ? (
+            <div className="mb-5 rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3 text-xs leading-relaxed text-primary-900">
+              <span className="font-semibold">Good to know:</span>{' '}
+              {result.emailNotice ||
+                'The email service is unavailable, so we skipped email verification and activated your account. You can sign in immediately.'}
+            </div>
+          ) : emailPaused ? (
             <div className="mb-5 rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
               <span className="font-semibold">Good to know:</span> {result.emailNotice ||
                 'Your account is safe and created. Email delivery can be retried from the sign-in page without losing your registration.'}
             </div>
-          )}
+          ) : null}
 
           <div className="space-y-2.5">
             <Link
@@ -183,7 +207,8 @@ export default function RegistrationSuccessModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
