@@ -1,4 +1,4 @@
-import { useState, FormEvent, ReactNode } from 'react';
+import { useState, FormEvent } from 'react';
 import { Field, TextInput, SelectInput, PasswordInput } from './fields';
 import ProfilePhotoInput from './ProfilePhotoInput';
 import { TermsCheckbox, SubmitButton } from './StudentForm';
@@ -6,7 +6,7 @@ import { GENDERS, LIBRARY_SECTIONS, ALL_LIBRARY_BRANCHES } from '@/config/roles.
 import { institutionConfig } from '@config/institution.config';
 import { registerAccount, type RegisterResult } from '@/lib/registration';
 
-export default function LibrarianForm({ onSuccess, turnstileToken, turnstileRequired, turnstileWidget }: { onSuccess: (result: RegisterResult) => void; turnstileToken?: string | null; turnstileRequired?: boolean; turnstileWidget?: ReactNode }) {
+export default function LibrarianForm({ onSuccess }: { onSuccess: (result: RegisterResult) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -23,7 +23,6 @@ export default function LibrarianForm({ onSuccess, turnstileToken, turnstileRequ
     if (f.password !== f.confirm) return setError('Passwords do not match.');
     if (f.password.length < 8) return setError('Password must be at least 8 characters.');
     if (!agreed) return setError('Please agree to the Terms and Privacy Policy.');
-    if (turnstileRequired && !turnstileToken) return setError('Please complete the Cloudflare security verification before submitting.');
     setLoading(true);
     let res: RegisterResult;
     try {
@@ -33,7 +32,6 @@ export default function LibrarianForm({ onSuccess, turnstileToken, turnstileRequ
       password: f.password,
       fullName: `${f.surname} ${f.otherNames}`.trim(),
       patronCategory: 'Academic Staff',
-      turnstileToken,
       profile: {
         surname: f.surname, other_names: f.otherNames, gender: f.gender || null,
         phone: f.phone || null, staff_id: f.staffId || null,
@@ -76,7 +74,6 @@ export default function LibrarianForm({ onSuccess, turnstileToken, turnstileRequ
       )}
       <ProfilePhotoInput value={profilePhotoUrl} onChange={setProfilePhotoUrl} onError={setError} />
       <TermsCheckbox agreed={agreed} setAgreed={setAgreed} />
-      {turnstileWidget}
       <SubmitButton loading={loading} />
     </form>
   );

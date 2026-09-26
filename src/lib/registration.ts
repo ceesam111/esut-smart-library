@@ -10,7 +10,6 @@ import {
   policyRequiresEmailVerification,
   type RegistrationAccessPolicy,
 } from '@/lib/registrationPolicy';
-import { verifyTurnstileClient } from '@/lib/turnstileClient';
 
 export interface RegisterResult {
   ok: boolean;
@@ -40,19 +39,7 @@ export async function registerAccount(opts: {
   fullName: string;
   patronCategory: string;
   profile: Record<string, unknown>;
-  turnstileToken?: string | null;
 }): Promise<RegisterResult> {
-  try {
-    await verifyTurnstileClient(opts.turnstileToken ?? null, 'registration');
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error
-        ? error.message
-        : 'Please complete the security verification before submitting.',
-    };
-  }
-
   try {
     return await runRegistration(opts);
   } catch (error) {
@@ -72,7 +59,6 @@ async function runRegistration(opts: {
   fullName: string;
   patronCategory: string;
   profile: Record<string, unknown>;
-  turnstileToken?: string | null;
 }): Promise<RegisterResult> {
   const policy = await fetch('/api/registration/policy')
     .then((res) => (res.ok ? res.json() : null))

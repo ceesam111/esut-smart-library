@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { ROLE_LABELS, type AppRole } from '@/config/roles.config';
+import { ADMIN_GRANT_ONLY_ROLES } from '@/server/auth/permissions';
 import { REGISTRATION_POLICY_LABELS, type RegistrationAccessPolicy } from '@/lib/registrationPolicy';
 import {
   listAccounts, inviteUser, assignRole, revokeRole, setAccess,
@@ -12,8 +13,12 @@ import {
 
 const ASSIGNABLE: AssignableRole[] = [
   'super_admin', 'librarian', 'faculty_librarian',
+  'catalog_admin', 'ir_admin', 'dept_ir_officer',
   'researcher_lecturer', 'student', 'admin_staff', 'guest',
 ];
+
+/** Admin-scoped roles only a super administrator may grant or revoke. */
+const SUPER_ONLY_ROLES: string[] = ADMIN_GRANT_ONLY_ROLES;
 
 type Tab = 'users' | 'invite' | 'registration' | 'audit';
 
@@ -242,7 +247,7 @@ export default function AdminAccounts() {
                                 <Badge role={r} />
                                 <button
                                   title="Remove role"
-                                  disabled={targetLocked || (!isSuper && r === 'super_admin')}
+                                  disabled={targetLocked || (!isSuper && SUPER_ONLY_ROLES.includes(r))}
                                   onClick={() => run(`rr-${a.user_id}-${r}`, () => revokeRole({ data: { userId: a.user_id, role: r as AssignableRole, email: a.email ?? undefined } }), 'Role removed')}
                                   className="text-[10px] text-neutral-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-neutral-400"
                                 >✕</button>
@@ -269,7 +274,7 @@ export default function AdminAccounts() {
                               className="text-xs border border-neutral-300 rounded px-2 py-1"
                             >
                               <option value="">+ Add role…</option>
-                              {ASSIGNABLE.filter((r) => !a.roles.includes(r) && (isSuper || r !== 'super_admin')).map((r) => (
+                              {ASSIGNABLE.filter((r) => !a.roles.includes(r) && (isSuper || !SUPER_ONLY_ROLES.includes(r))).map((r) => (
                                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                               ))}
                             </select>
@@ -344,7 +349,7 @@ export default function AdminAccounts() {
               className="w-full px-3 py-2 rounded-lg border border-neutral-300 text-sm"
             >
               <option value="">No role (assign later)</option>
-              {ASSIGNABLE.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                              {(isSuper ? ASSIGNABLE : ASSIGNABLE.filter((r) => !SUPER_ONLY_ROLES.includes(r))).map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
             </select>
           </div>
           <button

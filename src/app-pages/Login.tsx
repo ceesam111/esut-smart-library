@@ -3,8 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { getDashboardPath, type AppRole } from '@/config/roles.config';
-import TurnstileWidget from '@/components/security/TurnstileWidget';
-import { verifyTurnstileClient } from '@/lib/turnstileClient';
 
 const GREEN = '#6B1D2A';
 const GOLD  = '#D4A017';
@@ -88,7 +86,6 @@ export default function Login() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [lockoutRemaining, setLockoutRemaining] = useState(0);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (lockoutRemaining <= 0) return;
@@ -116,13 +113,6 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    try {
-      await verifyTurnstileClient(turnstileToken, 'login');
-    } catch (challengeError) {
-      setLoading(false);
-      setError((challengeError as Error).message);
-      return;
-    }
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (err) {
@@ -220,8 +210,6 @@ export default function Login() {
             </div>
 
             <PasswordInput id="password" value={password} onChange={setPassword} label="Password" />
-
-            <TurnstileWidget action="login" onToken={setTurnstileToken} />
 
             <button
               type="submit"

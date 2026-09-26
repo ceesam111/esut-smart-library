@@ -1,7 +1,11 @@
 import { supabase } from '@/lib/supabase';
+import { ADMIN_GRANT_ONLY_ROLES } from '@/server/auth/permissions';
 
 export type AssignableRole =
   | 'super_admin'
+  | 'catalog_admin'
+  | 'ir_admin'
+  | 'dept_ir_officer'
   | 'librarian'
   | 'faculty_librarian'
   | 'student'
@@ -88,8 +92,9 @@ async function targetRoles(userId: string) {
 async function assertCanManageTarget(actor: ActorContext, targetUserId: string, roleChange?: AssignableRole) {
   const target = await targetRoles(targetUserId);
   const targetIsSuper = target.roles.includes('super_admin');
+  const grantOnly = !!roleChange && ADMIN_GRANT_ONLY_ROLES.includes(roleChange);
   if (actor.roles.includes('librarian') && !actor.roles.includes('super_admin')) {
-    if (targetIsSuper || roleChange === 'super_admin') throw new Error('Forbidden: librarians cannot manage super administrators');
+    if (targetIsSuper || grantOnly) throw new Error('Forbidden: only a super administrator can manage admin roles');
     return;
   }
   if (!actor.roles.includes('super_admin')) throw new Error('Forbidden: account managers only');

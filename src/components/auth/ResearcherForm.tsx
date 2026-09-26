@@ -1,4 +1,4 @@
-import { useState, FormEvent, ReactNode } from 'react';
+import { useState, FormEvent } from 'react';
 import { Field, TextInput, SelectInput, TextArea, PasswordInput, TagInput } from './fields';
 import ProfilePhotoInput from './ProfilePhotoInput';
 import { TermsCheckbox, SubmitButton } from './StudentForm';
@@ -6,7 +6,7 @@ import { GENDERS, FACULTIES, ACADEMIC_RANKS, PREFERRED_BRANCHES, DEFAULT_INSTITU
 import { institutionConfig } from '@config/institution.config';
 import { registerAccount, type RegisterResult } from '@/lib/registration';
 
-export default function ResearcherForm({ onSuccess, turnstileToken, turnstileRequired, turnstileWidget }: { onSuccess: (result: RegisterResult) => void; turnstileToken?: string | null; turnstileRequired?: boolean; turnstileWidget?: ReactNode }) {
+export default function ResearcherForm({ onSuccess }: { onSuccess: (result: RegisterResult) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -25,7 +25,6 @@ export default function ResearcherForm({ onSuccess, turnstileToken, turnstileReq
     if (f.password !== f.confirm) return setError('Passwords do not match.');
     if (f.password.length < 8) return setError('Password must be at least 8 characters.');
     if (!agreed) return setError('Please agree to the Terms and Privacy Policy.');
-    if (turnstileRequired && !turnstileToken) return setError('Please complete the Cloudflare security verification before submitting.');
     setLoading(true);
     let res: RegisterResult;
     try {
@@ -35,7 +34,6 @@ export default function ResearcherForm({ onSuccess, turnstileToken, turnstileReq
       password: f.password,
       fullName: `${f.surname} ${f.otherNames}`.trim(),
       patronCategory: 'Academic Staff',
-      turnstileToken,
       profile: {
         surname: f.surname, other_names: f.otherNames, gender: f.gender || null,
         phone: f.phone || null, staff_id: f.staffId || null, institution: f.institution,
@@ -83,7 +81,6 @@ export default function ResearcherForm({ onSuccess, turnstileToken, turnstileReq
       <Field label="Short Bio" hint="Optional, max 200 characters"><TextArea value={f.bio} onChange={(v) => set('bio', v)} maxLength={200} /></Field>
       <ProfilePhotoInput value={profilePhotoUrl} onChange={setProfilePhotoUrl} onError={setError} />
       <TermsCheckbox agreed={agreed} setAgreed={setAgreed} />
-      {turnstileWidget}
       <SubmitButton loading={loading} />
     </form>
   );

@@ -1,4 +1,4 @@
-import { useState, FormEvent, ReactNode } from 'react';
+import { useState, FormEvent } from 'react';
 import { Field, TextInput, SelectInput, TextArea, PasswordInput } from './fields';
 import ProfilePhotoInput from './ProfilePhotoInput';
 import {
@@ -9,7 +9,7 @@ import { registerAccount, type RegisterResult } from '@/lib/registration';
 
 const GREEN = '#6B1D2A';
 
-export default function StudentForm({ onSuccess, turnstileToken, turnstileRequired, turnstileWidget }: { onSuccess: (result: RegisterResult) => void; turnstileToken?: string | null; turnstileRequired?: boolean; turnstileWidget?: ReactNode }) {
+export default function StudentForm({ onSuccess }: { onSuccess: (result: RegisterResult) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -28,7 +28,6 @@ export default function StudentForm({ onSuccess, turnstileToken, turnstileRequir
     if (f.password !== f.confirm) return setError('Passwords do not match.');
     if (f.password.length < 8) return setError('Password must be at least 8 characters.');
     if (!agreed) return setError('Please agree to the Terms and Privacy Policy.');
-    if (turnstileRequired && !turnstileToken) return setError('Please complete the Cloudflare security verification before submitting.');
     setLoading(true);
     let res: RegisterResult;
     try {
@@ -38,7 +37,6 @@ export default function StudentForm({ onSuccess, turnstileToken, turnstileRequir
       password: f.password,
       fullName: `${f.surname} ${f.otherNames}`.trim(),
       patronCategory: f.studentType === 'Undergraduate' ? 'Student' : 'Postgraduate Student',
-      turnstileToken,
       profile: {
         surname: f.surname, other_names: f.otherNames, gender: f.gender || null,
         date_of_birth: f.dob || null, phone: f.phone || null,
@@ -97,7 +95,6 @@ export default function StudentForm({ onSuccess, turnstileToken, turnstileRequir
       <ProfilePhotoInput value={profilePhotoUrl} onChange={setProfilePhotoUrl} onError={setError} />
 
       <TermsCheckbox agreed={agreed} setAgreed={setAgreed} />
-      {turnstileWidget}
       <SubmitButton loading={loading} />
     </form>
   );

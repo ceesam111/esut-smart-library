@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import StudentForm from '@/components/auth/StudentForm';
@@ -6,7 +6,6 @@ import ResearcherForm from '@/components/auth/ResearcherForm';
 import AdminStaffForm from '@/components/auth/AdminStaffForm';
 import LibrarianForm from '@/components/auth/LibrarianForm';
 import type { RegisterResult } from '@/lib/registration';
-import TurnstileWidget from '@/components/security/TurnstileWidget';
 
 const GREEN = '#6B1D2A';
 const GOLD = '#D4A017';
@@ -23,15 +22,6 @@ const ACCOUNT_TYPES: { kind: Kind; title: string; desc: string; icon: string }[]
 export default function Register() {
   const [kind, setKind] = useState<Kind | null>(null);
   const [done, setDone] = useState<RegisterResult | null>(null);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileRequired, setTurnstileRequired] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/security/turnstile/config')
-      .then((res) => res.ok ? res.json() : null)
-      .then((json) => setTurnstileRequired(!!json?.siteKey))
-      .catch(() => setTurnstileRequired(false));
-  }, []);
 
   if (done) return <SuccessScreen result={done} />;
 
@@ -53,7 +43,7 @@ export default function Register() {
                 {ACCOUNT_TYPES.map((t) => (
                   <button
                     key={t.kind}
-                    onClick={() => { setTurnstileToken(null); setKind(t.kind); }}
+                    onClick={() => setKind(t.kind)}
                     className="flex items-center gap-4 p-4 rounded-xl border border-neutral-200 hover:border-primary-400 hover:bg-primary-50/40 transition-colors text-left"
                   >
                     <span className="text-2xl">{t.icon}</span>
@@ -68,14 +58,14 @@ export default function Register() {
             </>
           ) : (
             <>
-              <button onClick={() => { setTurnstileToken(null); setKind(null); }} className="text-sm text-neutral-500 hover:text-neutral-800 mb-4">← Change account type</button>
+              <button onClick={() => setKind(null)} className="text-sm text-neutral-500 hover:text-neutral-800 mb-4">← Change account type</button>
               <h2 className="text-lg font-semibold text-neutral-800 mb-5">
                 {ACCOUNT_TYPES.find((t) => t.kind === kind)?.title} Registration
               </h2>
-              {kind === 'student' && <StudentForm onSuccess={setDone} turnstileToken={turnstileToken} turnstileRequired={turnstileRequired} turnstileWidget={<RegistrationTurnstile onToken={setTurnstileToken} />} />}
-              {kind === 'researcher' && <ResearcherForm onSuccess={setDone} turnstileToken={turnstileToken} turnstileRequired={turnstileRequired} turnstileWidget={<RegistrationTurnstile onToken={setTurnstileToken} />} />}
-              {kind === 'admin_staff' && <AdminStaffForm onSuccess={setDone} turnstileToken={turnstileToken} turnstileRequired={turnstileRequired} turnstileWidget={<RegistrationTurnstile onToken={setTurnstileToken} />} />}
-              {kind === 'librarian' && <LibrarianForm onSuccess={setDone} turnstileToken={turnstileToken} turnstileRequired={turnstileRequired} turnstileWidget={<RegistrationTurnstile onToken={setTurnstileToken} />} />}
+              {kind === 'student' && <StudentForm onSuccess={setDone} />}
+              {kind === 'researcher' && <ResearcherForm onSuccess={setDone} />}
+              {kind === 'admin_staff' && <AdminStaffForm onSuccess={setDone} />}
+              {kind === 'librarian' && <LibrarianForm onSuccess={setDone} />}
             </>
           )}
 
@@ -85,15 +75,6 @@ export default function Register() {
           </p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function RegistrationTurnstile({ onToken }: { onToken: (token: string | null) => void }) {
-  return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-      <p className="text-sm font-semibold text-neutral-800 mb-2">Security verification</p>
-      <TurnstileWidget action="registration" onToken={onToken} />
     </div>
   );
 }
