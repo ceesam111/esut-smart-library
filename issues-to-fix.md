@@ -68,3 +68,26 @@ Open items (need user action):
 3. AFUED domain Cloudflare 403 (Under Attack / Bot Fight Mode) must be disabled by the account owner.
 4. Remaining items from the numbered list above (ILS loan, search ranking across sources, statistics, harvest, reserved-books workflow, etc.) not touched in this session — PDF bucket (issue 6) and Lyria voice (issue 10) fixed in part 2. ISSUE 22: MyProfile photo limits now fixed (max 150 KB, no 50 KB minimum; using shared `readProfilePhoto` helper).
 5. `npm run lint` still broken locally (pre-existing); project folder name `ESUT SMART LIBRARY` does not match the DWC registry slug `esut-smart-library`.
+
+
+## Session status 2026-09-26 (reservations RLS, back buttons, Account edit mode)
+
+Commits (pushed to `ceesam111/esut-smart-library` master, deployed to VPS):
+
+- `4ead44f` — Digital Library ID surname fallback in `LibraryCard.tsx` (`formatCardName()` falls back to the last token of `full_name` when `profile.surname` is NULL).
+- `9c0d395` — reservation visibility + back-button coverage: "My Reservations" nav (patrons), "Book Requests" nav (admins), RLS migration `20260926120000_fix_reservations_staff_rls.sql`, `BackButton` added to Dashboard, CourseReserves, ILLHistory, LecturerProfile, ReadingLists.
+- `7efa360` — working Account edit mode; `EbookResponse` initial state includes all source buckets; `TurnstileVerifyResult` type fixes the signature the build had been ignoring.
+
+Resolved in this session:
+
+- **Reservation visibility (issue 22)**: the original `reservations_select_policy` / `reservations_update_policy` only checked the `librarians` table, so a super admin with no active librarian row could not see or approve reservations. New migration adds `or public.is_library_staff(auth.uid())`. Applied to the hosted Supabase database (not just committed) and verified live: the stored select policy now ends with `is_library_staff(auth.uid())`.
+- **Reservation navigation**: patrons now have "My Reservations" → `/dashboard/requests`; admins now have "Book Requests" → `/admin/requests` (route and page already existed but nothing linked to it).
+- **Back buttons (issue 22)**: `BackButton` added to the five dashboard pages that lacked any back affordance. `DashboardThesis` already has a "Back to Dashboard" link; `Wellbeing` (Take A Break) already has `BackButton`.
+- **Account edit mode (issue 22)**: `Account.tsx` had a `handleSave` that referenced undefined `patron`, `setPatron`, `setProfileError`, `supabase`, `institutionConfig` and `useState` was never imported — with no edit UI at all, and invisible because `next.config.mjs` sets `typescript.ignoreBuildErrors: true`. Rebuilt with a real `Edit Profile` / `Cancel` / `Save Changes` flow, typed fields (identity, contact, academic, preferred branch, bio), update by `user_id`, then `reload()`. Library Number, Patron ID, status and email stay read-only with an explanatory notice.
+- **Type-check drift**: `emptyEbookResponse()` was missing the 9 source buckets added by the search-bucketing fix; `verifyTurnstileToken` no longer matched the route that reads `result.error`. Both fixed.
+
+Verification evidence (2026-09-26): `next build` OK; vitest 52/52; `verify-resource-pages.mjs` 18/18; `tsc --noEmit` = 64 errors, exactly the pre-existing baseline (no new errors); production E2E 13/13 passed after deploy; `GET /api/security/turnstile/config` 200 with site key; app container healthy after cutover; reservation RLS confirmed live via `pg_policies`.
+
+Known gap (found while checking admin roles, not fixed here): `catalog_admin`, `ir_admin` and `dept_ir_officer` exist in the front-end `roles.config.ts` permission map but are **not** in the server-side `FoundationRole` / `LIBRARY_ADMIN_ROLES` in `src/server/auth/permissions.ts`, and are not in the assignable list in `Accounts.tsx`. A user granted one of them in the database would pass front-end gates but be rejected by `requireRole()` API calls.
+
+Still open from the numbered list: issues 3, 5, 7, 9, 11-19, 21 (ILL submit, resource labels/3D overflow, student-only route guards, repository header, news dates, researchers page, hold checkout, barcode, statistics, duplicate staging, harvest, content engine, Take-A-Break extras, reserved-books visibility). Turnstile verification stays temporarily disabled by directive — re-enable in `src/server/security/turnstile.ts` once final keys are issued.
