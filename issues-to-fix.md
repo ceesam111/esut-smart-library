@@ -23,6 +23,25 @@ I want you to do a deep check and deep research to fix these production issues o
 
 ---
 
+## Session status 2026-09-26 (part 2 — provider keys wired, B2/Turnstile/Voice fixed)
+
+Commits: `9aa4b55` (current model defaults + model-candidate fallback + Turnstile build arg), pushed and deployed.
+
+Secrets configuration (never committed — `/root/esut-extra.env` on VPS, `gitignored .env.local` locally):
+`GEMINI_API_KEY`, `GROQ_API_KEY`, `ELEVENLABS_*`, `CLOUDFLARE_SITE_KEY`, `CLOUDFLARE_SECRET_KEY`, `NEXT_PUBLIC_CLOUDFLARE_SITE_KEY`, `B2_ENDPOINT`, `B2_REGION`, `B2_BUCKET_LIBRARY_FILES/BACKUPS/EXPORTS`, `B2_PUBLIC_BASE_URL`.
+
+Root causes found and fixed:
+
+1. **Issue 10/19 (AI unavailable)** — the router's default models were retired (`gemini-2.0-flash`, `llama-3.3-70b-versatile` → 404). Fixed defaults to models that exist today (`gemini-3.8-flash`, `qwen/qwen3.8-27b`, reasoning `openai/gpt-oss-120b`) and added a **model-candidate fallback**: on 404/503/empty the router walks the provider's candidate list before moving on, so future catalog churn cannot break Lexis or the agent workers. Live proof: `GET /api/ai/reference-librarian` returns a real answer served by **Gemini** (free tier); `/api/ai/providers` shows `gemini configured=true, lastSuccessAt=...`.
+2. **Issue 20 (Turnstile)** — keys now configured; `/api/security/turnstile/config` returns a site key, and `/api/security/turnstile/verify` rejects a bad token with the real Cloudflare code `invalid-input-response`. The form already shows "Please complete the Cloudflare security verification before submitting." and renders the widget above the submit button. Dockerfile/deploy now pass `NEXT_PUBLIC_CLOUDFLARE_SITE_KEY`.
+3. **Issue 6 (PDF upload "bucket not found")** — the container had **zero** `B2_*` variables, `B2_ENDPOINT` lacked the `https://` scheme, `B2_REGION` and bucket names were unset. Configured `https://s3.us-east-005.backblazeb2.com`, region `us-east-005`, bucket `esuttlibrary` (discovered from the account). Verified with a real put/head/delete probe — PASS.
+4. **Issue 10 (Lyria voice)** — ElevenLabs key was valid but the configured voice was a **library (paid) voice**: API returned `402 paid_plan_required` for free users. Switched `ELEVENLABS_LYRIA_VOICE_ID` to premade voice **Sarah** (`EXAVITQu4vr4xnSDxMaL`). Live proof: `/api/ai/lyria-voice` returns `audio/mpeg`, 30 KB, 1.6 s.
+
+Verification evidence (2026-09-26, after final deploy): `next build` OK · vitest **52/52** · `verify-resource-pages.mjs` 18/18 · tsc clean for changed files (only the 64 pre-existing `libraryMode` errors) · production E2E **13/13** · Lexis real answer · Lyria audio · Turnstile configured · B2 probe PASS · app + worker healthy with 44 env lines.
+
+Still open (not addressed in this session): issues 1-5, 7-9, 11-19, 21, 22 from the numbered list above (ILS submit, search relevance, resource labels/3D overflow, student-only menus, repository header, news dates, researchers page, hold checkout, barcode, catalogue statistics, duplicate staging, harvest buttons, content engine, Take-A-Break, account settings, back buttons, Dewey/LoC/WorldCat fields, reserved-books visibility). Turnstile keys still need the Cloudflare site's allowed domains to include `virtuallibrary.esut.edu.ng`, and the Vercel AI Gateway still has no credit (harmless — free providers now serve first).
+
+
 ## Session status 2026-09-26 (registration + AI tools + AI router)
 
 Commits (pushed to `ceesam111/esut-smart-library` master, deployed to VPS):
@@ -44,8 +63,8 @@ Verification evidence (2026-09-26): `next build` OK; vitest 51/51; `verify-resou
 
 Open items (need user action):
 
-1. **Lexis limited-mode**: Vercel AI Gateway returns **402 insufficient credit** — add free-tier `GEMINI_API_KEY`/`GROQ_API_KEY` to `/root/esut-extra.env` (never Git) and redeploy, or top up gateway credits. Until then Lexis and AI agent JSON jobs use graceful fallback.
-2. Cloudflare Turnstile: no site/secret keys exist yet (`/api/security/turnstile/config` → `siteKey: null`).
+1. ~~**Lexis limited-mode**~~ — resolved in part 2: free-tier `GEMINI_API_KEY`/`GROQ_API_KEY` added to `/root/esut-extra.env`, Lexis now answers via Gemini. Vercel AI Gateway still has no credit (harmless fallback).
+2. ~~Cloudflare Turnstile: no site/secret keys exist yet~~ — resolved in part 2: keys configured, site key served, verify endpoint rejects bad tokens with the real Cloudflare code.
 3. AFUED domain Cloudflare 403 (Under Attack / Bot Fight Mode) must be disabled by the account owner.
-4. Remaining items from the numbered list above (ILS loan, search ranking across sources, PDF bucket, statistics, harvest, reserved-books workflow, etc.) not touched in this session.
+4. Remaining items from the numbered list above (ILS loan, search ranking across sources, statistics, harvest, reserved-books workflow, etc.) not touched in this session — PDF bucket (issue 6) and Lyria voice (issue 10) fixed in part 2.
 5. `npm run lint` still broken locally (pre-existing); project folder name `ESUT SMART LIBRARY` does not match the DWC registry slug `esut-smart-library`.
