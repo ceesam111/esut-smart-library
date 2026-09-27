@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { routeChatCompletion, AiRoutingError } from '@/server/ai/providerRouter';
 import type { AiMessage } from '@/server/ai/aiGatewayClient';
+import { rateLimit, rateLimitKey } from '@/server/rate-limit';
 
 function systemPrompt() {
   return `You are Lexis, ESUT Library's AI Reference Librarian. Today's date is ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}. Answer questions from any field of endeavour, not only library topics. Give warm, practical, full answers that help the user understand the subject, apply it, and know what to do next.
@@ -27,6 +28,8 @@ function fallbackAnswer(messages: Array<{ role: string; content: string }>, loca
 
 export async function POST(request: Request) {
   try {
+    const limit = rateLimit(rateLimitKey([request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'], '/api/ai/reference-librarian'), 15, 60_000);
+    if (limit.limited) return NextResponse.json({ error: 'Too many requests.' }, { status: 429, headers: { 'retry-after': String(limit.retryAfter ?? 60) } });
     const body = await request.json().catch(() => ({}));
     const messages: AiMessage[] = Array.isArray(body.messages)
       ? body.messages

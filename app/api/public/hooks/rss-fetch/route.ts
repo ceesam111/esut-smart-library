@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { requireRole } from '@/server/auth/requireRole';
+import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
 
 const parser = new Parser({
   customFields: {
@@ -9,6 +11,12 @@ const parser = new Parser({
 });
 
 export async function POST(req: Request) {
+  let roles: { primaryRole: string | null };
+  try {
+    roles = await requireRole(req, LIBRARY_ADMIN_ROLES);
+  } catch {
+    return NextResponse.json({ success: false, error: 'Staff access required.' }, { status: 403 });
+  }
   try {
     const body = await req.json().catch(() => ({}));
     const serialId = body.serialId as string | undefined;

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { rateLimit, rateLimitKey } from '@/server/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,8 @@ function fallbackVoice(error: string) {
 
 export async function POST(request: Request) {
   try {
+    const limit = rateLimit(rateLimitKey([request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'], '/api/ai/lyria-voice'), 15, 60_000);
+    if (limit.limited) return NextResponse.json({ error: 'Too many requests.' }, { status: 429, headers: { 'retry-after': String(limit.retryAfter ?? 60) } });
     const body = await request.json().catch(() => ({}));
     const text = typeof body.text === 'string' ? body.text.trim() : '';
     if (!text) return NextResponse.json({ error: 'Text is required.' }, { status: 400 });

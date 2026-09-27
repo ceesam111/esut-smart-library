@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { rateLimit, rateLimitKey } from '@/server/rate-limit';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const OUTDATED_BEFORE = CURRENT_YEAR - 10;
@@ -87,6 +88,8 @@ async function analyseCitations(text: string) {
 
 export async function POST(request: Request) {
   try {
+    const limit = rateLimit(rateLimitKey([request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'], '/api/academic-integrity'), 10, 3_600_000);
+    if (limit.limited) return NextResponse.json({ error: 'Please wait before trying again.' }, { status: 429, headers: { 'retry-after': String(limit.retryAfter ?? 3600) } });
     const body = await request.json().catch(() => ({}));
     const action = String(body.action ?? '');
     const text = String(body.text ?? '').trim();

@@ -2,7 +2,7 @@ import arcjet, { detectBot, shield } from '@arcjet/next';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const sensitivePrefixes = ['/api/auth', '/api/generate-questions', '/api/admin/catalogue/enrich-catalogue', '/api/admin/harvest', '/api/resource-requests/external'];
+const sensitivePrefixes = ['/api/auth', '/api/generate-questions', '/api/admin/catalogue/enrich-catalogue', '/api/admin/harvest', '/api/resource-requests/external', '/api/ai/', '/api/public/hooks/'];
 const sensitiveExact = new Set(['/api/search/resources']);
 const csrfExemptPrefixes = ['/api/ai/', '/api/security/turnstile/', '/api/registration/'];
 const devBuckets = new Map<string, { count: number; resetAt: number }>();

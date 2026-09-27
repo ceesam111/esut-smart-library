@@ -63,33 +63,29 @@ export default function IrDeposit() {
     const fileUrl = upload.error ? null : supabase.storage.from('repository').getPublicUrl(path).data.publicUrl;
     const contributors = form.contributors.split(/[;,]/).map((name) => name.trim()).filter(Boolean);
     const supervisors = form.supervisors.split(/[;,]/).map((name) => name.trim()).filter(Boolean);
-    const payload = {
-      title: form.title.trim(),
-      authors: form.creators.split(/[;,]/).map((name) => name.trim()).filter(Boolean),
-      item_type: form.item_type,
-      type: form.item_type,
-      abstract: form.abstract.trim(),
-      keywords: form.keywords.split(/[;,]/).map((x) => x.trim()).filter(Boolean),
-      department: form.department.trim(),
-      faculty: form.faculty.trim() || null,
-      year: Number(year),
-      date_issued: form.date_issued,
-      publisher: form.publisher.trim() || null,
-      doi: form.doi.trim() || null,
-      handle,
-      license: form.license,
-      embargo_until: form.embargo_until || null,
-      file_url: fileUrl,
-      file_size: file.size,
-      file_paths: fileUrl ? [fileUrl] : [],
-      metadata_json: { contributors, supervisors, deposit_checklist: CHECKLIST, original_file_name: file.name, mime_type: file.type || null },
-      deposit_date: new Date().toISOString(),
-      submitter_id: user.id,
-      depositor_id: user.id,
-      status: 'published',
-      visibility: form.embargo_until ? 'private' : 'global',
-    };
-    const { error: insertError } = await supabase.from('repository_items').insert(payload).select('id').single();
+      const payload = {
+        title: form.title.trim(),
+        creators: form.creators.split(/[;,]/).map((name) => name.trim()).filter(Boolean),
+        contributors: form.contributors.split(/[;,]/).map((name) => name.trim()).filter(Boolean),
+        item_type: form.item_type,
+        abstract: form.abstract.trim(),
+        keywords: form.keywords.split(/[;,]/).map((x) => x.trim()).filter(Boolean),
+        department: form.department.trim(),
+        faculty: form.faculty.trim() || null,
+        year: Number(year),
+        date_issued: form.date_issued,
+        publisher: form.publisher.trim() || null,
+        doi: form.doi.trim() || null,
+        handle,
+        license: form.license,
+        embargo_until: form.embargo_until || null,
+        file_paths: fileUrl ? [fileUrl] : [],
+        metadata_json: { contributors, supervisors, deposit_checklist: CHECKLIST, original_file_name: file.name, mime_type: file.type || null },
+        deposit_date: new Date().toISOString(),
+        depositor_id: user.id,
+        status: form.embargo_until ? 'embargoed' : 'published',
+      };
+      const { error: insertError } = await supabase.from('ir_items').insert(payload).select('id').single();
     await supabase.from('ir_audit_logs').insert({ user_id: user.id, action: 'deposit', target_handle: handle, metadata: { title: form.title, department: form.department, file_type: file.type || safeName.split('.').pop() } });
     setSaving(false);
     if (insertError) { setError(insertError.message); return; }
