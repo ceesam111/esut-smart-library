@@ -178,6 +178,29 @@ export default function RepositorySubmit() {
         orcid: a.orcid || undefined,
       }));
 
+      let doi: string | null = null;
+      let handle: string | null = null;
+      try {
+        const mintRes = await fetch('/api/identifiers/mint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'doi', title: title.trim(), creators: authorsJson.map(a => a.name), year: parseInt(year) }),
+        });
+        if (mintRes.ok) {
+          const mintData = await mintRes.json();
+          if (mintData.success) doi = mintData.doi;
+        }
+        const handleRes = await fetch('/api/identifiers/mint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'handle', year: parseInt(year) }),
+        });
+        if (handleRes.ok) {
+          const handleData = await handleRes.json();
+          if (handleData.success) handle = handleData.handle;
+        }
+      } catch { /* identifiers are best-effort */ }
+
       const { data: inserted, error: insertErr } = await supabase.from('repository_items').insert({
         title: title.trim(),
         authors: authorsJson,
@@ -197,6 +220,8 @@ export default function RepositorySubmit() {
         status: 'submitted',
         submitter_id: user.id,
         faculty_code: patron?.faculty_code ?? null,
+        doi,
+        handle,
       }).select('id').single();
 
       if (insertErr) throw new Error(insertErr.message);
