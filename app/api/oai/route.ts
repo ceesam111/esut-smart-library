@@ -21,14 +21,14 @@ function dcRecord(item: Record<string, unknown>): string {
   const doi = (item.doi as string) ?? null;
   const handle = (item.handle as string) ?? null;
   const itemUrl = `https://esutlibrary.edu.ng/repository/${encodeURIComponent(String(item.handle ?? item.id))}`;
-  const creatorTags = authors.map((a) => `<dc:creator>${a}</dc:creator>`).join('\n        ');
-  const subjectTags = [...subjects, ...keywords].map((s) => `<dc:subject>${s}</dc:subject>`).join('\n        ');
+  const creatorTags = authors.map((a) => `<dc:creator>${xmlEscape(typeof a === 'string' ? a : String((a as Record<string, unknown>).name ?? ''))}</dc:creator>`).join('\n        ');
+  const subjectTags = [...subjects, ...keywords].map((s) => `<dc:subject>${xmlEscape(String(s))}</dc:subject>`).join('\n        ');
   const idTags = [itemUrl, doi ? `https://doi.org/${doi}` : null].filter(Boolean).map((u) => `<dc:identifier>${xmlEscape(String(u))}</dc:identifier>`).join('\n        ');
   return `<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
         <dc:title>${xmlEscape(String(item.title ?? ''))}</dc:title>${creatorTags}${subjectTags}
         <dc:description>${xmlEscape(String(item.abstract ?? ''))}</dc:description>
         <dc:date>${dateDatestamp(item.year ? String(item.year) : (item.date_issued as string) ?? '')}</dc:date>
-        <dc:type>${xmlEscape(String(item.item_type ?? item.type ?? ''))}</dc:type>${idTags}
+        <dc:type>${xmlEscape(String(item.item_type ?? ''))}</dc:type>${idTags}
         <dc:language>${xmlEscape(String(item.language ?? 'English'))}</dc:language>
         <dc:rights>${xmlEscape(String(item.license ?? 'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/'))}</dc:rights>
       </oai_dc:dc>`;
@@ -41,6 +41,8 @@ function oaiEnvelope(verb: string, body: string, params = ''): string {
   <request verb="${verb}" ${params}>${BASE_URL}</request>${body}
 </OAI-PMH>`;
 }
+
+const COLS = 'id,title,authors,abstract,keywords,item_type,doi,handle,license,embargo_until,year,date_issued,faculty_code,updated_at';
 
 export async function GET(request: Request) {
   if (!isEnabled()) return new NextResponse('OAI-PMH is not enabled. Set OAI_ENABLED=true.', { status: 404, headers: { 'Content-Type': 'text/plain' } });
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
     if (metadataPrefix !== 'oai_dc') return xml(oaiError('cannotDisseminateFormat', 'Only oai_dc is supported', verb));
     if (!identifier) return xml(oaiError('badArgument', 'identifier is required', verb));
     const itemId = identifier.replace(/^oai:[^:]+:/, '');
-    const { data: item } = await supabase.from('repository_items').select('id,title,authors,abstract,keywords,item_type,type,doi,handle,license,embargo_until,year,date_issued,faculty_code,updated_at').eq('id', itemId).eq('status', 'published').eq('visibility', 'global').maybeSingle();
+    const { data: item } = await supabase.from('repository_items').select(COLS).eq('id', itemId).eq('status', 'published').eq('visibility', 'global').maybeSingle();
     if (!item) return xml(oaiError('idDoesNotExist', 'Record not found', verb));
     return xml(oaiEnvelope('GetRecord', `<GetRecord><record><header><identifier>${oaiIdentifier(item.id as string, OAI_AUTHORITY)}</identifier><datestamp>${utcDatestamp(item.updated_at as string)}</datestamp></header><metadata>${dcRecord(item as Record<string, unknown>)}</metadata></record></GetRecord>`, `metadataPrefix="${metadataPrefix}" identifier="${identifier}"`));
   }
@@ -93,7 +95,7 @@ export async function GET(request: Request) {
       if (set) countQuery = countQuery.eq('faculty_code', set);
       const { count } = await countQuery; totalCount = count ?? 0;
     }
-    let query = supabase.from('repository_items').select('id,title,authors,abstract,keywords,item_type,type,doi,handle,license,embargo_until,year,date_issued,faculty_code,updated_at').eq('status', 'published').eq('visibility', 'global').order('updated_at', { ascending: true }).range(offset, offset + PAGE_SIZE - 1);
+    let query = supabase.from('repository_items').select(COLS).eq('status', 'published').eq('visibility', 'global').order('updated_at', { ascending: true }).range(offset, offset + PAGE_SIZE - 1);
     if (from) query = query.gte('updated_at', toUtcDate(from));
     if (until) query = query.lte('updated_at', toUtcDate(until, true));
     if (set) query = query.eq('faculty_code', set);
