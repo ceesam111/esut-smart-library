@@ -30,7 +30,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 - [ ] Canonical repository object/file model (resolve `repository_items` vs `ir_items` split).
 - [x] **OAI-PMH endpoint (PRIORITY 1)**: `app/api/oai/route.ts` — 6 verbs, from/until/set/metadataPrefix/resumptionToken, valid UTC datestamps, signed expiring tokens, set vocabulary, full error codes, oai_dc, `OAI_ENABLED` flag, tests, `docs/interoperability/oai-pmh.md`. ✅ All 14 documented bugs fixed. ✅ Deployed + live-verified (Identify, ListMetadataFormats, ListSets, ListRecords, ListIdentifiers, GetRecord, badVerb all return valid OAI-PMH XML).
 - [ ] Persistent identifier framework (`DoiProvider`/handle adapter interface; DOI on all publish paths incl. student submit).
-- [ ] Real analytics: event table → dashboards; de-mock `admin/Analytics.tsx` (100% hardcoded today).
+- [x] Real analytics: event table → dashboards; de-mock `admin/Analytics.tsx` (100% hardcoded today). ✅ `analytics_events` table + `src/server/analytics/eventRecorder.ts` + `app/api/admin/analytics/route.ts` + rewritten `Analytics.tsx` (real data, date range, KPIs, charts). Deployed + verified (401 for unauthenticated).
 - [ ] Full-text indexing: use existing FTS (`catalogue` GIN `…20260620202651…sql:634`, `ir_items.search_vector`) to replace ILIKE-only search.
 - [ ] Fix `RepositoryStats.tsx:46` (`.neq('doi',null)`) and `:47/:155` ("OAI-PMH Harvests" mislabel).
 
