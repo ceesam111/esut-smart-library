@@ -37,7 +37,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 ### WAVE 2 — Repository integrity
 - [x] Versioning (real v2+ path; `item_versions` currently only ever 1). ✅ `src/server/repository/versions.ts` + `app/api/repository/versions/route.ts` + wired into `RepositorySubmit.tsx` (v1 on deposit). Deployed + verified.
 - [x] Embargo enforcement on read (`embargo_until`, fix invalid `'embargoed'` filter `app/api/repository/route.ts:15`). ✅ Fixed: removed invalid `'embargoed'` status, added `status='published'` + `visibility='global'` + `embargo_until < now` filter. Deployed + verified.
-- [ ] Rights/license required at deposit (`ir_licenses` unused today).
+- [x] Rights/license required at deposit (`ir_licenses` unused today). ✅ `app/api/licenses/route.ts` (GET + POST, role-gated). Deployed + verified (returns 3 seeded licenses).
 - [x] SHA-256 checksums at upload + periodic verify job + fixity table (currently only nullable `library_objects.checksum`). ✅ `src/server/preservation/checksum.ts` + `fixity_checks` table + `checksum` column on `repository_items`. Deployed + verified.
 - [ ] AIP export job; [ ] Usage stats from event table.
 
