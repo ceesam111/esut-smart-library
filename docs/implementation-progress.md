@@ -39,7 +39,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 - [x] Embargo enforcement on read (`embargo_until`, fix invalid `'embargoed'` filter `app/api/repository/route.ts:15`). ✅ Fixed: removed invalid `'embargoed'` status, added `status='published'` + `visibility='global'` + `embargo_until < now` filter. Deployed + verified.
 - [x] Rights/license required at deposit (`ir_licenses` unused today). ✅ `app/api/licenses/route.ts` (GET + POST, role-gated). Deployed + verified (returns 3 seeded licenses).
 - [x] SHA-256 checksums at upload + periodic verify job + fixity table (currently only nullable `library_objects.checksum`). ✅ `src/server/preservation/checksum.ts` + `fixity_checks` table + `checksum` column on `repository_items`. Deployed + verified.
-- [ ] AIP export job; [ ] Usage stats from event table.
+- [x] AIP export job; [ ] Usage stats from event table. ✅ `src/server/preservation/aipExport.ts` (BagIt-style export) + `aip-exports` storage bucket. Deployed + verified.
 
 ### WAVE 3 — Catalogue interoperability
 - [ ] MARC consolidation (3 coexisting representations → canonical leader+fields).
