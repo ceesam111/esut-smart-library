@@ -226,6 +226,15 @@ export default function RepositorySubmit() {
 
       if (insertErr) throw new Error(insertErr.message);
 
+      // Create initial version
+      try {
+        await fetch('/api/repository/versions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: inserted.id, file_url: fileUrl, change_note: 'Initial deposit' }),
+        });
+      } catch { /* non-blocking */ }
+
       // Fire-and-forget background plagiarism scan. Does not block submission;
       // the result (and any warning) surfaces on the item page once complete.
       supabase.functions
