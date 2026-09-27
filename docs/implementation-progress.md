@@ -1,0 +1,93 @@
+# Implementation Progress — ESUT Smart Library (next-prompt.md)
+
+Cross-session source of truth. Update this file after every wave/milestone.
+Assignment: `next-prompt.md` — audit → WAVE 0-6 → final gap matrix.
+Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
+
+## Completed tasks
+
+- [x] **Phase 0 audit** — 5-pass read-only inspection; `docs/platform-audit.md` written (13-item first deliverable + capability classification + severity rollup + dependency graph).
+- [x] Test baseline recorded: vitest **64 tests / 20 files**, tsc baseline **exactly 64 errors**, `verify-resource-pages.mjs` 18/18, `next build` exit 0.
+- [x] (Prior sessions) Centralized email service (Resend → Gmail fallback) live-verified; RLS-poisoning fix; role alignment (10-value `app_role`); Turnstile removal; registration/verify flows stabilized.
+
+## Current task
+
+- WAVE 0 — foundation: migrations strategy doc, permissions review fixes, event infrastructure.
+
+## Pending tasks (ordered)
+
+### WAVE 0 — Audit/Foundation
+- [ ] **Migrations strategy**: adopt `supabase migration` flow; document how migrations reach the hosted DB; retire ad-hoc `scripts/*.sh` DSNs; fix stale `DATABASE_MIGRATION.md`.
+- [ ] **Permissions review (security pull-forward)**:
+  - [ ] Add RLS to 5 IR tables (`ir_items`, `ir_licenses`, `ir_embargo_logs`, `ir_audit_logs`, `catalog_audit_logs`) — CRITICAL.
+  - [ ] Remove/rotate committed DB credentials in tracked `check_jobs.js:3`, `check_schema.js:3` — HIGH (rotation = owner approval).
+  - [ ] Close 4 open mutating routes (add auth/validation/CSRF as appropriate).
+  - [ ] `src/App.tsx:234-235` missing student `FeatureRoute` guard (issues-to-fix #7).
+  - [ ] Rate-limit `/api/ai/*` (currently exempt: `middleware.ts:5-7`); decide auth policy keeping public widget working.
+  - [ ] Tighten CSRF exemptions (`middleware.ts:7`).
+  - [ ] Fix IR admin deposit broken insert (`admin/IrDeposit.tsx:74-92`).
+  - [ ] Fix sitemap/robots/OAI host split — `public/sitemap.xml` uses `afuedlibrary.org.ng` (HIGH, cross-institution leak).
+- [ ] **Event infrastructure**: usage/event table + server-side recorder (views/downloads/searches), foundation for real analytics and stats.
+- [ ] Reconcile admin agent jobs whitelist 8/10 (`app/api/admin/agents/jobs/route.ts:9-18`).
+- [ ] Decide `next.config.mjs` ignore flags (`ignoreBuildErrors`/`ignoreDuringBuilds`) end-state.
+
+### WAVE 1 — Critical repository interoperability
+- [ ] Canonical repository object/file model (resolve `repository_items` vs `ir_items` split).
+- [ ] **OAI-PMH endpoint (PRIORITY 1)**: `app/api/oai/route.ts` — 6 verbs, from/until/set/metadataPrefix/resumptionToken, valid UTC datestamps, signed expiring tokens, set vocabulary, full error codes, oai_dc, `OAI_ENABLED` flag, tests, `docs/interoperability/oai-pmh.md`.
+- [ ] Persistent identifier framework (`DoiProvider`/handle adapter interface; DOI on all publish paths incl. student submit).
+- [ ] Real analytics: event table → dashboards; de-mock `admin/Analytics.tsx` (100% hardcoded today).
+- [ ] Full-text indexing: use existing FTS (`catalogue` GIN `…20260620202651…sql:634`, `ir_items.search_vector`) to replace ILIKE-only search.
+- [ ] Fix `RepositoryStats.tsx:46` (`.neq('doi',null)`) and `:47/:155` ("OAI-PMH Harvests" mislabel).
+
+### WAVE 2 — Repository integrity
+- [ ] Versioning (real v2+ path; `item_versions` currently only ever 1).
+- [ ] File-level access control; [ ] Embargo enforcement on read (`embargo_until`, fix invalid `'embargoed'` filter `app/api/repository/route.ts:15`).
+- [ ] Rights/license required at deposit (`ir_licenses` unused today).
+- [ ] SHA-256 checksums at upload + periodic verify job + fixity table (currently only nullable `library_objects.checksum`).
+- [ ] AIP export job; [ ] Usage stats from event table.
+
+### WAVE 3 — Catalogue interoperability
+- [ ] MARC consolidation (3 coexisting representations → canonical leader+fields).
+- [ ] Honest Z39.50 relabel now (`admin/CatalogueNew.tsx:55-60` decorative; Open Library proxy at `:318-323`), then real gateway/targets.
+- [ ] SRU client/server; [ ] Authority control linking (table exists, no FK); [ ] Duplicate management.
+
+### WAVE 4 — ILS operations
+- [ ] Offline circulation hardening (fields exist); notices/slips; acquisitions multi-currency (default NGN today); EDI/POS; serials depth; SIP2 behind flag (ABSENT today).
+
+### WAVE 5 — Open scholarship interoperability
+- [ ] SWORD, COAR Notify, Signposting, ResourceSync, ORCID server-side validation, ROR, OpenURL, KBART — all ABSENT (case-sensitive sweep 0).
+
+### WAVE 6 — Enterprise maturity
+- [ ] Report writer (Operational Reports tab is a placeholder `admin/Reports.tsx:508-520`); COUNTER/SUSHI; multilingual; accessibility; API docs; backups/DR; observability (Arcjet key absent, no APM); security hardening; performance testing.
+
+### Definition of Done gate (each wave)
+migrations applied · vitest passes · tsc = 64 baseline (or better) · lint · build · docs updated · commit logically.
+
+## Migration state
+
+- 55 timestamped SQL files, `20260620202651…` → `20260926160000…`; applied manually/ad-hoc to hosted Supabase (no `db push` script; `docker/postgres/init-migrations.sh` orphaned).
+- Hosted DB: `rnnjspkdhojoigncdgmy`; live schema verified via ad-hoc psql (121 tables, 116 RLS).
+- PENDING migration (from audit): RLS on 5 IR tables; credentials cleanup; canonical repo model changes; event tables; FTS wiring.
+- Safety: every migration must be idempotent (`IF NOT EXISTS` guards, existing convention) + have rollback notes in the commit message.
+
+## Tests
+
+- Vitest: **64 / 20 files** passing as of `854d15e` (incl. 12 email tests).
+- tsc: baseline **64 errors** — new code must not add to it (`node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`).
+- E2E smoke suites (temp, not committed): `C:\Users\LENOVO\AppData\Local\Temp\opencode\{reg-e2e.mjs, verify-rate-limit.mjs, email-live.mjs}`.
+- No headless browser available → no browser-level UI tests.
+
+## Configuration required / external dependencies
+
+- **Owner action**: verify sending domain at resend.com/domains (or change `FROM_EMAIL`) — currently all mail rides Gmail SMTP fallback (≈500/day cap).
+- Owner: provide `ARCJET_KEY` and/or Turnstile keys to re-enable middleware protections (both inert today).
+- Owner: rotate DB password after removing `check_jobs.js`/`check_schema.js` credentials.
+- Optional: `ZENODO_TOKEN` (DOI minting), `CORE_API_KEY` (CORE adapter returns `[]` without it), `AI_GATEWAY_API_KEY` (AI librarian edge fn).
+- No fabricated secrets: external-integration code marked "CODE COMPLETE — AWAITING CREDENTIALS" where applicable.
+
+## Known issues (open, from issues-to-fix.md + audit)
+
+- #3 ILL submit · #5 labels/3D overflow · #7 student route guards · #9 repo header · #11 news dates · #12 researchers page · #13 hold checkout · #14 barcode · #15 stats · #16 duplicate staging · #17/18 harvest · #19 AI agent workers · #21 Take-A-Break extras.
+- `GlobalSearch.tsx` hard-coded empty tabs; "Coming Soon" pages (`FacultyLibraries.tsx:95`, `LibraryBranch.tsx:642`).
+- `docs/features-by-role-and-benchmark.md` + `next-prompt.md` untracked (owner has not decided).
+- Parity matrix claim "OAI-PMH Complete" is false until WAVE 1 lands (`docs/library-platform-parity-matrix.md:169`).
