@@ -29,7 +29,7 @@ export async function searchLocalResources(input: { tenantId: string; query: str
     .from('catalogue_items')
     .select('id,title,authors,isbn,doi,publisher,year,subjects,source_url,cover_image')
     .eq('tenant_id', input.tenantId)
-    .or(`title.ilike.%${q}%,isbn.ilike.%${q}%,doi.ilike.%${q}%,publisher.ilike.%${q}%`)
+    .textSearch('search_vector', q, { type: 'websearch' })
     .limit(input.limit ?? 25);
   if (error) {
     if (isMissingSchemaError(error)) return { results: [], quality: 'none' as const, schemaAvailable: false };

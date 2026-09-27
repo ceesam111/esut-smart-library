@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     .in('status', ['published', 'embargoed'])
     .order('created_at', { ascending: false })
     .limit(limit);
-  if (q) query = query.or(`title.ilike.%${q}%,abstract.ilike.%${q}%,department.ilike.%${q}%`);
+  if (q) query = query.textSearch('search_vector', q, { type: 'websearch' });
   if (department) query = query.eq('department', department);
   const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
