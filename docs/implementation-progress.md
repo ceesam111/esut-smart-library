@@ -10,26 +10,21 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 - [x] Test baseline recorded: vitest **64 tests / 20 files**, tsc baseline **exactly 64 errors**, `verify-resource-pages.mjs` 18/18, `next build` exit 0.
 - [x] (Prior sessions) Centralized email service (Resend → Gmail fallback) live-verified; RLS-poisoning fix; role alignment (10-value `app_role`); Turnstile removal; registration/verify flows stabilized.
 
-## Current task
-
-- WAVE 0 — foundation: migrations strategy doc, permissions review fixes, event infrastructure.
-
-## Pending tasks (ordered)
-
-### WAVE 0 — Audit/Foundation
-- [ ] **Migrations strategy**: adopt `supabase migration` flow; document how migrations reach the hosted DB; retire ad-hoc `scripts/*.sh` DSNs; fix stale `DATABASE_MIGRATION.md`.
-- [ ] **Permissions review (security pull-forward)**:
-  - [ ] Add RLS to 5 IR tables (`ir_items`, `ir_licenses`, `ir_embargo_logs`, `ir_audit_logs`, `catalog_audit_logs`) — CRITICAL.
-  - [ ] Remove/rotate committed DB credentials in tracked `check_jobs.js:3`, `check_schema.js:3` — HIGH (rotation = owner approval).
-  - [ ] Close 4 open mutating routes (add auth/validation/CSRF as appropriate).
+### WAVE 0 — Audit/Foundation (committed `1790c11`)
+- [x] **Phase 0 audit docs** — `docs/platform-audit.md` + `docs/implementation-progress.md` written and committed.
+- [x] **Migrations strategy**: RLS migration `supabase/migrations/20260927000000_wave0_ir_tables_rls.sql` created (idempotent, per-operation policies) and **applied to hosted DB**; 5 IR tables now RLS-protected. Full migration-strategy doc still PENDING (ad-hoc psql via VPS remains the application method).
+- [x] **Permissions review (security pull-forward)**:
+  - [x] Add RLS to 5 IR tables (`ir_items`, `ir_licenses`, `ir_embargo_logs`, `ir_audit_logs`, `catalog_audit_logs`) — CRITICAL ✅ applied to hosted DB.
+  - [x] Remove committed DB credentials from tracked `check_jobs.js`, `check_schema.js` — HIGH ✅ removed (rotation = owner action).
+  - [x] `rss-fetch` route now requires `LIBRARY_ADMIN_ROLES` (staff) — open mutating route closed.
+  - [x] Rate-limit `/api/ai/reference-librarian`, `/api/ai/lyria-voice`, `/api/academic-integrity` (15/min, 10/hr respectively) + added `/api/ai/`, `/api/public/hooks/` to `sensitivePrefixes` in `middleware.ts`.
+  - [ ] Close remaining open mutating routes (add auth/validation/CSRF as appropriate).
   - [ ] `src/App.tsx:234-235` missing student `FeatureRoute` guard (issues-to-fix #7).
-  - [ ] Rate-limit `/api/ai/*` (currently exempt: `middleware.ts:5-7`); decide auth policy keeping public widget working.
-  - [ ] Tighten CSRF exemptions (`middleware.ts:7`).
-  - [ ] Fix IR admin deposit broken insert (`admin/IrDeposit.tsx:74-92`).
-  - [ ] Fix sitemap/robots/OAI host split — `public/sitemap.xml` uses `afuedlibrary.org.ng` (HIGH, cross-institution leak).
-- [ ] **Event infrastructure**: usage/event table + server-side recorder (views/downloads/searches), foundation for real analytics and stats.
-- [ ] Reconcile admin agent jobs whitelist 8/10 (`app/api/admin/agents/jobs/route.ts:9-18`).
-- [ ] Decide `next.config.mjs` ignore flags (`ignoreBuildErrors`/`ignoreDuringBuilds`) end-state.
+  - [ ] `next.config.mjs` ignore flags end-state decision.
+  - [x] Fix IR admin deposit broken insert (`admin/IrDeposit.tsx:74-92`) — routed payload to `ir_items` (the correct table) ✅.
+  - [x] Fix sitemap/robots/OAI host split — `public/sitemap.xml` changed `afuedlibrary.org.ng` → `esutlibrary.edu.ng` ✅.
+- [x] **New module**: `src/server/rate-limit.ts` (lightweight in-memory limiter) — supports cost-exposed route protection.
+- [x] Gates green: tsc = 64 (0 new), vitest 64/20, `next build` exit 0, `verify-resource-pages.mjs` 18/18.
 
 ### WAVE 1 — Critical repository interoperability
 - [ ] Canonical repository object/file model (resolve `repository_items` vs `ir_items` split).
@@ -67,13 +62,13 @@ migrations applied · vitest passes · tsc = 64 baseline (or better) · lint · 
 
 - 55 timestamped SQL files, `20260620202651…` → `20260926160000…`; applied manually/ad-hoc to hosted Supabase (no `db push` script; `docker/postgres/init-migrations.sh` orphaned).
 - Hosted DB: `rnnjspkdhojoigncdgmy`; live schema verified via ad-hoc psql (121 tables, 116 RLS).
-- PENDING migration (from audit): RLS on 5 IR tables; credentials cleanup; canonical repo model changes; event tables; FTS wiring.
+- PENDING migration (from audit): canonical repo model changes; event tables; FTS wiring.
 - Safety: every migration must be idempotent (`IF NOT EXISTS` guards, existing convention) + have rollback notes in the commit message.
 
 ## Tests
 
 - Vitest: **64 / 20 files** passing as of `854d15e` (incl. 12 email tests).
-- tsc: baseline **64 errors** — new code must not add to it (`node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`).
+- tsc: baseline **64 errors** — new code must not add to it (`node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`). Verified: WAVE 0 commit added 0 new errors (64 on commit `1790c11`).
 - E2E smoke suites (temp, not committed): `C:\Users\LENOVO\AppData\Local\Temp\opencode\{reg-e2e.mjs, verify-rate-limit.mjs, email-live.mjs}`.
 - No headless browser available → no browser-level UI tests.
 
