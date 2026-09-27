@@ -1,356 +1,128 @@
-import { useState } from 'react';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { useState, useEffect } from 'react';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const lineData = [
-  { date: 'Mon', visits: 2400 },
-  { date: 'Tue', visits: 2210 },
-  { date: 'Wed', visits: 2290 },
-  { date: 'Thu', visits: 2000 },
-  { date: 'Fri', visits: 2181 },
-  { date: 'Sat', visits: 2500 },
-  { date: 'Sun', visits: 2100 },
-];
+const COLORS = ['#6B1D2A', '#CC0000', '#df4468', '#f4a3b3', '#8B0000', '#FF6B6B'];
 
-const donutData = [
-  { name: 'Book Loans', value: 35 },
-  { name: 'E-resource Access', value: 28 },
-  { name: 'Renewals', value: 20 },
-  { name: 'Database Queries', value: 17 },
-];
-
-const searchData = [
-  { rank: 1, query: 'nursing research', count: 1250 },
-  { rank: 2, query: 'organic chemistry', count: 890 },
-  { rank: 3, query: 'financial management', count: 756 },
-  { rank: 4, query: 'psychology journals', count: 634 },
-  { rank: 5, query: 'computer networks', count: 521 },
-  { rank: 6, query: 'literature review', count: 445 },
-  { rank: 7, query: 'statistics methods', count: 398 },
-  { rank: 8, query: 'medical databases', count: 367 },
-  { rank: 9, query: 'law reports', count: 312 },
-  { rank: 10, query: 'thesis samples', count: 287 },
-];
-
-const COLORS = ['#6B1D2A', '#CC0000', '#df4468', '#f4a3b3'];
+interface AnalyticsData {
+  pageViews: number;
+  searches: number;
+  downloads: number;
+  logins: number;
+  registrations: number;
+  topPaths: [string, number][];
+  daily: { date: string; count: number }[];
+}
 
 export default function Analytics() {
-  const [activeTab, setActiveTab] = useState<'network' | 'branch' | 'resources'>('network');
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'year'>('7d');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [days, setDays] = useState(30);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const getVisitsData = () => {
-    switch (dateRange) {
-      case '7d':
-        return { today: 542, week: 18450, month: 76230, year: 450120 };
-      case '30d':
-        return { today: 542, week: 18450, month: 76230, year: 450120 };
-      case '90d':
-        return { today: 542, week: 18450, month: 180560, year: 450120 };
-      case 'year':
-        return { today: 542, week: 18450, month: 76230, year: 450120 };
-    }
-  };
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/admin/analytics?days=${days}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setData(json.data);
+        else setError(json.error || 'Failed to load');
+      })
+      .catch(() => setError('Network error'))
+      .finally(() => setLoading(false));
+  }, [days]);
 
-  const visitsData = getVisitsData();
-  const newRegistrations = [
-    { date: 'Mon', count: 12 },
-    { date: 'Tue', count: 19 },
-    { date: 'Wed', count: 15 },
-    { date: 'Thu', count: 22 },
-    { date: 'Fri', count: 18 },
-    { date: 'Sat', count: 8 },
-    { date: 'Sun', count: 5 },
-  ];
+  if (loading) return <div className="p-6 text-neutral-500">Loading analytics…</div>;
+  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (!data) return <div className="p-6 text-neutral-500">No data</div>;
+
+  const eventBreakdown = [
+    { name: 'Page Views', value: data.pageViews },
+    { name: 'Searches', value: data.searches },
+    { name: 'Downloads', value: data.downloads },
+    { name: 'Logins', value: data.logins },
+    { name: 'Registrations', value: data.registrations },
+  ].filter((d) => d.value > 0);
+
+  const topPathsData = data.topPaths.map(([path, count]) => ({ path: path.length > 30 ? path.slice(0, 30) + '…' : path, count }));
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Platform Analytics</h1>
-        <p className="text-gray-600 mt-2">Monitor platform usage and resource performance</p>
+    <div className="p-6 md:p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-neutral-900">Analytics</h1>
+        <select className="input" value={days} onChange={(e) => setDays(Number(e.target.value))}>
+          <option value={7}>Last 7 days</option>
+          <option value={30}>Last 30 days</option>
+          <option value={90}>Last 90 days</option>
+          <option value={365}>Last year</option>
+        </select>
       </div>
 
-      <div className="card">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('network')}
-              className={`px-4 py-2 rounded font-medium ${
-                activeTab === 'network'
-                  ? 'bg-primary-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Network Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('branch')}
-              className={`px-4 py-2 rounded font-medium ${
-                activeTab === 'branch'
-                  ? 'bg-primary-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              This Branch
-            </button>
-            <button
-              onClick={() => setActiveTab('resources')}
-              className={`px-4 py-2 rounded font-medium ${
-                activeTab === 'resources'
-                  ? 'bg-primary-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Resource Performance
-            </button>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {[
+          { label: 'Page Views', value: data.pageViews },
+          { label: 'Searches', value: data.searches },
+          { label: 'Downloads', value: data.downloads },
+          { label: 'Logins', value: data.logins },
+          { label: 'Registrations', value: data.registrations },
+        ].map((kpi) => (
+          <div key={kpi.label} className="card p-4">
+            <div className="text-2xl font-bold text-neutral-900">{kpi.value.toLocaleString()}</div>
+            <div className="text-sm text-neutral-500">{kpi.label}</div>
           </div>
-
-          <div className="flex gap-2">
-            {(['7d', '30d', '90d', 'year'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setDateRange(range)}
-                className={`px-4 py-2 rounded text-sm font-medium ${
-                  dateRange === range
-                    ? 'bg-primary-700 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {range === '7d' ? '7 days' : range === '30d' ? '30 days' : range === '90d' ? '90 days' : 'Year'}
-              </button>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {activeTab === 'network' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="stat-card">
-              <div className="text-sm font-medium text-gray-600">Visits Today</div>
-              <div className="text-3xl font-bold mt-2">{visitsData.today}</div>
-              <div className="text-xs text-green-600 mt-2">↑ 12% from yesterday</div>
-            </div>
+      <div className="card p-5">
+        <h2 className="font-semibold text-neutral-900 mb-4">Daily Activity</h2>
+        {data.daily.length > 0 ? (
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={data.daily}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="count" stroke="#6B1D2A" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-neutral-400 text-sm">No activity recorded yet. Events will appear as users interact with the platform.</p>
+        )}
+      </div>
 
-            <div className="stat-card">
-              <div className="text-sm font-medium text-gray-600">This Week</div>
-              <div className="text-3xl font-bold mt-2">{visitsData.week.toLocaleString()}</div>
-              <div className="text-xs text-green-600 mt-2">↑ 8% from last week</div>
-            </div>
-
-            <div className="stat-card">
-              <div className="text-sm font-medium text-gray-600">This Month</div>
-              <div className="text-3xl font-bold mt-2">{visitsData.month.toLocaleString()}</div>
-              <div className="text-xs text-gray-600 mt-2">Current period</div>
-            </div>
-
-            <div className="stat-card">
-              <div className="text-sm font-medium text-gray-600">This Year</div>
-              <div className="text-3xl font-bold mt-2">{visitsData.year.toLocaleString()}</div>
-              <div className="text-xs text-green-600 mt-2">↑ 15% from last year</div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Visits Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="card p-5">
+          <h2 className="font-semibold text-neutral-900 mb-4">Event Breakdown</h2>
+          {eventBreakdown.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={eventBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {eventBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
                 <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="visits"
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--color-primary)', r: 5 }}
-                />
-              </LineChart>
+              </PieChart>
             </ResponsiveContainer>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Top 10 Searches</h3>
-            <div className="space-y-2">
-              {searchData.map((item) => (
-                <div key={item.rank} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <div className="flex items-center gap-4">
-                    <span className="font-bold text-gray-500 w-8">#{item.rank}</span>
-                    <span className="font-medium">{item.query}</span>
-                  </div>
-                  <span className="badge badge-primary">{item.count.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          ) : (
+            <p className="text-neutral-400 text-sm">No events recorded yet.</p>
+          )}
         </div>
-      )}
 
-      {activeTab === 'branch' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Patron Activity Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={donutData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={80}
-                    outerRadius={120}
-                    dataKey="value"
-                  >
-                    {donutData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="mt-4 space-y-2">
-                {donutData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                      />
-                      {item.name}
-                    </span>
-                    <span className="font-semibold">{item.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">New Registrations</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={newRegistrations}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Branch Statistics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-primary-50 rounded">
-                <p className="text-sm text-gray-600">Total Patrons</p>
-                <p className="text-2xl font-bold mt-2">2,847</p>
-              </div>
-              <div className="p-4 bg-green-50 rounded">
-                <p className="text-sm text-gray-600">Active Loans</p>
-                <p className="text-2xl font-bold mt-2">1,234</p>
-              </div>
-              <div className="p-4 bg-yellow-50 rounded">
-                <p className="text-sm text-gray-600">Overdue Items</p>
-                <p className="text-2xl font-bold mt-2">47</p>
-              </div>
-              <div className="p-4 bg-purple-50 rounded">
-                <p className="text-sm text-gray-600">Renewals Today</p>
-                <p className="text-2xl font-bold mt-2">156</p>
-              </div>
-            </div>
-          </div>
+        <div className="card p-5">
+          <h2 className="font-semibold text-neutral-900 mb-4">Top Pages</h2>
+          {topPathsData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={topPathsData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="path" width={120} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#6B1D2A" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-neutral-400 text-sm">No page views recorded yet.</p>
+          )}
         </div>
-      )}
-
-      {activeTab === 'resources' && (
-        <div className="space-y-6">
-          <div className="card">
-            <label className="label">Search Resource</label>
-            <input
-              type="text"
-              placeholder="Enter resource title..."
-              className="input w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="card overflow-x-auto">
-            <h3 className="text-lg font-semibold mb-4">Resource Performance Metrics</h3>
-            <table className="w-full text-sm">
-              <thead className="border-b bg-gray-50">
-                <tr>
-                  <th className="text-left p-3 font-semibold">Resource Title</th>
-                  <th className="text-left p-3 font-semibold">Views</th>
-                  <th className="text-left p-3 font-semibold">Downloads</th>
-                  <th className="text-left p-3 font-semibold">Avg Session Duration</th>
-                  <th className="text-left p-3 font-semibold">Bounce Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  {
-                    title: 'JSTOR Database',
-                    views: 5240,
-                    downloads: 1240,
-                    duration: '4m 32s',
-                    bounce: '12%',
-                  },
-                  {
-                    title: 'Project MUSE',
-                    views: 3890,
-                    downloads: 856,
-                    duration: '3m 18s',
-                    bounce: '18%',
-                  },
-                  {
-                    title: 'IEEE Xplore',
-                    views: 2156,
-                    downloads: 445,
-                    duration: '5m 12s',
-                    bounce: '8%',
-                  },
-                  {
-                    title: 'ProQuest Dissertations',
-                    views: 1847,
-                    downloads: 367,
-                    duration: '6m 45s',
-                    bounce: '5%',
-                  },
-                  {
-                    title: 'Scopus Database',
-                    views: 4523,
-                    downloads: 1089,
-                    duration: '4m 8s',
-                    bounce: '14%',
-                  },
-                ].map((resource, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium">{resource.title}</td>
-                    <td className="p-3">{resource.views.toLocaleString()}</td>
-                    <td className="p-3">{resource.downloads.toLocaleString()}</td>
-                    <td className="p-3">{resource.duration}</td>
-                    <td className="p-3">{resource.bounce}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
