@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
     const summary = await getAnalyticsSummary(days);
     return NextResponse.json({ success: true, data: summary });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : 'Failed';
+    if (msg === 'Forbidden.' || msg === 'Authentication required.') {
+      return NextResponse.json({ success: false, error: msg }, { status: 401 });
+    }
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
