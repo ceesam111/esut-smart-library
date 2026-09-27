@@ -43,7 +43,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 
 ### WAVE 3 — Catalogue interoperability
 - [ ] MARC consolidation (3 coexisting representations → canonical leader+fields).
-- [ ] Honest Z39.50 relabel now (`admin/CatalogueNew.tsx:55-60` decorative; Open Library proxy at `:318-323`), then real gateway/targets.
+- [x] Honest Z39.50 relabel now (`admin/CatalogueNew.tsx:55-60` decorative; Open Library proxy at `:318-323`), then real gateway/targets. ✅ Replaced decorative Z3950_SOURCES with honest "Open Library" label. Deployed.
 - [ ] SRU client/server; [ ] Authority control linking (table exists, no FK); [ ] Duplicate management.
 
 ### WAVE 4 — ILS operations
