@@ -52,12 +52,7 @@ const DEFAULT_MARC_FIELDS = [
   { tag: '650', ind1: ' ', ind2: '0', subfields: [{ code: 'a', value: '' }] },
 ];
 
-const Z3950_SOURCES = [
-  { id: 'loc', label: 'Library of Congress', url: 'https://lx2.loc.gov:210/LCDB' },
-  { id: 'bl', label: 'British Library', url: 'https://z3950.bl.uk:9909/BLAC' },
-  { id: 'worldcat', label: 'WorldCat', url: 'https://www.worldcat.org/search' },
-  { id: 'ddc', label: 'Dewey Decimal Classification', url: 'https://www.oclc.org/dewey' },
-];
+const EXTERNAL_SEARCH_SOURCE = 'Open Library';
 
 const FORMATS = CATALOG_ITEM_TYPES;
 
@@ -145,7 +140,6 @@ export default function CatalogueNew() {
   const [aiLoading, setAiLoading] = useState(false);
   const [z3950Open, setZ3950Open] = useState(false);
   const [z3950Query, setZ3950Query] = useState('');
-  const [z3950Source, setZ3950Source] = useState('loc');
   const [z3950Results, setZ3950Results] = useState<any[]>([]);
   const [z3950Searching, setZ3950Searching] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -358,7 +352,7 @@ export default function CatalogueNew() {
     });
     if (mode === 'advanced') syncSimpleToMarc();
     setZ3950Open(false);
-    setSuccessMsg(`Record imported from ${Z3950_SOURCES.find(s => s.id === z3950Source)?.label ?? 'external source'}.`);
+    setSuccessMsg(`Record imported from ${EXTERNAL_SEARCH_SOURCE}.`);
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
@@ -938,14 +932,8 @@ export default function CatalogueNew() {
             </div>
 
             <div className="p-5 space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                {Z3950_SOURCES.map(s => (
-                  <button key={s.id} onClick={() => setZ3950Source(s.id)}
-                    className={`border rounded-lg p-3 text-left text-sm transition-all ${z3950Source === s.id ? 'border-primary-400 bg-primary-50 text-primary-700' : 'border-neutral-200 hover:border-primary-200'}`}>
-                    <div className="font-medium">{s.label}</div>
-                    <div className="text-xs text-neutral-400 mt-0.5">{s.url.split('/')[2]}</div>
-                  </button>
-                ))}
+              <div className="text-sm text-neutral-500">
+                Searching {EXTERNAL_SEARCH_SOURCE} (open-access books)
               </div>
 
               <div className="flex gap-2">
@@ -983,7 +971,7 @@ export default function CatalogueNew() {
               {z3950Searching && (
                 <div className="flex items-center justify-center py-6 gap-2 text-neutral-400 text-sm">
                   <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                  Searching {Z3950_SOURCES.find(s => s.id === z3950Source)?.label}…
+                  Searching {EXTERNAL_SEARCH_SOURCE}…
                 </div>
               )}
 
