@@ -174,3 +174,23 @@ Commits: `82baec2` (password proof + admin purge), `4ab12e8` (receipt verificati
 **Verification evidence (2026-09-26):** `tsc --noEmit` = 64 errors (pre-existing baseline); vitest 52/52; `next build` OK; `verify-resource-pages.mjs` 18/18; production E2E 13/13; rate-limit suite 5/5 (the send-verification check now sends the receipt proof); a dedicated 12-check live script covering the reported flows all passed — fresh registration with no session, receipt-issued proof, create-profile (previously 401), send-verification auto-verifying on `send_failed`, sign-in after auto-confirm, duplicate registration resume, create-profile for a confirmed account with receipt, admin purge routes returning 401 without an admin, and **0 unconfirmed accounts remaining** after the purge. All 4 previously stranded unconfirmed registrations (including the half-finished librarian profile) were removed; the product owner must register that address again.
 
 Not tested: the Unconfirmed tab through a real browser session (no headless browser here) and Resend delivery itself, which still fails (`reason: send_failed`) and is a separate fix.
+
+## Session status 2026-09-26 (part 7 - "permissions issue" on registration: shared admin client was poisoned by a successful sign-in)
+
+Commits: `29acc75` (persistence-error logging with key details), `161a7b5` (the fix), pushed to `ceesam111/esut-smart-library` master and deployed.
+
+**Reported:** both student and librarian registrations failed with `Your profile could not be saved due to a permissions issue. The library team has been informed - please try again shortly.` The API returned 400 from `create-profile` and the container logged `insert failed: 42501 new row violates row-level security policy for table "patrons"`.
+
+**Root cause (reproduced, not guessed):** `getSupabaseAdminClient()` returns one cached client for the whole Node process. `supabase.auth.signInWithPassword()` stores a session **on that client**, after which supabase-js sends the *user's* access token as `Authorization` for every later request it makes. Every server-side write then ran as `authenticated` instead of `service_role`, so RLS rejected it - and the process stayed broken until the next deploy restarted it. That is why the site worked right after a restart, failed hours later (once somebody signed in through the server), and recovered after a redeploy. Reproduced locally: after one successful sign-in on the shared client, an insert for a different user returned `42501`, while an insert matching `auth.uid()` still succeeded (which is why an earlier probe looked inconclusive). `auth.admin.*` kept working because GoTrue's admin API holds its own service-key header, so the earlier "the key must be wrong" theories were misleading.
+
+**Why real registrations hit it and the test suites did not:** the two server-side sign-in calls are reached only for accounts that **can actually sign in** (confirmed account, or a proof that confirms the account first). The automated suites register fresh unconfirmed users, whose sign-in fails and therefore stores no session.
+
+**Fixes (`161a7b5`):**
+- New `src/server/auth/passwordCheck.ts` - password checks run on a throwaway client that is discarded afterwards, so no session can ever land on the shared admin client.
+- `src/server/registration/passwordProof.ts` and `app/api/registration/create-auth-user/route.ts` now use `checkPassword()` instead of `supabase.auth.signInWithPassword()` on the admin client.
+- `src/server/supabase/adminClient.ts` pins `apikey` and `Authorization` to the service key on every `/rest/` request (PostgREST), so even a future session change cannot downgrade writes to `authenticated`. Auth endpoints are untouched so user JWTs still work there.
+- `create-profile` logs the raw error code/message plus the key's role claim on any persistence failure, for future diagnosis.
+
+**Evidence (2026-09-26, after deploy `161a7b5`):** new 5-check poison regression passed (prove-password on a confirmed account, then create-profile for another user; duplicate unconfirmed signup with matching password; resuming that registration with its receipt; one more profile after both former poison paths) - all 200; production E2E 13/13; rate-limit suite 5/5; `0` RLS failures in container logs; tsc = 64 errors (pre-existing baseline); vitest 52/52; `next build` OK; `verify-resource-pages.mjs` 18/18.
+
+Not tested: this scenario through a real browser session (no headless browser here).
