@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { signRecoveryReceipt } from '@/server/registration/recoveryReceipt';
 import { findUserIdByEmail } from '@/server/auth/userLookup';
+import { checkPassword } from '@/server/auth/passwordCheck';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,10 +108,12 @@ export async function POST(request: NextRequest) {
 
     // Unconfirmed account with no verified owner yet: only resume it when the
     // caller can prove they know its password (GoTrue reports
-    // `email_not_confirmed` only after the password matched).
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    const signInDetail = `${(signInError as { code?: string })?.code ?? ''} ${signInError?.message ?? ''}`;
-    const passwordMatches = /email_not_confirmed|not confirmed/i.test(signInDetail);
+    // `email_not_confirmed` only after the password matched). The check runs on
+    // a throwaway client so a saved session can never downgrade the shared
+    // admin client to `authenticated` and break later writes with RLS errors.
+    const probe = await checkPassword(email, password);
+    const signInDetail = probe.detail;
+    const passwordMatches = probe.ok || /email_not_confirmed|not confirmed/i.test(signInDetail);
     if (!passwordMatches) {
       return NextResponse.json({ ok: true, exists: true });
     }

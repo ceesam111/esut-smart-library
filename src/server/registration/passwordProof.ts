@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { findUserIdByEmail } from '@/server/auth/userLookup';
+import { checkPassword } from '@/server/auth/passwordCheck';
 import { signRecoveryReceipt } from './recoveryReceipt';
 import { completeEmailVerification } from './completeEmailVerification';
 import { getRegistrationPolicy } from './policy';
@@ -29,13 +30,13 @@ export async function provePassword(email: string, password: string, confirm: bo
   const userId = await findUserIdByEmail(supabase, email);
   if (!userId) return { ok: false, error: 'Invalid email or password.' };
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const probe = await checkPassword(email, password);
 
-  if (!error) {
+  if (probe.ok) {
     return { ok: true, userId, receipt: signRecoveryReceipt(userId), confirmed: true };
   }
 
-  const detail = `${(error as { code?: string })?.code ?? ''} ${error.message ?? ''}`;
+  const detail = probe.detail;
   if (/email_not_confirmed|not confirmed|confirm your email/i.test(detail)) {
     if (confirm) {
       try {
