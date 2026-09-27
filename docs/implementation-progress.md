@@ -35,7 +35,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 - [ ] Fix `RepositoryStats.tsx:46` (`.neq('doi',null)`) and `:47/:155` ("OAI-PMH Harvests" mislabel).
 
 ### WAVE 2 — Repository integrity
-- [ ] Versioning (real v2+ path; `item_versions` currently only ever 1).
+- [x] Versioning (real v2+ path; `item_versions` currently only ever 1). ✅ `src/server/repository/versions.ts` + `app/api/repository/versions/route.ts` + wired into `RepositorySubmit.tsx` (v1 on deposit). Deployed + verified.
 - [x] Embargo enforcement on read (`embargo_until`, fix invalid `'embargoed'` filter `app/api/repository/route.ts:15`). ✅ Fixed: removed invalid `'embargoed'` status, added `status='published'` + `visibility='global'` + `embargo_until < now` filter. Deployed + verified.
 - [ ] Rights/license required at deposit (`ir_licenses` unused today).
 - [ ] SHA-256 checksums at upload + periodic verify job + fixity table (currently only nullable `library_objects.checksum`).
