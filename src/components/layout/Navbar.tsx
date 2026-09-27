@@ -427,6 +427,9 @@ export default function Navbar() {
                   <button
                     onMouseEnter={() => openDropdown(item.dropdown)}
                     onMouseLeave={scheduleClose}
+                    aria-expanded={openMenu === item.dropdown}
+                    aria-haspopup="true"
+                    aria-label={`${item.label} menu`}
                     className="flex items-center gap-1 px-2 2xl:px-3 py-2 rounded-md text-[13px] 2xl:text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 transition-colors duration-100 whitespace-nowrap"
                   >
                     {item.label}
