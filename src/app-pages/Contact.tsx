@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { sendTransactionalEmail } from '@/lib/email';
 
 const SUBJECTS = [
   'General Inquiry',
@@ -29,13 +29,11 @@ export default function Contact() {
     setSending(true);
     setError('');
     try {
-      await supabase.functions.invoke('send-email', {
-        body: {
-          to: 'library@esut.edu.ng',
-          to_name: 'ESUT Library Team',
-          subject: `[${form.subject}] Contact from ${form.name}`,
-          html: `<p><strong>From:</strong> ${form.name} (${form.email})</p><p><strong>Subject:</strong> ${form.subject}</p><p>${form.message.replace(/\n/g, '<br>')}</p>`,
-        },
+      await sendTransactionalEmail({
+        to: 'library@esut.edu.ng',
+        to_name: 'ESUT Library Team',
+        subject: `[${form.subject}] Contact from ${form.name}`,
+        html: `<p><strong>From:</strong> ${form.name} (${form.email})</p><p><strong>Subject:</strong> ${form.subject}</p><p>${form.message.replace(/\n/g, '<br>')}</p>`,
       });
       setSent(true);
     } catch {

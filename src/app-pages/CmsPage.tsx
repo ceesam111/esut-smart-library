@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { sendTransactionalEmail } from '@/lib/email';
 
 interface Block {
   id: string;
@@ -264,19 +265,22 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 function ContactForm({ email }: { email: string }) {
   const [values, setValues] = useState({ name: '', email: '', message: '' });
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
-    await supabase.functions.invoke('send-email', {
-      body: {
+    setError('');
+    try {
+      await sendTransactionalEmail({
         to: email || 'library@esut.edu.ng',
         to_name: 'Library Team',
         subject: `Website Contact from ${values.name}`,
         html: `<p><strong>From:</strong> ${values.name} (${values.email})</p><p>${values.message}</p>`,
-      },
-    });
-    setSent(true);
+      });
+      setSent(true);
+    } catch {
+      setError('Your message could not be sent. Please email us directly at library@esut.edu.ng.');
+    }
   }
 
   if (sent) {
@@ -314,6 +318,9 @@ function ContactForm({ email }: { email: string }) {
         onChange={e => setValues(v => ({ ...v, message: e.target.value }))}
         className="w-full border border-neutral-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
       />
+      {error && (
+        <p className="text-sm text-red-600" role="alert">{error}</p>
+      )}
       <button
         type="submit"
         className="w-full bg-primary-700 hover:bg-primary-800 text-white font-medium py-2.5 rounded-lg transition-colors"

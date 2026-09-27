@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { sendTransactionalEmail } from '@/lib/email';
 import { institutionConfig } from '@config/institution.config';
 import ProfilePhotoInput from '@/components/auth/ProfilePhotoInput';
 import { GENDERS } from '@/config/roles.config';
@@ -131,9 +132,8 @@ export default function Settings() {
         .eq('id', patronId);
 
       // Send confirmation email
-      await supabase.functions.invoke('send-email', {
-        body: {
-          to: user.email,
+      await sendTransactionalEmail({
+          to: user.email!,
           to_name: (patron as { full_name: string }).full_name,
           subject: `Account Deletion Request — ${institutionConfig.name} Library`,
           html: `<p>Dear ${(patron as { full_name: string }).full_name},</p>
@@ -141,7 +141,6 @@ export default function Settings() {
 <p>If you submitted this request in error, please contact us immediately at <a href="mailto:${institutionConfig.supportEmail}">${institutionConfig.supportEmail}</a>.</p>
 <p>Your academic records (thesis submissions, repository items) held as part of the institutional record may be retained under s.25(1)(e) of the NDPA.</p>
 <p>Regards,<br/>${institutionConfig.name} Library</p>`,
-        },
       });
 
       setDeleteState('done');

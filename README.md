@@ -26,7 +26,7 @@ Built with Next.js, React, TypeScript, and Supabase. Designed for production dep
 | Database | PostgreSQL (Supabase) |
 | Storage | Backblaze B2 + Supabase Storage |
 | AI | Vercel AI Gateway |
-| Email | Resend |
+| Email | Resend (primary) + Gmail SMTP fallback |
 | Security | Arcjet + CSP + CSRF |
 | Testing | Vitest + Playwright |
 | Deployment | Docker + Coolify |
@@ -86,7 +86,9 @@ See `.env.example` for all required variables. Key variables:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
 | `SUPABASE_JWT_SECRET` | Supabase JWT secret (server-only) |
-| `RESEND_API_KEY` | Resend email API key |
+| `RESEND_API_KEY` | Resend email API key (primary provider) |
+| `GMAIL_SMTP_USER` | Gmail address for the SMTP fallback provider |
+| `GMAIL_SMTP_APP_PASSWORD` | Google App Password for the SMTP fallback (server-only) |
 | `APP_BASE_URL` | Application base URL |
 
 **Never commit `.env` files or expose secrets in client-side code.**

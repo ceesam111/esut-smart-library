@@ -15,22 +15,73 @@ const BRAND = {
 };
 
 // ── Transport ─────────────────────────────────────────────────────────────────
+//
+// All application email goes through the server gateway at /api/email/send,
+// which delivers with Resend (primary) and Gmail SMTP (fallback). Credentials
+// never reach the browser: the gateway trusts a signed-in session, a password
+// recovery receipt from registration, or — for anonymous contact forms — the
+// library inbox only.
 
-async function send(to: string, toName: string, subject: string, html: string) {
-  const { data, error } = await supabase.functions.invoke('send-email', {
-    body: { to, to_name: toName, subject, html },
-  });
+export interface EmailProof {
+  /** Supabase access token (defaults to the current session when omitted). */
+  token?: string;
+  /** Registration password-proof receipt + its user id. */
+  recoveryReceipt?: string;
+  userId?: string;
+}
 
-  if (error) {
-    throw new Error(error.message || 'Email function failed.');
+async function postEmail(body: Record<string, unknown>, proof?: EmailProof) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  let token = proof?.token;
+  if (!token) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      token = data.session?.access_token ?? undefined;
+    } catch {
+      // Anonymous caller — the gateway will apply its public-contact policy.
+    }
   }
+  if (token) headers.Authorization = `Bearer ${token}`;
 
-  if (data && typeof data === 'object' && 'ok' in data && !data.ok) {
-    const message = 'error' in data && typeof data.error === 'string'
-      ? data.error
-      : 'Email provider rejected the message.';
+  const payload: Record<string, unknown> = { ...body };
+  if (proof?.userId) payload.userId = proof.userId;
+  if (proof?.recoveryReceipt) payload.recoveryReceipt = proof.recoveryReceipt;
+
+  const response = await fetch('/api/email/send', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+
+  if (!response.ok || data.ok === false) {
+    const message =
+      typeof data.error === 'string' && data.error.trim()
+        ? data.error
+        : 'Email could not be sent. Please try again later.';
     throw new Error(message);
   }
+  return data;
+}
+
+async function send(to: string, toName: string, subject: string, html: string, proof?: EmailProof) {
+  await postEmail({ to, to_name: toName, subject, html }, proof);
+}
+
+export interface TransactionalEmailPayload {
+  to: string | string[];
+  to_name?: string;
+  toName?: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+  reply_to?: string;
+}
+
+/** Sends any pre-built transactional message through the server gateway. */
+export async function sendTransactionalEmail(payload: TransactionalEmailPayload, proof?: EmailProof) {
+  return postEmail({ ...payload }, proof);
 }
 
 // ── HTML template ─────────────────────────────────────────────────────────────
@@ -73,9 +124,10 @@ function template(content: string): string {
 
 // ── 1. Welcome email ──────────────────────────────────────────────────────────
 
-export async function sendWelcomeEmail(patron: {
-  email: string; full_name: string; patron_id: string; faculty_name?: string;
-}) {
+export async function sendWelcomeEmail(
+  patron: { email: string; full_name: string; patron_id: string; faculty_name?: string },
+  proof?: EmailProof
+) {
   const html = template(`
     <h2 style="color:#6B1D2A;margin-top:0">Welcome to ESUT Library!</h2>
     <p style="color:#374151">Dear <strong>${patron.full_name}</strong>,</p>
@@ -93,7 +145,7 @@ export async function sendWelcomeEmail(patron: {
       <li>Submit your research to the <a href="https://esutlibrary.edu.ng/repository/submit" style="color:#6B1D2A">institutional repository</a></li>
     </ul>
   `);
-  await send(patron.email, patron.full_name, 'Welcome to ESUT Library', html);
+  await send(patron.email, patron.full_name, 'Welcome to ESUT Library', html, proof);
 }
 
 export async function sendRegistrationVerificationEmail(patron: {

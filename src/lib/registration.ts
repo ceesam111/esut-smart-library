@@ -335,12 +335,18 @@ async function runRegistration(opts: {
         'Your account was created, but we could not reach the email service. Try signing in now; if you are still asked to verify, request a new link from the sign-in page.';
     }
   } else {
-    sendWelcomeEmail({
-      email: opts.email,
-      full_name: opts.fullName,
-      patron_id: String(profileJson.patronId || institutionConfig.institutionCode || ''),
-      faculty_name: (opts.profile.faculty_name as string) || undefined,
-    }).catch(() => undefined);
+    sendWelcomeEmail(
+      {
+        email: opts.email,
+        full_name: opts.fullName,
+        patron_id: String(profileJson.patronId || institutionConfig.institutionCode || ''),
+        faculty_name: (opts.profile.faculty_name as string) || undefined,
+      },
+      {
+        ...(sessionToken ? { token: sessionToken } : {}),
+        ...(recoveryReceipt ? { recoveryReceipt, userId: userId ?? undefined } : {}),
+      }
+    ).catch(() => undefined);
   }
 
   return {

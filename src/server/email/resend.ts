@@ -1,5 +1,5 @@
 import { institutionConfig as cfg } from '@config/institution.config';
-import nodemailer from 'nodemailer';
+import { sendEmail } from './emailService';
 
 const BRAND = {
   primary: cfg.primaryColour,
@@ -12,7 +12,7 @@ const BRAND = {
   domainUrl: cfg.domain,
 };
 
-function template(content: string): string {
+export function template(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${BRAND.libraryName}</title></head>
@@ -46,63 +46,9 @@ function template(content: string): string {
 </html>`;
 }
 
-export class EmailSendError extends Error {
-  constructor(message: string, public readonly code: 'rate_limited' | 'not_configured' | 'send_failed') {
-    super(message);
-    this.name = 'EmailSendError';
-  }
-}
-
-function classifySmtpError(error: unknown): EmailSendError {
-  const raw = error instanceof Error ? error.message : String(error ?? '');
-  const responseCode = (error as { responseCode?: number })?.responseCode;
-  const lower = raw.toLowerCase();
-  if (
-    responseCode === 421 || responseCode === 450 || responseCode === 451 || responseCode === 452 ||
-    /rate.?limit|too many|throttl|429|try again later|quota exceeded|exceeded a rate limit|temporarily rejected/i.test(lower)
-  ) {
-    return new EmailSendError(raw || 'Email provider rate limit reached.', 'rate_limited');
-  }
-  if (!process.env.RESEND_API_KEY || !(process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL)) {
-    return new EmailSendError(raw || 'Email service is not configured.', 'not_configured');
-  }
-  return new EmailSendError(raw || 'Email could not be sent.', 'send_failed');
-}
-
-async function sendEmail(to: string, toName: string, subject: string, html: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL;
-  const fromName = process.env.FROM_NAME || BRAND.libraryName;
-
-  if (!apiKey) throw new EmailSendError('RESEND_API_KEY is not configured.', 'not_configured');
-  if (!fromEmail) throw new EmailSendError('FROM_EMAIL is not configured.', 'not_configured');
-
-  const port = Number(process.env.RESEND_SMTP_PORT || process.env.SMTP_PORT || 587);
-  const transporter = nodemailer.createTransport({
-    host: process.env.RESEND_SMTP_HOST || process.env.SMTP_HOST || 'smtp.resend.com',
-    port,
-    secure: port === 465 || port === 2465,
-    requireTLS: port === 587 || port === 2587,
-    auth: {
-      user: process.env.RESEND_SMTP_USER || process.env.SMTP_USER || 'resend',
-      pass: apiKey,
-    },
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
-  });
-
-  try {
-    await transporter.sendMail({
-      from: `${fromName} <${fromEmail}>`,
-      to: toName ? `${toName} <${to}>` : to,
-      subject,
-      html,
-    });
-  } catch (error) {
-    throw classifySmtpError(error);
-  }
-}
+// Kept exported for backwards compatibility with earlier imports; the actual
+// implementation is the shared EmailDeliveryError used by the central service.
+export { EmailSendError } from './types';
 
 export async function sendRegistrationVerificationEmailServer(patron: {
   email: string;
@@ -119,5 +65,10 @@ export async function sendRegistrationVerificationEmailServer(patron: {
     <p style="color:#94a3b8;font-size:13px;line-height:1.6">If the button does not work, copy and paste this link into your browser:<br><a href="${patron.verificationLink}" style="color:#6B1D2A;word-break:break-all">${patron.verificationLink}</a></p>
   `);
 
-  await sendEmail(patron.email, patron.full_name, 'Verify your ESUT Library email', html);
+  await sendEmail({
+    to: patron.email,
+    toName: patron.full_name,
+    subject: 'Verify your ESUT Library email',
+    html,
+  });
 }

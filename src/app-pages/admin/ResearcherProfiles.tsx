@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendTransactionalEmail } from '@/lib/email';
 
 interface Profile {
   id: string;
@@ -76,8 +77,7 @@ export default function ResearcherProfiles() {
     // Send email notification
     if (profile.patrons?.email) {
       const fullName = [profile.salutation, profile.first_name, profile.surname].filter(Boolean).join(' ');
-      await supabase.functions.invoke('send-email', {
-        body: {
+      await sendTransactionalEmail({
           to: profile.patrons.email,
           to_name: profile.patrons.full_name,
           subject: 'Your ESUT Research Profile is Now Published',
@@ -85,7 +85,6 @@ export default function ResearcherProfiles() {
 <p>Your research profile has been reviewed and <strong>approved</strong> by the Digital Resources Librarian. It is now publicly available on the ESUT Lecturer Directory.</p>
 <p><a href="https://library.esut.edu.ng/lecturers/${profile.slug}">View your profile</a></p>
 <p>Regards,<br/>ESUT Library</p>`,
-        },
       });
     }
 
@@ -108,8 +107,7 @@ export default function ResearcherProfiles() {
     // Send email
     if (profile.patrons?.email) {
       const fullName = [profile.salutation, profile.first_name, profile.surname].filter(Boolean).join(' ');
-      await supabase.functions.invoke('send-email', {
-        body: {
+      await sendTransactionalEmail({
           to: profile.patrons.email,
           to_name: profile.patrons.full_name,
           subject: 'Action Required: ESUT Research Profile — Revision Needed',
@@ -120,7 +118,6 @@ export default function ResearcherProfiles() {
 </div>
 <p>Please log in to your dashboard, update your profile, and resubmit.</p>
 <p>Regards,<br/>ESUT Library</p>`,
-        },
       });
     }
 

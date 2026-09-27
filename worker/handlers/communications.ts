@@ -1,6 +1,7 @@
 import type { AgentJobHandler } from '../types';
 import { createApproval, requireTenant, safeResult, textPayload } from './utils';
 import { workerJsonCompletion } from '../ai';
+import { sendEmail } from '../../src/server/email';
 
 export const draftNewsletter: AgentJobHandler = async (job, { supabase }) => {
   requireTenant(job);
@@ -66,15 +67,13 @@ export const sendOverdueEmails: AgentJobHandler = async (job, { supabase }) => {
       }));
 
     try {
-      const { error: sendErr } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: email,
-          to_name: patron.full_name,
-          subject: 'Overdue Library Items — Please Return',
-          html: buildOverdueHtml(patron.full_name, patronLoans),
-        },
+      await sendEmail({
+        to: String(email),
+        toName: patron.full_name,
+        subject: 'Overdue Library Items — Please Return',
+        html: buildOverdueHtml(patron.full_name, patronLoans),
       });
-      if (!sendErr) sent++; else failed++;
+      sent++;
     } catch {
       failed++;
     }
@@ -125,15 +124,13 @@ export const sendDueSoonEmails: AgentJobHandler = async (job, { supabase }) => {
       }));
 
     try {
-      const { error: sendErr } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: email,
-          to_name: patron.full_name,
-          subject: 'Library Items Due Soon',
-          html: buildDueSoonHtml(patron.full_name, patronLoans),
-        },
+      await sendEmail({
+        to: String(email),
+        toName: patron.full_name,
+        subject: 'Library Items Due Soon',
+        html: buildDueSoonHtml(patron.full_name, patronLoans),
       });
-      if (!sendErr) sent++; else failed++;
+      sent++;
     } catch {
       failed++;
     }

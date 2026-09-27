@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendTransactionalEmail } from '@/lib/email';
 import { institutionConfig } from '@config/institution.config';
 
 interface Issue {
@@ -106,14 +107,17 @@ export default function Newsletter() {
       return;
     }
 
-    // Send via edge function (batches emails)
+    // Send through the server gateway (Resend primary, Gmail fallback)
     let sent = 0;
+    let failed = 0;
     const html = buildEmailHtml(form.subject, form.content);
     for (const r of emailRecipients) {
-      await supabase.functions.invoke('send-email', {
-        body: { to: r.email, to_name: r.name, subject: form.subject, html },
-      });
-      sent++;
+      try {
+        await sendTransactionalEmail({ to: r.email, to_name: r.name, subject: form.subject, html });
+        sent++;
+      } catch {
+        failed++;
+      }
     }
 
     const now = new Date().toISOString();
@@ -124,7 +128,7 @@ export default function Newsletter() {
     }
 
     setSending(false);
-    setMessage(`Sent to ${sent} recipients.`);
+    setMessage(failed > 0 ? `Sent to ${sent} recipients (${failed} failed).` : `Sent to ${sent} recipients.`);
     setTab('history');
     load();
   }
