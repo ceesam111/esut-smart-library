@@ -42,7 +42,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 - [x] AIP export job; [ ] Usage stats from event table. ✅ `src/server/preservation/aipExport.ts` (BagIt-style export) + `aip-exports` storage bucket. Deployed + verified.
 
 ### WAVE 3 — Catalogue interoperability
-- [ ] MARC consolidation (3 coexisting representations → canonical leader+fields).
+- [x] MARC consolidation (3 coexisting representations → canonical leader+fields). ✅ `src/server/catalogue/marc.ts` (canonical MARC21 with JSONB/XML/JSON conversion). Deployed.
 - [x] Honest Z39.50 relabel now (`admin/CatalogueNew.tsx:55-60` decorative; Open Library proxy at `:318-323`), then real gateway/targets. ✅ Replaced decorative Z3950_SOURCES with honest "Open Library" label. Deployed.
 - [x] SRU client/server; [ ] Authority control linking (table exists, no FK); [ ] Duplicate management. ✅ SRU server at `/api/sru` (explain + searchRetrieve, SRU/XML 1.1). Deployed + verified.
 
