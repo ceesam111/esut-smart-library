@@ -9,10 +9,13 @@ export async function GET(request: NextRequest) {
   const department = searchParams.get('department')?.trim();
   const limit = Math.min(Number(searchParams.get('limit') || 25), 100);
   const supabase = getSupabaseAdminClient();
+  const now = new Date().toISOString();
   let query = supabase
     .from('repository_items')
     .select('id,title,authors,item_type,type,abstract,keywords,department,faculty_code,year,doi,handle,license,embargo_until,file_url,status,visibility', { count: 'exact' })
-    .in('status', ['published', 'embargoed'])
+    .eq('status', 'published')
+    .eq('visibility', 'global')
+    .or(`embargo_until.is.null,embargo_until.lt.${now}`)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (q) query = query.textSearch('search_vector', q, { type: 'websearch' });
