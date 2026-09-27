@@ -637,6 +637,16 @@ function PurchaseOrdersTab() {
                 </select>
               </div>
               <div>
+                <label className="label">Currency</label>
+                <select className="input" value={form.currency} onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}>
+                  <option value="NGN">NGN — Nigerian Naira</option>
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="GBP">GBP — British Pound</option>
+                  <option value="ZAR">ZAR — South African Rand</option>
+                </select>
+              </div>
+              <div>
                 <label className="label">Faculty / Collection</label>
                 <select className="input" value={form.faculty_code} onChange={(e) => setForm((p) => ({ ...p, faculty_code: e.target.value }))}>
                   <option value="">General Collection</option>
