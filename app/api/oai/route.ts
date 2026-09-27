@@ -27,7 +27,7 @@ function dcRecord(item: Record<string, unknown>): string {
   return `<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
         <dc:title>${xmlEscape(String(item.title ?? ''))}</dc:title>${creatorTags}${subjectTags}
         <dc:description>${xmlEscape(String(item.abstract ?? ''))}</dc:description>
-        <dc:date>${dateDatestamp(item.year ? String(item.year) : (item.date_issued as string) ?? '')}</dc:date>
+        <dc:date>${dateDatestamp(item.year ? String(item.year) : null)}</dc:date>
         <dc:type>${xmlEscape(String(item.item_type ?? ''))}</dc:type>${idTags}
         <dc:language>${xmlEscape(String(item.language ?? 'English'))}</dc:language>
         <dc:rights>${xmlEscape(String(item.license ?? 'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/'))}</dc:rights>
@@ -42,7 +42,7 @@ function oaiEnvelope(verb: string, body: string, params = ''): string {
 </OAI-PMH>`;
 }
 
-const COLS = 'id,title,authors,abstract,keywords,item_type,doi,handle,license,embargo_until,year,date_issued,faculty_code,updated_at';
+const COLS = 'id,title,authors,abstract,keywords,item_type,doi,handle,license,embargo_until,year,faculty_code,updated_at';
 
 export async function GET(request: Request) {
   if (!isEnabled()) return new NextResponse('OAI-PMH is not enabled. Set OAI_ENABLED=true.', { status: 404, headers: { 'Content-Type': 'text/plain' } });
