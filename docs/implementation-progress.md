@@ -28,7 +28,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
 
 ### WAVE 1 — Critical repository interoperability
 - [ ] Canonical repository object/file model (resolve `repository_items` vs `ir_items` split).
-- [ ] **OAI-PMH endpoint (PRIORITY 1)**: `app/api/oai/route.ts` — 6 verbs, from/until/set/metadataPrefix/resumptionToken, valid UTC datestamps, signed expiring tokens, set vocabulary, full error codes, oai_dc, `OAI_ENABLED` flag, tests, `docs/interoperability/oai-pmh.md`.
+- [x] **OAI-PMH endpoint (PRIORITY 1)**: `app/api/oai/route.ts` — 6 verbs, from/until/set/metadataPrefix/resumptionToken, valid UTC datestamps, signed expiring tokens, set vocabulary, full error codes, oai_dc, `OAI_ENABLED` flag, tests, `docs/interoperability/oai-pmh.md`. ✅ All 14 documented bugs fixed.
 - [ ] Persistent identifier framework (`DoiProvider`/handle adapter interface; DOI on all publish paths incl. student submit).
 - [ ] Real analytics: event table → dashboards; de-mock `admin/Analytics.tsx` (100% hardcoded today).
 - [ ] Full-text indexing: use existing FTS (`catalogue` GIN `…20260620202651…sql:634`, `ir_items.search_vector`) to replace ILIKE-only search.
