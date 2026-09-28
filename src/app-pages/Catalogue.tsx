@@ -637,10 +637,11 @@ export default function Catalogue() {
 }
 
 function CatalogueCard({ item }: { item: any }) {
+  const title = typeof item.title === 'string' ? item.title : (item.title?.name || item.title?.value || item.title?.text || 'Untitled');
   return (
     <Resource3DBookCard
       id={item.id}
-      title={item.title}
+      title={title}
       authors={Array.isArray(item.authors) ? item.authors : String(item.authors || '').split(',').filter(Boolean)}
       resourceType={item.format || item.item_type || 'book'}
       coverUrl={item.cover_image}

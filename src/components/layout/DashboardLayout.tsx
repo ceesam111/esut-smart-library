@@ -131,6 +131,27 @@ export default function DashboardLayout() {
           <Link to="/ai-librarian" className="text-white/80 hover:text-white text-xs font-medium transition-colors">
             Ask {institutionConfig.librarianName}
           </Link>
+          <div className="relative group">
+            <button className="flex items-center gap-2 text-white/90 hover:text-white transition-colors" aria-label="User menu" aria-haspopup="true">
+              <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold">
+                {profile?.full_name?.[0] || profile?.email?.[0] || 'U'}
+              </span>
+              <span className="hidden sm:block text-sm font-medium">{profile?.full_name || profile?.email || 'User'}</span>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 hidden group-hover:block z-50">
+              <Link to="/dashboard" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50">My Dashboard</Link>
+              <Link to="/dashboard/account" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50">My Profile</Link>
+              <Link to="/dashboard/settings" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50">Settings</Link>
+              <hr className="my-1 border-neutral-100" />
+              <button
+                onClick={async () => { await supabase.auth.signOut(); navigate('/login'); }}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
