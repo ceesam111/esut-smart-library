@@ -82,7 +82,13 @@ migrations applied · vitest passes · tsc = 64 baseline (or better) · lint · 
 
 ## Known issues (open, from issues-to-fix.md + audit)
 
-- #3 ILL submit · #5 labels/3D overflow · #7 student route guards · #9 repo header · #11 news dates · #12 researchers page · #13 hold checkout · #14 barcode · #15 stats · #16 duplicate staging · #17/18 harvest · #19 AI agent workers · #21 Take-A-Break extras.
+- #3 ILL submit · #5 labels/3D overflow · #9 repo header · #11 news dates · #12 researchers page · #13 hold checkout · #14 barcode · #15 stats · #16 duplicate staging · #17/18 harvest · #19 AI agent workers · #21 Take-A-Break extras.
 - `GlobalSearch.tsx` hard-coded empty tabs; "Coming Soon" pages (`FacultyLibraries.tsx:95`, `LibraryBranch.tsx:642`).
 - `docs/features-by-role-and-benchmark.md` + `next-prompt.md` untracked (owner has not decided).
 - Parity matrix claim "OAI-PMH Complete" is false until WAVE 1 lands (`docs/library-platform-parity-matrix.md:169`).
+
+## Fixed 2026-09-28 (accreditation readiness)
+
+- **Catalogue "[object Object]" titles** — `CatalogueCard` now coerces title to string (`typeof item.title === 'string' ? item.title : ...`). Committed `d426bd8`, deployed.
+- **Dashboard Sign Out menu** — `DashboardLayout` top bar now has user dropdown (My Dashboard, My Profile, Settings, Sign Out). Committed `d426bd8`, deployed.
+- **Admin login credentials** — passwords reset for `admin@esut.edu.ng` (`ESUT@Admin2026!`), `librarian@esut.edu.ng` (`ESUT@Lib2026!`), `cataloguer@esut.edu.ng` (`ESUT@Cat2026!`). Verified via Supabase Auth API: all three return access tokens.
