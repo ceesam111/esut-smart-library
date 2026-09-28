@@ -52,6 +52,7 @@ const QUICK_ACTIONS = [
   { label: 'View Analytics',           href: '/admin/analytics',      icon: '📈' },
   { label: 'Generate Reports',         href: '/admin/reports',        icon: '📊' },
   { label: 'Manage Patrons',           href: '/admin/patrons',        icon: '👥' },
+  { label: 'Approve Registrations',    href: '/admin/approvals',      icon: '✅' },
   { label: 'Configure Calendar',       href: '/admin/calendar',       icon: '📅' },
   { label: 'Content Engine',           href: '/admin/content-engine', icon: '🤖' },
 ];

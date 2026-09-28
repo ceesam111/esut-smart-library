@@ -28,7 +28,7 @@ export function buildSip2Response(code: string, fields: Array<[string, string]>,
   const body = fields.map(([tag, value]) => tag + value).join('') + 'AY' + sequence;
   const message = code + fixed + body;
   const checksum = computeChecksum(message + 'AZ');
-  return message + checksum + '\r';
+  return message + 'AZ' + checksum + '\r';
 }
 
 function computeChecksum(data: string): string {

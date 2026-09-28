@@ -3,11 +3,11 @@ import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { getDashboardLabel, roleCan } from '@/config/roles.config';
+import { getDashboardLabel, roleCan, type Feature } from '@/config/roles.config';
 
 const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
 
-type NavItem = { label: string; href: string; icon: string; show?: boolean; accountManager?: boolean; module?: 'catalog' | 'ir' };
+type NavItem = { label: string; href: string; icon: string; show?: boolean; accountManager?: boolean; module?: 'catalog' | 'ir'; feature?: Feature };
 const adminNav: { group: string; items: NavItem[] }[] = [
   { group: 'Overview',  items: [
     { label: 'Dashboard',          href: '/admin',                       icon: '⊞' },
@@ -15,6 +15,7 @@ const adminNav: { group: string; items: NavItem[] }[] = [
   ]},
   { group: 'Patrons', items: [
     { label: 'Patron Directory',   href: '/admin/patrons',               icon: '👥' },
+    { label: 'Approvals',          href: '/admin/approvals',             icon: '✅', feature: 'approvals' },
     { label: 'Bulk Import',        href: '/admin/patrons/import',        icon: '📥' },
   ]},
   { group: 'Collections', items: [
@@ -148,7 +149,7 @@ export default function AdminLayout() {
           <nav className="p-3 space-y-4 flex-1">
             {adminNav.map((group) => {
               const visibleItems = group.items.filter(
-                (i) => i.show !== false && (!i.accountManager || isAccountManager) && (!i.module || (i.module === 'catalog' ? canSeeCatalog : canSeeIr)),
+                (i) => i.show !== false && (!i.feature || roleCan(role, i.feature)) && (!i.accountManager || isAccountManager) && (!i.module || (i.module === 'catalog' ? canSeeCatalog : canSeeIr)),
               );
               if (!visibleItems.length) return null;
               return (
