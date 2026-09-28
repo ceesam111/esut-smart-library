@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BackButton from '@/components/BackButton';
 import LibraryResourceCard from '@/components/LibraryResourceCard';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { SUBSCRIBED_DATABASES } from '@/config/subscribedDatabases.data';
+import type { LibraryResource } from '@/config/libraryResources.config';
 import {
   LIBRARIAN_WHATSAPP_URL,
   OPAC_URL,
@@ -10,6 +12,19 @@ import {
 
 export default function SubscribedDatabases() {
   usePageTitle('Subscribed Databases');
+
+  const [list, setList] = useState<LibraryResource[]>(SUBSCRIBED_DATABASES);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/directory?directory=subscribed')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!cancelled && json?.success && Array.isArray(json.data)) setList(json.data);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
@@ -73,7 +88,7 @@ export default function SubscribedDatabases() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {SUBSCRIBED_DATABASES.map((db) => (
+        {list.map((db) => (
           <LibraryResourceCard key={db.id} resource={db} ctaLabel="Access Database" />
         ))}
       </div>

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BackButton from '@/components/BackButton';
 import LibraryResourceCard from '@/components/LibraryResourceCard';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { OPEN_ACCESS_DATABASES } from '@/config/openAccessDatabases.data';
+import type { LibraryResource } from '@/config/libraryResources.config';
 import { OPAC_URL } from '@/config/libraryResources.config';
 
 export default function OpenAccessDatabases() {
@@ -12,19 +13,31 @@ export default function OpenAccessDatabases() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [accessType, setAccessType] = useState('');
+  const [list, setList] = useState<LibraryResource[]>(OPEN_ACCESS_DATABASES);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/directory?directory=open_access')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!cancelled && json?.success && Array.isArray(json.data)) setList(json.data);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
 
   const categories = useMemo(
-    () => [...new Set(OPEN_ACCESS_DATABASES.map((r) => r.category).filter(Boolean))].sort(),
-    [],
+    () => [...new Set(list.map((r) => r.category).filter(Boolean))].sort(),
+    [list],
   );
   const accessTypes = useMemo(
-    () => [...new Set(OPEN_ACCESS_DATABASES.map((r) => r.accessType).filter(Boolean))].sort(),
-    [],
+    () => [...new Set(list.map((r) => r.accessType).filter(Boolean))].sort(),
+    [list],
   );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return OPEN_ACCESS_DATABASES.filter((r) => {
+    return list.filter((r) => {
       const matchSearch =
         !q ||
         r.name.toLowerCase().includes(q) ||
@@ -35,7 +48,7 @@ export default function OpenAccessDatabases() {
       const matchAccess = !accessType || r.accessType === accessType;
       return matchSearch && matchCategory && matchAccess;
     });
-  }, [search, category, accessType]);
+  }, [list, search, category, accessType]);
 
   const selectCls =
     'border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white';
@@ -53,7 +66,7 @@ export default function OpenAccessDatabases() {
         </p>
         <h1 className="text-3xl font-bold text-neutral-900 mb-2">Open Access Databases</h1>
         <p className="text-neutral-500 max-w-2xl">
-          {OPEN_ACCESS_DATABASES.length} free and open research resources — journals, repositories,
+          {list.length} free and open research resources — journals, repositories,
           discovery tools, data portals and directories. No subscription required.
         </p>
       </div>
@@ -95,7 +108,7 @@ export default function OpenAccessDatabases() {
       </div>
 
       <p className="text-xs text-neutral-400 mb-5" aria-live="polite">
-        Showing {filtered.length} of {OPEN_ACCESS_DATABASES.length} resources
+        Showing {filtered.length} of {list.length} resources
       </p>
 
       {filtered.length === 0 ? (

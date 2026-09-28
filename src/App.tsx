@@ -105,6 +105,7 @@ const AdminCMS            = lazy(() => import('@/pages/admin/CMS'));
 const AdminCmsMenu        = lazy(() => import('@/pages/admin/CmsMenu'));
 const CmsPage             = lazy(() => import('@/pages/CmsPage'));
 const AdminDatabases      = lazy(() => import('@/pages/admin/Databases'));
+const AdminDirectory      = lazy(() => import('@/pages/admin/DirectoryDatabases'));
 const AdminReports        = lazy(() => import('@/pages/admin/Reports'));
 const AdminMigration      = lazy(() => import('@/pages/admin/Migration'));
 const AdminContentEngine  = lazy(() => import('@/pages/admin/ContentEngine'));
@@ -263,6 +264,8 @@ export default function App() {
             <Route path="/admin/cms" element={<AdminCMS />} />
             <Route path="/admin/cms/menu" element={<AdminCmsMenu />} />
             <Route path="/admin/databases" element={<AdminDatabases />} />
+            <Route path="/admin/open-access-databases" element={<AdminDirectory directory="open_access" />} />
+            <Route path="/admin/subscribed-databases" element={<AdminDirectory directory="subscribed" />} />
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/migration" element={<AdminMigration />} />
             <Route path="/admin/content-engine" element={<AdminContentEngine />} />

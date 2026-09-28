@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { supabase } from '@/lib/supabase';
 
 const COLORS = ['#6B1D2A', '#CC0000', '#df4468', '#f4a3b3', '#8B0000', '#FF6B6B'];
 
@@ -20,15 +21,25 @@ export default function Analytics() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    fetch(`/api/admin/analytics?days=${days}`)
-      .then((r) => r.json())
-      .then((json) => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`/api/admin/analytics?days=${days}`, {
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        });
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
         if (json.success) setData(json.data);
         else setError(json.error || 'Failed to load');
-      })
-      .catch(() => setError('Network error'))
-      .finally(() => setLoading(false));
+      } catch {
+        if (!cancelled) setError('Network error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [days]);
 
   if (loading) return <div className="p-6 text-neutral-500">Loading analytics…</div>;

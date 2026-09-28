@@ -30,6 +30,8 @@ const adminNav: { group: string; items: NavItem[] }[] = [
     { label: 'IR Review Queue',    href: '/admin/repository',            icon: '🗄️', module: 'ir' },
     { label: 'Deposit to IR',      href: '/admin/ir/deposit',            icon: '⬆️', module: 'ir' },
     { label: 'Licensed Databases', href: '/admin/databases',             icon: '🔗' },
+    { label: 'Open Access Databases', href: '/admin/open-access-databases', icon: '🌐' },
+    { label: 'Subscribed Databases',  href: '/admin/subscribed-databases',  icon: '💳' },
     { label: 'Acquisitions',       href: '/admin/acquisitions',          icon: '🛒' },
     { label: 'Serials',            href: '/admin/serials',               icon: '📰' },
     { label: 'Newspaper Index',    href: '/admin/newspaper-index',       icon: '🗞️' },
