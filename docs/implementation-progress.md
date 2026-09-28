@@ -67,7 +67,7 @@ migrations applied · vitest passes · tsc = 64 baseline (or better) · lint · 
 
 ## Tests
 
-- Vitest: **64 / 20 files** passing as of `854d15e` (incl. 12 email tests).
+- Vitest: **133 / 42 files** passing as of `dfb36f9` (incl. SIP2 + AIP tests now real, not vacuous).
 - tsc: baseline **64 errors** — new code must not add to it (`node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`). Verified: WAVE 0 commit added 0 new errors (64 on commit `1790c11`).
 - E2E smoke suites (temp, not committed): `C:\Users\LENOVO\AppData\Local\Temp\opencode\{reg-e2e.mjs, verify-rate-limit.mjs, email-live.mjs}`.
 - No headless browser available → no browser-level UI tests.
@@ -85,10 +85,17 @@ migrations applied · vitest passes · tsc = 64 baseline (or better) · lint · 
 - #3 ILL submit · #5 labels/3D overflow · #9 repo header · #11 news dates · #12 researchers page · #13 hold checkout · #14 barcode · #15 stats · #16 duplicate staging · #17/18 harvest · #19 AI agent workers · #21 Take-A-Break extras.
 - `GlobalSearch.tsx` hard-coded empty tabs; "Coming Soon" pages (`FacultyLibraries.tsx:95`, `LibraryBranch.tsx:642`).
 - `docs/features-by-role-and-benchmark.md` + `next-prompt.md` untracked (owner has not decided).
-- Parity matrix claim "OAI-PMH Complete" is false until WAVE 1 lands (`docs/library-platform-parity-matrix.md:169`).
+- ~~Parity matrix claim "OAI-PMH Complete" is false until WAVE 1 lands~~ — WAVE 1 landed; OAI-PMH live-verified (`docs/interoperability/oai-pmh.md`).
 
 ## Fixed 2026-09-28 (accreditation readiness)
 
 - **Catalogue "[object Object]" titles** — `CatalogueCard` now coerces title to string (`typeof item.title === 'string' ? item.title : ...`). Committed `d426bd8`, deployed.
 - **Dashboard Sign Out menu** — `DashboardLayout` top bar now has user dropdown (My Dashboard, My Profile, Settings, Sign Out). Committed `d426bd8`, deployed.
 - **Admin login credentials** — passwords reset for `admin@esut.edu.ng` (`ESUT@Admin2026!`), `librarian@esut.edu.ng` (`ESUT@Lib2026!`), `cataloguer@esut.edu.ng` (`ESUT@Cat2026!`). Verified via Supabase Auth API: all three return access tokens.
+
+## Fixed 2026-09-28 (approvals nav + 2 red tests)
+
+- **Approvals missing from admin menu** — the `/admin/approvals` route existed under `AdminLayout` (`src/App.tsx:242`) but had **no sidebar entry** in `adminNav` (`src/components/layout/AdminLayout.tsx`); only the patron dashboard footer linked it. Added **Patrons → Approvals** (gated by the `approvals` feature via `roleCan`) and **Approve Registrations** quick action on the admin dashboard. Committed `dfb36f9`, deployed `CUTOVER_OK`, live-verified (health 200, `/api/admin/approvals` 401 unauthenticated = exists + auth-gated).
+- **SIP2 spec bug** — `buildSip2Response` computed the CRC over `message + 'AZ'` but never appended the literal `AZ` tag, so responses ended in 4 bare hex digits (`src/server/sip2/messages.ts:31`). Fixed: `message + 'AZ' + checksum + '\r'`.
+- **AIP test was vacuous** — `aipExport.test.ts` asserted a hand-written fixture `'abc123'` had length 64 (impossible, always failed). Rewrote to hash real bytes with `computeChecksum` and assert `/^[0-9a-f]{64}$/`.
+- Gates after fixes: tsc **64** (baseline), vitest **133/133 (42 files)**, `next build` exit **0**, resource checks **18/18**.
