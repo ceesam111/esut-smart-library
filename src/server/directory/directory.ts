@@ -90,7 +90,8 @@ export async function getPublicDirectory(kind: DirectoryKind): Promise<LibraryRe
   try {
     const rows = await fetchDirectoryRows(kind);
     return mergeDirectory(kind, base, rows, false).map((entry) => entry.resource);
-  } catch {
+  } catch (error) {
+    console.error(`[directory] public read failed for kind=${kind}:`, error);
     return base;
   }
 }

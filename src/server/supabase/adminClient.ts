@@ -26,9 +26,9 @@ export function getSupabaseAdminClient() {
         const headers = new Headers(init?.headers);
         headers.set('apikey', serviceRoleKey);
         headers.set('Authorization', `Bearer ${serviceRoleKey}`);
-        return fetch(input, { ...init, headers });
+        return fetch(input, { ...init, headers, cache: 'no-store' });
       }
-      return fetch(input, init);
+      return fetch(input, { ...init, cache: 'no-store' });
     };
 
     cached = createClient(url, serviceRoleKey, {
