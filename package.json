@@ -23,7 +23,7 @@
     "@arcjet/next": "^1.5.0",
     "@aws-sdk/client-s3": "^3.1075.0",
     "@aws-sdk/s3-request-presigner": "^3.1075.0",
-    "@ericblade/quagga2": "^1.12.1",
+"@ericblade/quagga2": "1.12.0",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/playfair-display": "^5.2.8",
@@ -68,8 +68,8 @@
     "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.575.0",
-    "next": "^14.2.35",
-    "nodemailer": "^9.0.3",
+    "next": "16.3.6",
+    "nodemailer": "^10.0.12",
     "openseadragon": "^6.0.2",
     "papaparse": "^5.5.4",
     "pg": "^8.22.0",
@@ -104,9 +104,13 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.28",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.5.3",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "browserslist": "4.29.2",
+    "ndarray-pixels": "5.0.2"
   }
 }

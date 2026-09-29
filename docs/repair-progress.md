@@ -25,7 +25,7 @@ Session: REPAIR SESSION 1 · Started: 2026-09-29
 
 | # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1.1 | Next.js critical CVE | 1 critical npm vuln | Next.js 14.2.35 has known CVEs | — | — | — | — | — | PENDING | — |
+| 1.1 | Next.js critical CVE | 1 critical npm vuln | Next.js 14.2.35 has known CVEs | `package.json` | — | — | `npm audit --omit=dev` → 13 vulns (0 crit, 1 high, 9 mod, 3 low) | Critical eliminated; high reduced from 8 to 1 | COMPLETE | js-yaml transitive dep remains (major upgrade risk) |
 | 1.2 | COAR Notify security | Anonymous POST = 201 | No auth, no validation, no rate limiting | — | — | — | — | — | PENDING | — |
 | 1.3 | SIP2 authentication | Any non-blank password accepted | `authenticate()` checks `password !== ''` only | — | — | — | — | — | PENDING | — |
 | 1.4 | Object storage/embargo | Public buckets expose all files | Buckets created with public=true, no signed URLs | — | — | — | — | — | PENDING | — |
