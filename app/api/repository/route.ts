@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const now = new Date().toISOString();
   let query = supabase
     .from('repository_items')
-    .select('id,title,authors,item_type,type,abstract,keywords,department,faculty_code,year,doi,handle,license,embargo_until,file_url,status,visibility', { count: 'exact' })
+    .select('id,title,authors,item_type,type,abstract,keywords,department,faculty_code,year,doi,handle,license,embargo_until,status,visibility', { count: 'exact' })
     .eq('status', 'published')
     .eq('visibility', 'global')
     .or(`embargo_until.is.null,embargo_until.lt.${now}`)

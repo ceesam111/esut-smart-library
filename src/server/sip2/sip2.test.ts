@@ -12,7 +12,8 @@ describe('sip2', () => {
   it('creates initial SIP2 session', () => {
     const session = createSip2Session();
     expect(session.authenticated).toBe(false);
-    expect(session.patronId).toBeNull();
+    expect(session.terminalId).toBeNull();
+    expect(session.allowedOperations).toEqual([]);
   });
 
   it('builds SIP2 response with checksum', () => {
