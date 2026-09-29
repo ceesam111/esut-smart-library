@@ -78,9 +78,14 @@ export async function runExternalResourceDiscovery(input: {
     }
   });
 
-  const searchResults = await Promise.all(searchPromises);
+  const searchResults = await Promise.allSettled(searchPromises);
 
-  for (const { adapter, control, candidates } of searchResults) {
+  for (const result of searchResults) {
+    if (result.status === 'rejected') {
+      errors.push(`Provider failed: ${result.reason instanceof Error ? result.reason.message : 'unknown error'}`);
+      continue;
+    }
+    const { adapter, control, candidates } = result.value;
     if (!candidates || candidates.length === 0) continue;
     externalCount += candidates.length;
     for (const rawCandidate of candidates) {

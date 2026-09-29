@@ -47,6 +47,10 @@ export async function workerJsonCompletion<T>(input: {
       return { data: input.fallback, usedAi: false, model: result.model, provider: result.provider };
     }
   } catch {
+    const hasKey = Boolean(process.env.AI_GATEWAY_API_KEY);
+    if (!hasKey) {
+      console.warn(`[worker] AI not configured (AI_GATEWAY_API_KEY missing) — using fallback for ${input.agentName}/${input.jobType}`);
+    }
     return { data: input.fallback, usedAi: false, model: null as string | null, provider: null as string | null };
   }
 }
