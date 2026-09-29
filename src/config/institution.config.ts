@@ -44,10 +44,10 @@ export const institutionConfig = {
   // ── Branch Libraries ─────────────────────────────────────────────────────
   // ESUT currently operates a single main library. Branch library support is
   // preserved in the architecture for future extensibility.
-  branchLibraries: [],
+  branchLibraries: [] as Array<{ name: string; slug: string; code: string; description: string }>,
 
   // ── Faculty Libraries ────────────────────────────────────────────────────
-  facultyLibraries: [],
+  facultyLibraries: [] as Array<{ name: string; slug: string; code: string; description: string }>,
 
   // ── Faculties (for Faculty page routing) ─────────────────────────────────
   faculties: [
@@ -70,11 +70,11 @@ export const institutionConfig = {
   // ── Library mode ──────────────────────────────────────────────────────────
   // "single" = one main library only (no branch selection UI)
   // "multi"  = multiple branches with branch selection
-  libraryMode: "single" as const,
+  libraryMode: "single" as string,
 
   // ── Visibility rules ─────────────────────────────────────────────────────
   itemVisibility: {
-    options: ["global", "public", "private"] as const,
+    options: ["global", "public", "private"] as string[],
     defaults: {
       catalogueItems:  "public",
       repositoryItems: "public",

@@ -52,7 +52,7 @@ function shouldUseArcjet(request: NextRequest) {
 }
 
 function clientKey(request: NextRequest) {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.ip || 'unknown';
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
 
 function devRateLimit(request: NextRequest) {

@@ -19,9 +19,8 @@ const nextConfig = {
   // Silence ESLint during production builds (we run lint separately)
   eslint: { ignoreDuringBuilds: true },
 
-  // TypeScript is checked with `npx tsc --noEmit` before deployment. Skipping
-  // Next's duplicate build-time type pass keeps Coolify image builds under its timeout.
-  typescript: { ignoreBuildErrors: true },
+  // TypeScript is checked with `npm run typecheck` before deployment.
+  // No build-time type suppression — build fails on type errors.
 };
 
 export default nextConfig;

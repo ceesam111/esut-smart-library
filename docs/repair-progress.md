@@ -65,3 +65,20 @@ Session: REPAIR SESSION 1 · Started: 2026-09-29
 | # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
 |---|---|---|---|---|---|---|---|---|---|---|
 | K.1 | KBART 500 | Route always returns 500 | `requireRole(new Request('http://localhost'))` synthetic request | — | — | — | — | — | PENDING | — |
+
+### BATCH 2 — TypeScript, Lint, Tests, CI
+
+| # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2.1 | Capture TS baseline | — | — | — | — | — | 65 errors captured | — | COMPLETE | — |
+| 2.2 | Remove TS suppression | `ignoreBuildErrors:true` | Build passed despite errors | `next.config.mjs` | — | — | Removed permanently | — | COMPLETE | — |
+| 2.3 | Fix all TS errors | 65 errors | 4 root causes (as const, empty arrays, ringColor, request.ip) | `src/config/institution.config.ts`, `src/app-pages/Team.tsx`, `middleware.ts` | — | — | **TSC = 0 errors** | — | COMPLETE | — |
+| 2.4 | Establish lint | No ESLint config | Missing config | `eslint.config.mjs` (new) | — | — | Lint runs with 0 errors | — | COMPLETE | Full lint slow on large codebase |
+| 2.5 | Fix Vitest discovery | 6 route tests excluded | `vitest.config.ts` include missed `app/**` | `vitest.config.ts` | — | — | 52 test files discovered (was 46) | — | COMPLETE | — |
+| 2.6 | Run all tests | — | — | — | — | — | **206 passed (52 files)** | — | COMPLETE | — |
+| 2.7 | Test discovery regression | — | — | — | — | — | CI includes vitest run | — | COMPLETE | — |
+| 2.8 | Establish CI | No quality gates | CI only did Docker build | `.github/workflows/ci.yml` (new) | — | — | tsc + lint + vitest + build + audit | — | COMPLETE | — |
+| 2.9 | Build validation | — | — | — | — | — | **Build exit 0** | — | COMPLETE | — |
+| 2.10 | Script cleanup | Missing typecheck/lint scripts | — | `package.json` | — | — | `npm run typecheck`, `npm run lint` work | — | COMPLETE | — |
+| 2.11 | Quality gates doc | — | — | `docs/quality-gates.md` (new) | — | — | — | — | COMPLETE | — |
+| 2.12 | Update repair progress | — | — | `docs/repair-progress.md` | — | — | — | — | COMPLETE | — |

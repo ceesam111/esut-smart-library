@@ -58,7 +58,7 @@ export default function Team() {
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
             {TEAM.map((m) => (
               <div key={m.id} className="flex flex-col items-center text-center group">
-                <div className="w-32 h-32 rounded-full overflow-hidden shadow-md mb-4 border-3 border-white ring-2 transition-transform group-hover:scale-105" style={{ borderColor: '#6B1D2A', ringColor: '#6B1D2A' }}>
+                <div className="w-32 h-32 rounded-full overflow-hidden shadow-md mb-4 border-3 border-white ring-2 transition-transform group-hover:scale-105" style={{ borderColor: '#6B1D2A' }}>
                   <img
                     src={m.photo}
                     alt={m.name}

@@ -10,8 +10,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
+    "test:watch": "vitest",
     "worker": "tsx worker/index.ts",
     "seed:demo": "tsx scripts/seed-demo-data.ts",
     "seed:demo:reset": "tsx scripts/reset-demo-data.ts",
@@ -95,6 +97,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
@@ -105,10 +108,13 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "eslint": "^10.11.0",
+    "eslint-config-next": "^16.3.7",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.5.3",
+    "typescript-eslint": "^8.71.0",
     "vitest": "^4.1.9"
   },
   "overrides": {
