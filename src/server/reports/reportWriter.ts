@@ -52,7 +52,7 @@ export async function generateReport(config: ReportConfig): Promise<ReportResult
     case 'serials': {
       const { data: serials } = await supabase
         .from('serials_subscriptions')
-        .select('id, title, issn, publisher, status, start_date, end_date')
+        .select('id, title, issn, publisher, status, start_date, renewal_date')
         .limit(1000);
       data = serials ?? [];
       break;

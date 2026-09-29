@@ -82,3 +82,19 @@ Session: REPAIR SESSION 1 · Started: 2026-09-29
 | 2.10 | Script cleanup | Missing typecheck/lint scripts | — | `package.json` | — | — | `npm run typecheck`, `npm run lint` work | — | COMPLETE | — |
 | 2.11 | Quality gates doc | — | — | `docs/quality-gates.md` (new) | — | — | — | — | COMPLETE | — |
 | 2.12 | Update repair progress | — | — | `docs/repair-progress.md` | — | — | — | — | COMPLETE | — |
+
+### BATCH 3 — Database Correctness
+
+| # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 3.1 | Capture DB baseline | — | — | — | — | — | 125 tables, 327 indexes, 140 FKs, 366 RLS policies | — | COMPLETE | — |
+| 3.2 | Report writer serials bug | Serials report queries nonexistent `end_date` | Stale field name — column is `renewal_date` | `src/server/reports/reportWriter.ts` | — | 4 tests (reportWriter.test.ts) | All 4 tests pass; query uses `renewal_date` | — | COMPLETE | — |
+| 3.3 | Circulation indexes | 9 FK columns uncovered | Missing indexes on hot tables | — | `20260929040000_circulation_indexes.sql` | — | 9 CREATE INDEX statements applied to hosted DB | — | COMPLETE | — |
+| 3.4 | Query plan validation | — | — | — | — | — | Documented in `docs/database-performance.md` | — | COMPLETE | EXPLAIN ANALYZE not meaningful at 0 rows |
+| 3.5 | Schema integrity | — | — | — | — | — | 0 duplicate indexes, 0 orphan-prone relationships | — | COMPLETE | — |
+| 3.6 | RLS review | — | — | — | — | — | 125/125 tables RLS-enabled, 366 policies | — | COMPLETE | — |
+| 3.7 | Constraints | — | — | — | — | — | Existing constraints adequate | — | COMPLETE | — |
+| 3.8 | Migration safety | — | — | — | `20260929040000_circulation_indexes.sql` | — | Idempotent (IF NOT EXISTS), additive only | — | COMPLETE | — |
+| 3.9 | Schema/type sync | — | — | — | — | — | TSC = 0 errors after changes | — | COMPLETE | — |
+| 3.10 | Reporting safety | — | — | — | — | — | PostgREST-only (no SQL), read-only by construction | — | COMPLETE | — |
+| 3.11 | Tests | — | — | `src/server/reports/reportWriter.test.ts` (new) | — | 4 tests | 206 total tests pass (52 files) | — | COMPLETE | — |
