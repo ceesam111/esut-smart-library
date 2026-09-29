@@ -14,7 +14,7 @@ export async function createSecureRepositoryDownload(
   const supabase = getSupabaseAdminClient();
   const { data: item, error } = await supabase
     .from('repository_items')
-    .select('id,title,file_url,file_size,status,visibility,embargo_until,submitter_id')
+    .select('id,title,file_url,file_size,status,visibility,embargo_until,submitter_id,department')
     .eq('id', itemId)
     .maybeSingle();
 

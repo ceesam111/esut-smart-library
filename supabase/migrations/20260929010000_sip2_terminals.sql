@@ -5,6 +5,7 @@ create table if not exists public.sip2_terminals (
   institution_id text not null,
   login_username text not null,
   password_hash text not null,
+  credential_scheme text not null default 'sha256-legacy',
   is_active boolean not null default true,
   allowed_operations text[] not null default '{}',
   permitted_ip_cidr text,

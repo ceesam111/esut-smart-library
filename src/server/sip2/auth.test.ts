@@ -7,21 +7,21 @@ describe('sip2-auth', () => {
   });
 
   describe('hashSip2Password', () => {
-    it('produces consistent hashes', () => {
-      const hash1 = hashSip2Password('test-password');
-      const hash2 = hashSip2Password('test-password');
-      expect(hash1).toBe(hash2);
+    it('produces bcrypt hashes', async () => {
+      const hash = await hashSip2Password('test-password');
+      expect(hash).toMatch(/^\$2[aby]\$\d+\$/);
     });
 
-    it('produces different hashes for different passwords', () => {
-      const hash1 = hashSip2Password('password1');
-      const hash2 = hashSip2Password('password2');
+    it('produces different hashes for identical passwords (salted)', async () => {
+      const hash1 = await hashSip2Password('test-password');
+      const hash2 = await hashSip2Password('test-password');
       expect(hash1).not.toBe(hash2);
     });
 
-    it('produces a 64-char hex string', () => {
-      const hash = hashSip2Password('test');
-      expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    it('produces different hashes for different passwords', async () => {
+      const hash1 = await hashSip2Password('password1');
+      const hash2 = await hashSip2Password('password2');
+      expect(hash1).not.toBe(hash2);
     });
   });
 

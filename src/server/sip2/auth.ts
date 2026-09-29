@@ -1,10 +1,12 @@
-import { createHash, timingSafeEqual } from 'crypto';
+import bcrypt from 'bcryptjs';
+import { timingSafeEqual } from 'crypto';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 
 const SIP2_MAX_FAILED_ATTEMPTS = 5;
 const SIP2_LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 const SIP2_RATE_LIMIT_WINDOW_MS = 60_000;
 const SIP2_RATE_LIMIT_MAX = 10;
+const BCRYPT_ROUNDS = 12;
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -14,6 +16,7 @@ export interface Sip2Terminal {
   institution_id: string;
   login_username: string;
   password_hash: string;
+  credential_scheme: string;
   is_active: boolean;
   allowed_operations: string[];
   permitted_ip_cidr: string | null;
@@ -26,18 +29,6 @@ export interface Sip2AuthResult {
   terminalId?: string;
   allowedOperations?: string[];
   reason?: string;
-}
-
-function hashPassword(password: string): string {
-  return createHash('sha256').update(`sip2:${password}`).digest('hex');
-}
-
-function verifyPassword(password: string, hash: string): boolean {
-  const computed = hashPassword(password);
-  const a = Buffer.from(computed);
-  const b = Buffer.from(hash);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
 }
 
 function isIpAllowed(clientIp: string | null, permittedCidr: string | null): boolean {
@@ -75,6 +66,21 @@ function checkRateLimit(key: string): boolean {
   if (entry.count >= SIP2_RATE_LIMIT_MAX) return false;
   entry.count++;
   return true;
+}
+
+async function verifyPassword(password: string, hash: string, scheme: string): Promise<boolean> {
+  if (scheme === 'bcrypt') {
+    return bcrypt.compare(password, hash);
+  }
+  if (scheme === 'sha256-legacy') {
+    const { createHash } = await import('crypto');
+    const computed = createHash('sha256').update(`sip2:${password}`).digest('hex');
+    const a = Buffer.from(computed);
+    const b = Buffer.from(hash);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+  return false;
 }
 
 export async function authenticateSip2Terminal(
@@ -119,7 +125,10 @@ export async function authenticateSip2Terminal(
     return { success: false, reason: 'Invalid credentials' };
   }
 
-  if (!verifyPassword(password, terminal.password_hash)) {
+  const scheme = terminal.credential_scheme || 'sha256-legacy';
+  const valid = await verifyPassword(password, terminal.password_hash, scheme);
+
+  if (!valid) {
     const newFailed = terminal.failed_attempts + 1;
     const lockedUntil = newFailed >= SIP2_MAX_FAILED_ATTEMPTS
       ? new Date(Date.now() + SIP2_LOCKOUT_DURATION_MS).toISOString()
@@ -130,6 +139,15 @@ export async function authenticateSip2Terminal(
       .eq('id', terminal.id);
     await logSip2Event(terminal.id, 'login_failed', false, { reason: 'bad_password', failed_attempts: newFailed }, clientIp);
     return { success: false, reason: 'Invalid credentials' };
+  }
+
+  if (scheme === 'sha256-legacy') {
+    const newHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await supabase
+      .from('sip2_terminals')
+      .update({ password_hash: newHash, credential_scheme: 'bcrypt', updated_at: new Date().toISOString() })
+      .eq('id', terminal.id);
+    await logSip2Event(terminal.id, 'credential_migrated', true, { from: 'sha256-legacy', to: 'bcrypt' }, clientIp);
   }
 
   await supabase
@@ -172,8 +190,8 @@ export async function logSip2Event(
   }
 }
 
-export function hashSip2Password(password: string): string {
-  return hashPassword(password);
+export async function hashSip2Password(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 export function isOperationAllowed(allowedOperations: string[] | undefined, operation: string): boolean {

@@ -94,15 +94,15 @@ describe('coar-security', () => {
   });
 
   describe('isDuplicateNonce', () => {
-    it('detects duplicate nonce', () => {
+    it('detects duplicate nonce', async () => {
       const nonce = generateCoarNonce();
-      expect(isDuplicateNonce(nonce)).toBe(false);
-      expect(isDuplicateNonce(nonce)).toBe(true);
+      expect(await isDuplicateNonce(nonce)).toBe(false);
+      expect(await isDuplicateNonce(nonce)).toBe(true);
     });
 
-    it('allows unique nonces', () => {
-      expect(isDuplicateNonce(generateCoarNonce())).toBe(false);
-      expect(isDuplicateNonce(generateCoarNonce())).toBe(false);
+    it('allows unique nonces', async () => {
+      expect(await isDuplicateNonce(generateCoarNonce())).toBe(false);
+      expect(await isDuplicateNonce(generateCoarNonce())).toBe(false);
     });
   });
 

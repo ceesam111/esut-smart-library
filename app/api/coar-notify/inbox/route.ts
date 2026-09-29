@@ -5,6 +5,7 @@ import {
   isDuplicateNonce,
   validateCoarUrl,
   isCoarConfigured,
+  getCoarTargetHost,
 } from '@/server/interoperability/coar-security';
 import { validateCoarNotify, createCoarNotify, sendCoarNotify } from '@/server/interoperability/coar-notify';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing authentication headers' }, { status: 401 });
   }
 
-  if (isDuplicateNonce(nonce)) {
+  if (await isDuplicateNonce(nonce)) {
     return NextResponse.json({ error: 'Duplicate nonce' }, { status: 409 });
   }
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid COAR Notify payload' }, { status: 400 });
   }
 
-  const p = payload as Record<string, unknown>;
+  const p = payload as unknown as Record<string, unknown>;
   const actorId = (p.actor as Record<string, unknown>)?.id;
   if (!actorId || !validateCoarUrl(actorId)) {
     return NextResponse.json({ error: 'Invalid actor' }, { status: 400 });
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   const targetId = (p.target as Record<string, unknown>)?.id;
-  if (!targetId || !targetId.includes('esutlibrary.edu.ng')) {
+  if (!targetId || typeof targetId !== 'string' || !targetId.includes(getCoarTargetHost())) {
     return NextResponse.json({ error: 'Invalid target' }, { status: 400 });
   }
 

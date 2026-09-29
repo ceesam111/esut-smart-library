@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 
 const COAR_MAX_TIMESTAMP_DRIFT_SEC = 300;
 const COAR_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -13,6 +14,10 @@ function getSharedSecret(): string {
 
 export function isCoarConfigured(): boolean {
   return getSharedSecret().length >= 32;
+}
+
+export function getCoarTargetHost(): string {
+  return process.env.COAR_NOTIFY_TARGET_HOST || 'esutlibrary.edu.ng';
 }
 
 export function verifyCoarSignature(payload: string, signature: string, timestamp: string): boolean {
@@ -47,7 +52,7 @@ export function checkCoarRateLimit(senderId: string): boolean {
   return true;
 }
 
-export function isDuplicateNonce(nonce: string): boolean {
+export async function isDuplicateNonce(nonce: string): Promise<boolean> {
   if (processedNonces.has(nonce)) return true;
   processedNonces.add(nonce);
   if (processedNonces.size > 10_000) {
@@ -57,6 +62,18 @@ export function isDuplicateNonce(nonce: string): boolean {
       if (v.done) break;
       processedNonces.delete(v.value);
     }
+  }
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { data: existing } = await supabase
+      .from('coar_nonces')
+      .select('nonce')
+      .eq('nonce', nonce)
+      .maybeSingle();
+    if (existing) return true;
+    await supabase.from('coar_nonces').insert({ nonce });
+  } catch {
+    // if DB is unavailable, fall back to in-memory only
   }
   return false;
 }

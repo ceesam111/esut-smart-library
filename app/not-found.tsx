@@ -1,5 +1,5 @@
-// app/not-found.tsx
-// Renders the existing NotFound page for 404s
+'use client';
+
 import dynamic from 'next/dynamic';
 
 const NotFoundClient = dynamic(() => import('@/NotFoundClient'), { ssr: false });
