@@ -35,6 +35,7 @@ const CourseReserves       = lazy(() => import('@/pages/CourseReserves'));
 const Thesis               = lazy(() => import('@/pages/Thesis'));
 const ThesisSubmit         = lazy(() => import('@/pages/ThesisSubmit'));
 const ThesisStatusPublic   = lazy(() => import('@/pages/ThesisStatusPublic'));
+const WorkflowDashboard     = lazy(() => import('@/pages/WorkflowDashboard'));
 const Events               = lazy(() => import('@/pages/Events'));
 const Blog                 = lazy(() => import('@/pages/Blog'));
 const BlogPost             = lazy(() => import('@/pages/BlogPost'));
@@ -78,6 +79,8 @@ const DashboardCourseReserves  = lazy(() => import('@/pages/dashboard/DashboardC
 const DashboardSettings        = lazy(() => import('@/pages/dashboard/Settings'));
 const LecturerProfile          = lazy(() => import('@/pages/dashboard/LecturerProfile'));
 const Account                  = lazy(() => import('@/pages/dashboard/Account'));
+const DashboardWorkflows       = lazy(() => import('@/pages/dashboard/Workflows'));
+const AdminWorkflows           = lazy(() => import('@/pages/admin/Workflows'));
 const Approvals                = lazy(() => import('@/pages/admin/Approvals'));
 
 // Supervisor
@@ -230,6 +233,8 @@ export default function App() {
             <Route path="/dashboard/my-profile" element={<MyProfile />} />
             <Route path="/dashboard/profile" element={<PatronProfile />} />
             <Route path="/dashboard/thesis" element={<FeatureRoute feature="thesisPortal"><DashboardThesis /></FeatureRoute>} />
+            <Route path="/dashboard/workflows" element={<DashboardWorkflows />} />
+            <Route path="/dashboard/workflows/:id" element={<WorkflowDashboard />} />
             <Route path="/dashboard/course-reserves" element={<FeatureRoute feature="courseReserves"><DashboardCourseReserves /></FeatureRoute>} />
             <Route path="/dashboard/settings" element={<DashboardSettings />} />
             <Route path="/dashboard/lecturer-profile" element={<LecturerProfile />} />
@@ -241,6 +246,8 @@ export default function App() {
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/approvals" element={<Approvals />} />
+          <Route path="/admin/workflows" element={<AdminWorkflows />} />
+          <Route path="/admin/workflows/:id" element={<WorkflowDashboard />} />
             <Route path="/admin/patrons" element={<AdminPatrons />} />
             <Route path="/admin/patrons/import" element={<AdminPatronsImport />} />
             <Route path="/admin/catalogue" element={<AdminCatalogue />} />

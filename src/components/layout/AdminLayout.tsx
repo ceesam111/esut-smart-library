@@ -39,6 +39,7 @@ const adminNav: { group: string; items: NavItem[] }[] = [
   { group: 'Academic', items: [
     { label: 'Course Reserves',    href: '/admin/course-reserves',       icon: '📖', show: institutionConfig.features.courseReserves },
     { label: 'ILL Management',     href: '/admin/ill',                   icon: '📦' },
+    { label: 'Submission Workflows', href: '/admin/workflows',           icon: '✅' },
     { label: 'Book Requests',      href: '/admin/requests',              icon: '🔖' },
     { label: 'Researchers',        href: '/admin/researchers',           icon: '🔬', show: institutionConfig.features.researcherProfiles },
     { label: 'Academic Calendar',  href: '/admin/calendar',              icon: '📅' },

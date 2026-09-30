@@ -69,6 +69,32 @@ export default function SupervisorTheses() {
     })();
   }, [navigate]);
 
+  const syncWorkflow = async (thesisId: string, actionName: 'approve' | 'return_for_correction', comment?: string) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) return;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+      };
+      const listRes = await fetch(`/api/workflows?thesisId=${encodeURIComponent(thesisId)}`, { headers });
+      const listJson = await listRes.json().catch(() => ({}));
+      const instanceId: string | undefined = listJson.data?.[0]?.id;
+      if (!instanceId) return;
+      const res = await fetch(`/api/workflows/${instanceId}/transition`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action: actionName, ...(comment ? { comment } : {}) }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        console.warn('Workflow sync failed:', json.error ?? res.status);
+      }
+    } catch (e) {
+      console.warn('Workflow sync failed:', e);
+    }
+  };
+
   const handleAction = async () => {
     if (!selected || !action) return;
     if (action === 'return' && !notes.trim()) return;
@@ -89,6 +115,12 @@ export default function SupervisorTheses() {
         action: action === 'approve' ? 'approved_by_supervisor' : 'returned_by_supervisor',
         notes: notes.trim() || null,
       });
+
+      await syncWorkflow(
+        selected.id,
+        action === 'approve' ? 'approve' : 'return_for_correction',
+        notes.trim() || undefined,
+      );
 
       // Notify student submitter
       if (selected.submitter_id) {

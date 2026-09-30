@@ -15,6 +15,7 @@ const navItems = [
   { label: 'ILL Requests',   href: '/dashboard/ill',              icon: '📦' },
   { label: 'Reading Lists',  href: '/dashboard/reading-lists',    icon: '📋' },
   { label: 'My Thesis',      href: '/dashboard/thesis',           icon: '📄', show: institutionConfig.features.thesisPortal },
+  { label: 'My Submissions', href: '/dashboard/workflows',        icon: '📤' },
   { label: 'Course Reserves',href: '/dashboard/course-reserves',  icon: '📖', show: institutionConfig.features.courseReserves },
   { label: 'My Reservations',href: '/dashboard/requests',        icon: '🔖' },
   { label: 'Settings',        href: '/dashboard/settings',          icon: '⚙️' },

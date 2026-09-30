@@ -241,6 +241,27 @@ export default function RepositorySubmit() {
         .invoke('academic-integrity', { body: { action: 'scan-repository', itemId: inserted.id } })
         .catch(() => { /* non-blocking */ });
 
+      // Start the review workflow (non-fatal if it fails)
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          const wfRes = await fetch('/api/workflows', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${sessionData.session.access_token}`,
+            },
+            body: JSON.stringify({ resourceType: 'repository', repositoryItemId: inserted.id, submit: true }),
+          });
+          if (!wfRes.ok) {
+            const wfJson = await wfRes.json().catch(() => ({}));
+            console.warn('Workflow not started:', wfJson.error ?? wfRes.status);
+          }
+        }
+      } catch (wfError) {
+        console.warn('Workflow not started:', wfError);
+      }
+
       navigate(`/repository/${inserted.id}`, { state: { submitted: true } });
     } catch (e: any) {
       setError(e.message ?? 'Submission failed. Please try again.');
