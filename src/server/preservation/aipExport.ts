@@ -1,87 +1,134 @@
+import { createHash } from 'crypto';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
-import { computeChecksum } from './checksum';
 
-export interface AipExportResult {
-  item_id: string;
-  bag_path: string;
-  manifest_checksum: string;
-  file_count: number;
-  created_at: string;
+export interface AIPExportResult {
+  success: boolean;
+  aipPath?: string;
+  manifest?: string;
+  error?: string;
 }
 
-export async function exportItemToAip(itemId: string): Promise<AipExportResult | null> {
+function sha256File(data: Buffer): string {
+  return createHash('sha256').update(data).digest('hex');
+}
+
+export async function exportItemAIP(itemId: string, userId: string): Promise<AIPExportResult> {
   const supabase = getSupabaseAdminClient();
-  const { data: item } = await supabase
+
+  const { data: item, error: itemError } = await supabase
     .from('repository_items')
-    .select('id,title,authors,abstract,keywords,item_type,year,doi,handle,license,department,file_url,file_size,status,visibility,created_at,updated_at')
+    .select('*')
     .eq('id', itemId)
     .maybeSingle();
-  if (!item || !item.file_url) return null;
+  if (itemError || !item) return { success: false, error: 'Item not found' };
 
-  const fileRes = await fetch(item.file_url);
-  if (!fileRes.ok) return null;
-  const fileBuffer = Buffer.from(await fileRes.arrayBuffer());
-  const fileChecksum = computeChecksum(fileBuffer);
+  const { data: files, error: filesError } = await supabase
+    .from('repository_files')
+    .select('*')
+    .eq('repository_item_id', itemId)
+    .order('display_order');
+  if (filesError) return { success: false, error: 'Failed to fetch files' };
 
-  const metadata = {
+  const aipId = `item-${itemId}`;
+  const entries: string[] = [];
+  const manifestLines: string[] = [];
+
+  for (const file of (files ?? [])) {
+    try {
+      const { data: objectData, error: downloadError } = await supabase.storage
+        .from(file.storage_bucket)
+        .download(file.storage_key);
+      if (downloadError || !objectData) continue;
+
+      const bytes = Buffer.from(await objectData.arrayBuffer());
+      const checksum = sha256File(bytes);
+      const safeName = file.original_filename.replace(/[^a-zA-Z0-9._-]+/g, '-');
+      const dataPath = `data/${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('aip-exports')
+        .upload(`${aipId}/${dataPath}`, bytes, { contentType: file.mime_type || 'application/octet-stream', upsert: true });
+      if (uploadError) continue;
+
+      manifestLines.push(`${checksum}  ${dataPath}`);
+      entries.push(dataPath);
+    } catch {
+      continue;
+    }
+  }
+
+  const descriptiveMetadata = {
     id: item.id,
     title: item.title,
     authors: item.authors,
     abstract: item.abstract,
     keywords: item.keywords,
-    item_type: item.item_type,
     year: item.year,
+    item_type: item.item_type,
     doi: item.doi,
-    handle: item.handle,
     license: item.license,
-    department: item.department,
-    status: item.status,
     visibility: item.visibility,
+    status: item.status,
+  };
+
+  const administrativeMetadata = {
     created_at: item.created_at,
     updated_at: item.updated_at,
+    submitter_id: item.submitter_id,
   };
 
-  const manifest = [
-    'BagIt-Version: 1.0',
-    'Tag-File-Character-Encoding: UTF-8',
-    '',
-    `payload-oxum: ${fileBuffer.length}.${fileChecksum}`,
-    '',
-  ].join('\n');
+  const rightsMetadata = {
+    visibility: item.visibility,
+    access_level: 'PUBLIC',
+    embargo_until: item.embargo_until,
+  };
 
-  const bagName = `aip_${item.id}_${Date.now()}.txt`;
-  const bagContent = [
-    '=== BagIt Archive ===',
-    manifest,
-    '=== Metadata (JSON) ===',
-    JSON.stringify(metadata, null, 2),
-    '=== File ===',
-    `filename: ${item.handle || item.id}.pdf`,
-    `checksum: ${fileChecksum}`,
-    `size: ${fileBuffer.length}`,
-    '=== End ===',
-  ].join('\n');
+  const provenance = {
+    source: 'ESUT Smart Library',
+    exported_at: new Date().toISOString(),
+    exported_by: userId,
+  };
 
-  const { error: uploadError } = await supabase.storage
+  const metadataJson = JSON.stringify(descriptiveMetadata, null, 2);
+  const adminJson = JSON.stringify(administrativeMetadata, null, 2);
+  const rightsJson = JSON.stringify(rightsMetadata, null, 2);
+  const provenanceJson = JSON.stringify(provenance, null, 2);
+  const manifestContent = manifestLines.join('\n') + '\n';
+
+  const { error: manifestError } = await supabase.storage
     .from('aip-exports')
-    .upload(bagName, bagContent, { contentType: 'text/plain' });
+    .upload(`${aipId}/manifest-sha256.txt`, manifestContent, { contentType: 'text/plain', upsert: true });
+  if (manifestError) return { success: false, error: 'Failed to write manifest' };
 
-  if (uploadError) return null;
+  await supabase.storage.from('aip-exports').upload(`${aipId}/metadata/descriptive.json`, metadataJson, { contentType: 'application/json', upsert: true });
+  await supabase.storage.from('aip-exports').upload(`${aipId}/metadata/administrative.json`, adminJson, { contentType: 'application/json', upsert: true });
+  await supabase.storage.from('aip-exports').upload(`${aipId}/metadata/rights.json`, rightsJson, { contentType: 'application/json', upsert: true });
+  await supabase.storage.from('aip-exports').upload(`${aipId}/metadata/provenance.json`, provenanceJson, { contentType: 'application/json', upsert: true });
 
-  const { data: urlData } = supabase.storage.from('aip-exports').getPublicUrl(bagName);
+  await supabase.from('preservation_events').insert({
+    repository_item_id: itemId,
+    event_type: 'AIP_EXPORTED',
+    details: { aipId, fileCount: entries.length },
+    actor_id: userId,
+  });
 
-  return {
-    item_id: itemId,
-    bag_path: urlData.publicUrl,
-    manifest_checksum: fileChecksum,
-    file_count: 1,
-    created_at: new Date().toISOString(),
-  };
+  return { success: true, aipPath: aipId, manifest: manifestContent };
 }
 
-export async function getAipExports(itemId: string) {
-  const supabase = getSupabaseAdminClient();
-  const { data, error } = await supabase.storage.from('aip-exports').list(`${itemId}_`);
-  if (error) return [];
-  return data ?? [];
+export function validateAIP(manifest: string, files: Array<{ path: string; checksum: string }>): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const manifestLines = manifest.trim().split('\n');
+  const manifestMap = new Map<string, string>();
+  for (const line of manifestLines) {
+    const [checksum, path] = line.split('  ');
+    if (checksum && path) manifestMap.set(path, checksum);
+  }
+  for (const file of files) {
+    if (!manifestMap.has(file.path)) {
+      errors.push(`Missing from manifest: ${file.path}`);
+    } else if (manifestMap.get(file.path) !== file.checksum) {
+      errors.push(`Checksum mismatch: ${file.path}`);
+    }
+  }
+  return { valid: errors.length === 0, errors };
 }
