@@ -98,3 +98,18 @@ Session: REPAIR SESSION 1 · Started: 2026-09-29
 | 3.9 | Schema/type sync | — | — | — | — | — | TSC = 0 errors after changes | — | COMPLETE | — |
 | 3.10 | Reporting safety | — | — | — | — | — | PostgREST-only (no SQL), read-only by construction | — | COMPLETE | — |
 | 3.11 | Tests | — | — | `src/server/reports/reportWriter.test.ts` (new) | — | 4 tests | 206 total tests pass (52 files) | — | COMPLETE | — |
+
+### BATCH 4 — Broken Core Services
+
+| # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 4.1 | Federated search failure isolation | One provider failure crashes entire search | `Promise.all` in discovery.ts:81 | `src/server/resources/discovery.ts` | — | — | Code change verified: `Promise.all` → `Promise.allSettled` | — | COMPLETE | — |
+| 4.2 | Provider inventory | — | — | — | — | — | 14 adapters in sourceRegistry, all configured | — | COMPLETE | — |
+| 4.3 | Worker AI observability | Silent fallback when AI key missing | No logging when AI not configured | `worker/ai.ts` | — | — | console.warn added when AI_GATEWAY_API_KEY missing | — | COMPLETE | — |
+| 4.4 | Worker runtime verification | Worker not tested end-to-end | — | — | — | — | Worker started, health check 200: `{"status":"ok","processed":0,"failed":0}` | — | COMPLETE | — |
+| 4.5 | Issue #3 (ILL submit) | Direct client-side insert, RLS blocks | No API route, no server-side auth | `app/api/ill/route.ts` (new) | — | — | Server-side auth + patron lookup + validation | — | CLOSED | — |
+| 4.6 | Issue #13 (hold checkout) | No checkout button in hold queue | Missing UI action | `src/app-pages/admin/Circulation.tsx` | — | — | Check Out button added for ready_for_collection holds | — | CLOSED | — |
+| 4.7 | Issue #14 (barcode scanning) | Scanner not integrated into circulation | Missing UI integration | `src/app-pages/admin/Circulation.tsx` | — | — | Scan Barcode button + scanner modal added | — | CLOSED | — |
+| 4.8 | Issue #19 (AI workers) | Silent fallback, no observability | Missing AI key logging | `worker/ai.ts` | — | — | console.warn added, worker verified running | — | CLOSED | — |
+
+**BATCH 4 COMPLETE.** All owner issues closed. Worker verified running. Federated search failure isolation fixed.

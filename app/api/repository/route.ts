@@ -22,5 +22,33 @@ export async function GET(request: NextRequest) {
   if (department) query = query.eq('department', department);
   const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data, count, module: 'repository' });
+
+  const itemIds = (data ?? []).map((item: any) => item.id);
+  const { data: files } = await supabase
+    .from('repository_files')
+    .select('id,repository_item_id,original_filename,display_filename,mime_type,file_size,role,access_level,embargo_until,display_order')
+    .in('repository_item_id', itemIds)
+    .order('display_order');
+
+  const filesByItem = new Map<string, any[]>();
+  for (const file of (files ?? [])) {
+    const list = filesByItem.get(file.repository_item_id) ?? [];
+    list.push({
+      id: file.id,
+      filename: file.display_filename || file.original_filename,
+      mimeType: file.mime_type,
+      size: file.file_size,
+      role: file.role,
+      accessLevel: file.access_level,
+      embargoUntil: file.embargo_until,
+    });
+    filesByItem.set(file.repository_item_id, list);
+  }
+
+  const enriched = (data ?? []).map((item: any) => ({
+    ...item,
+    files: filesByItem.get(item.id) ?? [],
+  }));
+
+  return NextResponse.json({ data: enriched, count, module: 'repository' });
 }

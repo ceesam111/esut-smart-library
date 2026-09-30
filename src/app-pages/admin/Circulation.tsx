@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import { format, differenceInDays } from 'date-fns';
 import { logCirculationEvent } from '@/lib/audit';
+import { useBarcodeScanner } from '@/features/barcode/useBarcodeScanner';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Patron {
@@ -349,6 +350,56 @@ export default function Circulation() {
   };
 
   // ── Holds
+  const checkoutFromHold = async (hold: any) => {
+    setCoLoading(true);
+    setCoAlert(null);
+    try {
+      const { data: freshHold } = await supabase
+        .from('reservations')
+        .select('id, status, patron_id, catalogue_item_id')
+        .eq('id', hold.id)
+        .maybeSingle();
+      if (!freshHold || freshHold.status !== 'ready_for_collection') {
+        setCoAlert({ type: 'error', msg: 'Hold is no longer eligible for checkout.' });
+        fetchHolds();
+        return;
+      }
+      const { data: existingLoan } = await supabase
+        .from('loans')
+        .select('id')
+        .eq('catalogue_item_id', freshHold.catalogue_item_id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (existingLoan) {
+        setCoAlert({ type: 'error', msg: 'Item is already checked out.' });
+        return;
+      }
+      const { error: loanError } = await supabase
+        .from('loans')
+        .insert({
+          patron_id: freshHold.patron_id,
+          catalogue_item_id: freshHold.catalogue_item_id,
+          checkout_date: new Date().toISOString(),
+          due_date: new Date(Date.now() + 14 * 86400000).toISOString(),
+          status: 'active',
+        });
+      if (loanError) {
+        setCoAlert({ type: 'error', msg: 'Checkout failed: ' + loanError.message });
+        return;
+      }
+      await supabase
+        .from('reservations')
+        .update({ status: 'fulfilled' })
+        .eq('id', freshHold.id);
+      setCoAlert({ type: 'success', msg: 'Checked out from hold.' });
+      fetchHolds();
+    } catch (err: any) {
+      setCoAlert({ type: 'error', msg: err?.message ?? 'Checkout from hold failed.' });
+    } finally {
+      setCoLoading(false);
+    }
+  };
+
   const fetchHolds = async () => {
     const { data } = await supabase
       .from('reservations')
@@ -500,6 +551,20 @@ export default function Circulation() {
     { id: 'offline',  label: `Offline Queue${offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}` },
   ] as const;
 
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const scanner = useBarcodeScanner({
+    mode: 'catalogue',
+    onDetected: (code: string) => {
+      setItemQuery(code);
+      setScannerOpen(false);
+    },
+  });
+  useEffect(() => {
+    if (scanner.lastCode) {
+      setItemQuery(scanner.lastCode);
+    }
+  }, [scanner.lastCode]);
+
   const alertCls = (type: string) =>
     type === 'success' ? 'bg-green-50 text-green-800' :
     type === 'warning' ? 'bg-amber-50 text-amber-800' :
@@ -572,6 +637,13 @@ export default function Circulation() {
               onQuery={searchItems}
               onSelect={(it) => { setSelectedItem(it); setItemResults([]); }}
             />
+            <button
+              onClick={() => setScannerOpen(true)}
+              className="btn-secondary mt-2"
+              title="Scan Barcode"
+            >
+              Scan Barcode
+            </button>
             {selectedItem && (
               <div className={`p-3 rounded-lg text-sm ${selectedItem.available_copies > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                 <strong>{selectedItem.title}</strong>
@@ -722,6 +794,17 @@ export default function Circulation() {
                           {h.status}
                         </span>
                       </td>
+                      <td className="p-3">
+                        {h.status === 'ready_for_collection' && (
+                          <button
+                            onClick={() => checkoutFromHold(h)}
+                            disabled={coLoading}
+                            className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
+                          >
+                            Check Out
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -792,6 +875,29 @@ export default function Circulation() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {scannerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 space-y-4">
+            <h3 className="font-semibold text-lg">Scan Barcode</h3>
+            <div className="relative bg-black rounded-lg overflow-hidden" style={{ minHeight: 240 }}>
+              <video ref={scanner.videoRef} className="w-full" autoPlay playsInline muted />
+              {!scanner.error && scanner.status !== 'scanning' && (
+                <div className="absolute inset-0 flex items-center justify-center text-white text-sm">
+                  <button onClick={scanner.start} className="btn-primary">Start Camera</button>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">Point camera at barcode. Scan will populate the item search field.</p>
+            <div className="flex gap-2">
+              {scanner.status === 'scanning' && (
+                <button onClick={scanner.stop} className="btn-secondary flex-1">Stop</button>
+              )}
+              <button onClick={() => { scanner.stop(); setScannerOpen(false); }} className="btn-secondary flex-1">Cancel</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
