@@ -4,6 +4,7 @@ import { harvestResources, downloadResourceToB2 } from './resources';
 import { extractRepositoryMetadata } from './repository';
 import { draftNewsletter, overdueReminders, sendOverdueEmails, sendDueSoonEmails } from './communications';
 import { weeklyTenantReport, systemHealthCheck } from './reports';
+import { verifyFixity } from './preservation';
 
 export const handlers: Record<string, AgentJobHandler> = {
   'catalogue.enrich': enrichCatalogue,
@@ -16,6 +17,7 @@ export const handlers: Record<string, AgentJobHandler> = {
   'circulation.overdueReminders': overdueReminders,
   'circulation.sendOverdueEmails': sendOverdueEmails,
   'circulation.sendDueSoonEmails': sendDueSoonEmails,
+  'preservation.verifyFixity': verifyFixity,
 };
 
 export function getHandler(jobType: string) {
