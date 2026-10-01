@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import ThesisFileButton from '@/components/ThesisFileButton';
+
+interface MatchedSource {
+  title?: string | null;
+  url?: string | null;
+  matchedWords?: number | null;
+}
 
 interface Thesis {
   id: string;
@@ -14,11 +21,11 @@ interface Thesis {
   updated_at: string;
   similarity_score: number | null;
   ai_content_score: number | null;
-  matched_sources: any[] | null;
+  matched_sources: MatchedSource[] | null;
   plagiarism_scanned_at: string | null;
   file_url: string | null;
   abstract: string | null;
-  keywords: any[];
+  keywords: string[];
   doi: string | null;
   zenodo_id: string | null;
   repository_item_id: string | null;
@@ -57,7 +64,7 @@ export default function AdminTheses() {
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => { fetchTheses(); }, [filter]);
+  useEffect(() => { void fetchTheses(); }, [filter]);
 
   const fetchTheses = async () => {
     setLoading(true);
@@ -145,15 +152,15 @@ export default function AdminTheses() {
 
       setPublishResult({ ok: true, doi });
       setSelected(prev => prev ? { ...prev, status: 'published', doi } : null);
-      fetchTheses();
+      void fetchTheses();
 
       // 5. Email student
       if (submitterEmail) {
         const html = `<p>Dear ${submitterName || 'Student'},</p><p>Congratulations! Your work <strong>${selected.title}</strong> (Ref: ${selected.reference_no}) has been approved by the Library Committee and is now published in the ESUT institutional repository.</p>${doi ? `<p>Your DOI: <a href="https://doi.org/${doi}">https://doi.org/${doi}</a></p>` : ''}<p>Your work is now accessible to researchers worldwide.</p>`;
         await sendEmail(submitterEmail, submitterName || submitterEmail, `Your work is published: ${selected.reference_no}`, html);
       }
-    } catch (e: any) {
-      setPublishResult({ ok: false, error: e.message });
+    } catch (e) {
+      setPublishResult({ ok: false, error: e instanceof Error ? e.message : 'Publish failed.' });
     } finally {
       setPublishLoading(false);
     }
@@ -182,7 +189,7 @@ export default function AdminTheses() {
 
     setSelected(prev => prev ? { ...prev, status: 'returned_to_student', revision_notes: returnNotes.trim() } : null);
     setShowReturnForm(false);
-    fetchTheses();
+    void fetchTheses();
     setActionLoading(false);
   };
 
@@ -241,7 +248,7 @@ export default function AdminTheses() {
             </thead>
             <tbody>
               {theses.map(t => (
-                <tr key={t.id} className="border-b hover:bg-neutral-50 cursor-pointer" onClick={() => openThesis(t)}>
+                <tr key={t.id} className="border-b hover:bg-neutral-50 cursor-pointer" onClick={() => { void openThesis(t); }}>
                   <td className="p-3 font-medium max-w-xs">
                     <p className="line-clamp-1">{t.title}</p>
                     <p className="text-xs text-neutral-400 mt-0.5">{t.programme}</p>
@@ -263,7 +270,7 @@ export default function AdminTheses() {
                     {t.doi ? <span className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>DOI</span> : '—'}
                   </td>
                   <td className="p-3">
-                    <button className="btn-outline text-xs py-1 px-2" onClick={e => { e.stopPropagation(); openThesis(t); }}>
+                    <button className="btn-outline text-xs py-1 px-2" onClick={e => { e.stopPropagation(); void openThesis(t); }}>
                       Review
                     </button>
                   </td>
@@ -315,9 +322,7 @@ export default function AdminTheses() {
               )}
 
               {selected.file_url && (
-                <a href={selected.file_url} target="_blank" rel="noopener noreferrer" className="btn-outline text-sm w-full text-center block">
-                  Download PDF
-                </a>
+                <ThesisFileButton thesisId={selected.id} />
               )}
 
               {/* Plagiarism scores */}
@@ -344,7 +349,7 @@ export default function AdminTheses() {
                     {Array.isArray(selected.matched_sources) && selected.matched_sources.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs font-semibold text-neutral-600">Top Matched Sources</p>
-                        {selected.matched_sources.slice(0, 5).map((src: any, i: number) => (
+                        {selected.matched_sources.slice(0, 5).map((src, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <span className="text-neutral-400">#{i + 1}</span>
                             <span className="flex-1 truncate text-neutral-600">{src.title || src.url}</span>
@@ -378,7 +383,7 @@ export default function AdminTheses() {
               {selected.status === 'committee_review' && !showReturnForm && (
                 <div className="space-y-2 pt-4 border-t">
                   <button
-                    onClick={handlePublish}
+                    onClick={() => { void handlePublish(); }}
                     disabled={publishLoading}
                     className="btn-primary w-full disabled:opacity-50"
                   >
@@ -408,7 +413,7 @@ export default function AdminTheses() {
                   <div className="flex gap-2">
                     <button onClick={() => setShowReturnForm(false)} className="btn-ghost flex-1">Cancel</button>
                     <button
-                      onClick={handleReturnToStudent}
+                      onClick={() => { void handleReturnToStudent(); }}
                       disabled={!returnNotes.trim() || actionLoading}
                       className="flex-1 btn-ghost text-amber-700 border border-amber-300 hover:bg-amber-50 disabled:opacity-50"
                     >

@@ -61,7 +61,7 @@ select
   'ORIGINAL',
   case ri.visibility
     when 'global' then 'PUBLIC'
-    when 'faculty' then 'FACULTIC'
+    when 'faculty' then 'FACULTY'
     else 'PRIVATE'
   end,
   ri.submitter_id

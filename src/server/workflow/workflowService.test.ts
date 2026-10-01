@@ -23,7 +23,7 @@ const STUDENT = ['student'];
 const LIBRARIAN = ['librarian'];
 const SUPER_ADMIN = ['super_admin'];
 
-function seedInstance(overrides: Record<string, any> = {}) {
+function seedInstance(overrides: Record<string, unknown> = {}) {
   fakeDb.seed('workflow_instances', [
     {
       id: 'wf-1',
@@ -303,7 +303,7 @@ describe('workflowService', () => {
   });
 
   describe('claim / unclaim / reassign', () => {
-    function seedTask(overrides: Record<string, any> = {}) {
+    function seedTask(overrides: Record<string, unknown> = {}) {
       fakeDb.seed('workflow_tasks', [
         {
           id: 'task-1',
@@ -361,6 +361,19 @@ describe('workflowService', () => {
       expect(result.success).toBe(true);
       expect(fakeDb.rows('workflow_tasks')[0].assigned_to).toBe('reviewer-2');
       expect(fakeDb.rows('user_notifications')[0].user_id).toBe('reviewer-2');
+    });
+
+    it('lets a manager reassign a claimed task that was never assigned', async () => {
+      seedTask({ assigned_to: null, status: 'claimed', claimed_by: 'reviewer-1' });
+      const result = await reassignTask('task-1', 'reviewer-1', 'reviewer-2', SUPER_ADMIN);
+      expect(result.success).toBe(true);
+      expect(fakeDb.rows('workflow_tasks')[0]).toMatchObject({ assigned_to: 'reviewer-2', claimed_by: null });
+    });
+
+    it('blocks reassigning a task held by somebody else', async () => {
+      seedTask({ assigned_to: null, status: 'claimed', claimed_by: 'someone-else' });
+      const result = await reassignTask('task-1', 'reviewer-1', 'reviewer-2', SUPER_ADMIN);
+      expect(result.code).toBe('CONFLICT');
     });
 
     it('blocks reassignment by a non-manager', async () => {

@@ -15,5 +15,5 @@ insert into repository_files (repository_item_id, storage_bucket, storage_key, o
 values
   ('11111111-1111-1111-1111-111111111111', 'repository', 'test/article-1.pdf', 'article-1.pdf', 'application/pdf', 1024, 'ORIGINAL', 'PUBLIC', null),
   ('22222222-2222-2222-2222-222222222222', 'repository', 'test/thesis-1.pdf', 'thesis-1.pdf', 'application/pdf', 2048, 'ORIGINAL', 'PUBLIC', null),
-  ('33333333-3333-3333-3333-333333333333', 'repository', 'test/dataset-1.csv', 'dataset-1.csv', 'text/csv', 512, 'DATASET', 'PUBLIC', null)
+  ('33333333-3333-3333-3333-333333333333', 'repository', 'test/dataset-1.csv', 'dataset-1.csv', 'text/csv', 512, 'SUPPLEMENTARY', 'PUBLIC', null)
 on conflict (repository_item_id, storage_key) do nothing;

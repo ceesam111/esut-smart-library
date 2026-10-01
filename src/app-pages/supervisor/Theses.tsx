@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import ThesisFileButton from '@/components/ThesisFileButton';
+
+interface MatchedSource {
+  title?: string | null;
+  url?: string | null;
+  matchedWords?: number | null;
+}
 
 interface Thesis {
   id: string;
@@ -14,12 +21,12 @@ interface Thesis {
   created_at: string;
   similarity_score: number | null;
   ai_content_score: number | null;
-  matched_sources: any[] | null;
+  matched_sources: MatchedSource[] | null;
   plagiarism_scanned_at: string | null;
   revision_notes: string | null;
   file_url: string | null;
   abstract: string | null;
-  keywords: any[];
+  keywords: string[];
   submitter_id: string | null;
 }
 
@@ -37,17 +44,13 @@ export default function SupervisorTheses() {
   const [action, setAction] = useState<'approve' | 'return' | null>(null);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [supervisorEmail, setSupervisorEmail] = useState('');
-  const [supervisorName, setSupervisorName] = useState('');
+  const [, setSupervisorEmail] = useState('');
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
       setSupervisorEmail(user.email ?? '');
-
-      const { data: patron } = await supabase.from('patrons').select('full_name').eq('user_id', user.id).maybeSingle();
-      setSupervisorName(patron?.full_name ?? '');
 
       // Find theses where this user is a supervisor by email
       const { data: supRows } = await supabase
@@ -55,7 +58,7 @@ export default function SupervisorTheses() {
         .select('thesis_id')
         .eq('supervisor_email', user.email);
 
-      const ids = (supRows ?? []).map((r: any) => r.thesis_id);
+      const ids = (supRows ?? []).map((r: { thesis_id: string }) => r.thesis_id);
       if (ids.length === 0) { setLoading(false); return; }
 
       const { data } = await supabase
@@ -254,9 +257,7 @@ export default function SupervisorTheses() {
               )}
 
               {selected.file_url && (
-                <a href={selected.file_url} target="_blank" rel="noopener noreferrer" className="btn-outline text-sm w-full text-center block">
-                  Download PDF
-                </a>
+                <ThesisFileButton thesisId={selected.id} />
               )}
 
               {/* Plagiarism scores */}
@@ -281,7 +282,7 @@ export default function SupervisorTheses() {
                     <div>
                       <p className="text-xs text-neutral-500 font-semibold mb-1">Top Matched Sources</p>
                       <div className="space-y-1">
-                        {selected.matched_sources.slice(0, 3).map((src: any, i: number) => (
+                        {selected.matched_sources.slice(0, 3).map((src, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <span className="text-neutral-400">#{i + 1}</span>
                             <span className="flex-1 truncate text-neutral-600">{src.title || src.url}</span>
@@ -335,7 +336,7 @@ export default function SupervisorTheses() {
                   <div className="flex gap-2">
                     <button onClick={() => setAction(null)} disabled={submitting} className="btn-ghost flex-1">Cancel</button>
                     <button
-                      onClick={handleAction}
+                      onClick={() => { void handleAction(); }}
                       disabled={submitting || (action === 'return' && !notes.trim())}
                       className={`flex-1 disabled:opacity-50 ${action === 'approve' ? 'btn-primary' : 'btn-ghost text-amber-700 border border-amber-300 hover:bg-amber-50'}`}
                     >

@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import { deriveDegree } from '@/lib/thesisFields';
 import BackButton from '@/components/BackButton';
 
 const SUBMISSION_TYPES = ['Undergraduate Long Essay', 'Final Year Project', 'M.Ed. Dissertation', 'B.Ed. Project', 'thesis', 'dissertation', 'project'];
 const FACULTIES = ['Faculty of Arts', 'Faculty of Science', 'Faculty of Management & Social Sciences', 'Faculty of Education', 'Faculty of Vocational & Technical Education'];
 const PROGRAMMES = ['B.Ed. Education', 'B.Ed. English', 'B.Ed. Mathematics', 'B.Ed. Biology', 'B.Ed. Chemistry', 'B.Ed. Physics', 'B.Ed. Economics', 'B.Ed. History', 'B.Ed. Social Studies', 'M.Ed. Curriculum Studies', 'M.Ed. Educational Administration', 'M.Ed. Guidance & Counselling', 'Ph.D. Education'];
 const SESSIONS = ['2025/2026', '2024/2025', '2023/2024', '2022/2023', '2021/2022'];
+const DEPARTMENTS = ['Arts Education', 'Science Education', 'Social Science Education', 'Technology & Vocational Education', 'Educational Foundations', 'Educational Management & Policy', 'Guidance & Counselling', 'Curriculum Studies', 'Library and Information Science'];
 const SUBJECTS = ['Education', 'English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Economics', 'Geography', 'Social Studies', 'Agricultural Science', 'Integrated Science', 'Computer Science', 'French', 'Yoruba', 'Islamic Studies', 'Christian Religious Studies', 'Technical Education', 'Home Economics', 'Physical Education', 'Fine Arts', 'Music', 'Business Education'];
 
 interface Supervisor {
@@ -23,6 +25,7 @@ export default function ThesisSubmit() {
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState('');
   const [patronId, setPatronId] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [referenceNo, setReferenceNo] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -31,6 +34,7 @@ export default function ThesisSubmit() {
   const [title, setTitle] = useState('');
   const [submissionType, setSubmissionType] = useState('Undergraduate Long Essay');
   const [programme, setProgramme] = useState('');
+  const [department, setDepartment] = useState('');
   const [faculty, setFaculty] = useState('');
   const [session, setSession] = useState(SESSIONS[0]);
   const [abstract, setAbstract] = useState('');
@@ -51,12 +55,22 @@ export default function ThesisSubmit() {
   const [declarationTime, setDeclarationTime] = useState('');
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
       setUserId(user.id);
-      const { data: patron } = await supabase.from('patrons').select('id').eq('user_id', user.id).maybeSingle();
+      const { data: patron } = await supabase
+        .from('patrons')
+        .select('id, department, faculty_name, programme')
+        .eq('user_id', user.id)
+        .maybeSingle();
       setPatronId(patron?.id ?? '');
+      // Pre-fill from the patron profile so the student only corrects,
+      // never re-types. The server resolves the same fields if left alone.
+      if (patron?.department) setDepartment(patron.department);
+      if (patron?.faculty_name) setFaculty(prev => prev || patron.faculty_name!);
+      if (patron?.programme) setProgramme(prev => prev || patron.programme!);
+      setProfileLoaded(true);
     })();
   }, []);
 
@@ -72,9 +86,11 @@ export default function ThesisSubmit() {
   const updateSupervisor = (i: number, field: keyof Supervisor, value: string) =>
     setSupervisors(p => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
 
+  const derivedDegree = deriveDegree(null, programme);
+
   const canAdvance = () => {
-    if (step === 1) return title.trim() && submissionType && programme.trim() && session && abstract.trim().length >= 100;
-    if (step === 2) return supervisors.length > 0 && supervisors[0].name.trim() && supervisors[0].email.trim();
+    if (step === 1) return !!(title.trim() && submissionType && programme.trim() && department.trim() && session && abstract.trim().length >= 100 && (!profileLoaded || !!patronId));
+    if (step === 2) return supervisors.length > 0 && supervisors.every(s => s.name.trim() && s.email.trim());
     if (step === 3) return subjects.length >= 1 && keywords.length >= 3;
     if (step === 4) return !!file && declaration;
     return false;
@@ -86,6 +102,10 @@ export default function ThesisSubmit() {
   };
 
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdThesisId, setCreatedThesisId] = useState('');
+  const [workflowWarning, setWorkflowWarning] = useState<string | null>(null);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const handleSubmit = async () => {
     if (!file || !userId) return;
@@ -115,110 +135,97 @@ export default function ThesisSubmit() {
           throw new Error(upErr.message);
         }
       }
+      setUploadNote(storageNote);
       setUploadProgress(50);
 
-      const fileUrl = uploadBucket ? supabase.storage.from(uploadBucket).getPublicUrl(path).data.publicUrl : null;
-
-      // Generate reference number
-      const year = new Date().getFullYear();
-      const seq = Math.floor(Math.random() * 90000) + 10000;
-      const typeCode = submissionType === 'Undergraduate Long Essay' ? 'ULE'
-        : submissionType === 'Final Year Project' ? 'FYP'
-        : submissionType === 'M.Ed. Dissertation' ? 'MED'
-        : submissionType === 'B.Ed. Project' ? 'BED'
-        : 'THE';
-      const refNo = `${typeCode}-${year}-${seq}`;
+      // Both buckets are private, so store the object path (bucket/key) and
+      // let the API mint a short-lived signed URL on download. A public URL
+      // stored here would 404 for everyone.
+      const fileUrl = uploadBucket ? `${uploadBucket}/${path}` : null;
 
       setUploadProgress(70);
 
-      // Insert thesis
-      const { data: thesis, error: tErr } = await supabase.from('theses').insert({
-        title: title.trim(),
-        abstract: abstract.trim(),
-        submission_type: submissionType,
-        programme: programme.trim(),
-        faculty: faculty || null,
-        session,
-        keywords,
-        subjects,
-        file_url: fileUrl,
-        status: 'submitted',
-        patron_id: patronId || null,
-        submitter_id: userId,
-        reference_no: refNo,
-        declaration_timestamp: declarationTime,
-        embargo_enabled: embargoEnabled,
-        embargo_period_months: embargoEnabled ? embargoMonths : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).select('id').single();
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error('Your session expired. Please sign in again.');
 
-      if (tErr) throw new Error(tErr.message);
-
-      setUploadProgress(85);
-
-      // Insert supervisors
-      if (thesis) {
-        const supervisorRows = supervisors
-          .filter(s => s.name.trim())
-          .map(s => ({
-            thesis_id: thesis.id,
-            supervisor_name: s.name.trim(),
-            supervisor_email: s.email.trim() || null,
-            supervisor_orcid: s.orcid.trim() || null,
+      const response = await fetch('/api/thesis/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          abstract: abstract.trim(),
+          submissionType,
+          programme: programme.trim(),
+          department: department.trim(),
+          faculty: faculty || null,
+          session,
+          keywords,
+          subjects,
+          fileUrl,
+          fileSize: file.size,
+          declarationTimestamp: declarationTime || null,
+          embargoEnabled,
+          embargoPeriodMonths: embargoEnabled ? embargoMonths : null,
+          supervisors: supervisors.filter(s => s.name.trim()).map(s => ({
+            name: s.name.trim(),
+            email: s.email.trim(),
+            orcid: s.orcid.trim() || null,
             role: s.role,
-          }));
-        if (supervisorRows.length > 0) {
-          await supabase.from('thesis_supervisors').insert(supervisorRows);
-        }
+          })),
+        }),
+      });
 
-        // Insert workflow record
-        await supabase.from('thesis_workflow').insert({
-          thesis_id: thesis.id,
-          stage: 'submitted',
-          action: 'submitted',
-          acted_by: userId,
-          notes: storageNote ? `Initial submission. ${storageNote}` : 'Initial submission',
-        });
-
-        // Start the review workflow (non-fatal if it fails)
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData.session) {
-            const wfRes = await fetch('/api/workflows', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${sessionData.session.access_token}`,
-              },
-              body: JSON.stringify({ resourceType: 'thesis', thesisId: thesis.id, submit: true }),
-            });
-            if (!wfRes.ok) {
-              const wfJson = await wfRes.json().catch(() => ({}));
-              console.warn('Workflow not started:', wfJson.error ?? wfRes.status);
-            }
-          }
-        } catch (wfError) {
-          console.warn('Workflow not started:', wfError);
-        }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error ?? `Submission failed (HTTP ${response.status}).`);
       }
 
-      setUploadProgress(95);
+      const created = payload.data ?? {};
+      setUploadProgress(85);
+      setCreatedThesisId(created.thesisId ?? '');
+      setWorkflowWarning(created.workflowStarted ? null : (created.workflowWarning ?? 'The review workflow did not start.'));
 
       // Send supervisor notification emails
       const primarySup = supervisors.find(s => s.role === 'primary' && s.email.trim());
       if (primarySup) {
-        const html = `<p>Dear ${primarySup.name},</p><p>A thesis/essay has been submitted for your supervision and requires your review.</p><p><strong>Title:</strong> ${title}</p><p><strong>Reference:</strong> ${refNo}</p><p>Please log in to the supervisor portal to review and take action.</p>`;
-        await sendEmail(primarySup.email, primarySup.name, `New thesis submission for your supervision: ${refNo}`, html);
+        const html = `<p>Dear ${primarySup.name},</p><p>A thesis/essay has been submitted for your supervision and requires your review.</p><p><strong>Title:</strong> ${title}</p><p><strong>Reference:</strong> ${created.referenceNo}</p><p>Please log in to the supervisor portal to review and take action.</p>`;
+        await sendEmail(primarySup.email, primarySup.name, `New thesis submission for your supervision: ${created.referenceNo}`, html);
       }
 
       setUploadProgress(100);
-      setReferenceNo(refNo);
+      setReferenceNo(created.referenceNo ?? '');
       setStep(5);
-    } catch (e: any) {
-      setSubmitError(e.message ?? 'Submission failed. Please try again.');
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Submission failed. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const retryWorkflow = async () => {
+    if (!createdThesisId) return;
+    setRetrying(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error('Your session expired. Please sign in again.');
+      const response = await fetch('/api/workflows', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({ resourceType: 'thesis', thesisId: createdThesisId, submit: true }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error ?? `HTTP ${response.status}`);
+      setWorkflowWarning(payload.warning ? String(payload.warning) : null);
+    } catch (e) {
+      setWorkflowWarning(e instanceof Error ? e.message : 'Retry failed.');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -262,6 +269,13 @@ export default function ThesisSubmit() {
               <p className="text-neutral-500 text-sm mt-1">Provide the core information about your academic work.</p>
             </div>
 
+            {profileLoaded && !patronId && (
+              <div className="p-4 bg-error-50 border border-error-200 rounded-xl text-sm text-error-700">
+                This account has no library patron profile, so a deposit cannot be recorded against it.
+                Register as a patron (or ask the library to activate your profile) before submitting.
+              </div>
+            )}
+
             <div>
               <label className="label">Submission Type *</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1">
@@ -296,6 +310,26 @@ export default function ThesisSubmit() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Department *</label>
+                <input className="input w-full" list="thesis-departments" value={department}
+                  onChange={e => setDepartment(e.target.value)}
+                  placeholder="Start typing your department…" />
+                <datalist id="thesis-departments">
+                  {DEPARTMENTS.map(d => <option key={d} value={d} />)}
+                </datalist>
+                {!department.trim() && <p className="text-xs text-amber-600 mt-1">Required — used for review routing.</p>}
+              </div>
+              <div>
+                <label className="label">Degree</label>
+                <div className="input w-full bg-neutral-50 text-neutral-600" aria-readonly="true">
+                  {derivedDegree ?? <span className="text-neutral-400">Derived from programme…</span>}
+                </div>
+                <p className="text-xs text-neutral-400 mt-1">Recorded automatically from your programme.</p>
+              </div>
+            </div>
+
             <div>
               <label className="label">Faculty</label>
               <select className="input w-full" value={faculty} onChange={e => setFaculty(e.target.value)}>
@@ -325,7 +359,7 @@ export default function ThesisSubmit() {
           <div className="card p-8 space-y-5">
             <div>
               <h2 className="text-2xl font-bold">Step 2: Supervision Details</h2>
-              <p className="text-neutral-500 text-sm mt-1">Add your supervisor(s). At least one primary supervisor is required.</p>
+              <p className="text-neutral-500 text-sm mt-1">Add your supervisor(s). Every supervisor needs a name and an email address — the deposit cannot be recorded without at least one named supervisor.</p>
             </div>
 
             {supervisors.map((sup, i) => (
@@ -344,8 +378,9 @@ export default function ThesisSubmit() {
                     <input className="input w-full text-sm" value={sup.name} onChange={e => updateSupervisor(i, 'name', e.target.value)} placeholder="Dr. / Prof. Name" />
                   </div>
                   <div>
-                    <label className="label text-xs">Email Address {i === 0 ? '*' : ''}</label>
+                    <label className="label text-xs">Email Address *</label>
                     <input className="input w-full text-sm" type="email" value={sup.email} onChange={e => updateSupervisor(i, 'email', e.target.value)} placeholder="supervisor@esut.edu.ng" />
+                    {!sup.email.trim() && <p className="text-xs text-amber-600 mt-1">Required for review notifications.</p>}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -519,7 +554,7 @@ export default function ThesisSubmit() {
             <div className="flex gap-3">
               <button onClick={() => setStep(3)} className="btn-ghost flex-1" disabled={submitting}>Back</button>
               <button
-                onClick={handleSubmit}
+                onClick={() => { void handleSubmit(); }}
                 disabled={!canAdvance() || submitting}
                 className="btn-primary flex-1 disabled:opacity-50"
               >
@@ -552,6 +587,27 @@ export default function ThesisSubmit() {
               <p className="text-3xl font-bold font-mono text-primary-800 tracking-wide">{referenceNo}</p>
               <p className="text-xs text-primary-600 mt-2">Keep this safe — use it to track your submission status.</p>
             </div>
+
+            {workflowWarning && (
+              <div className="text-left bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-amber-800">Your work is saved, but not yet in review</p>
+                <p className="text-sm text-amber-700">{workflowWarning}</p>
+                <p className="text-xs text-amber-700">
+                  The record was kept as a <strong>draft</strong> on purpose, so nothing is shown as
+                  &ldquo;under review&rdquo; when it is not. Send it for review once the issue clears.
+                </p>
+                <button onClick={() => { void retryWorkflow(); }} disabled={retrying || !createdThesisId}
+                  className="btn-primary text-sm px-4 py-2 disabled:opacity-50">
+                  {retrying ? 'Sending…' : 'Send for review'}
+                </button>
+              </div>
+            )}
+
+            {uploadNote && (
+              <div className="text-left bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                <p className="text-sm text-neutral-600">{uploadNote}</p>
+              </div>
+            )}
 
             <div className="text-left bg-neutral-50 rounded-xl p-4 space-y-2 text-sm">
               <h4 className="font-bold">What happens next?</h4>

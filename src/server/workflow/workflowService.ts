@@ -487,16 +487,31 @@ export async function reassignTask(
   const roles: ActorRoles = actorRoles ?? (await getUserRoles(fromUserId));
   if (!canReassignTasks(roles)) return { success: false, code: 'FORBIDDEN', error: 'Library manager role required.' };
 
-  const { data: reassigned, error } = await supabase
+  // A task is "held" either by a formal assignment or by a claim. Reviewers
+  // claim unassigned queue items, so matching only on assigned_to made every
+  // claimed-but-unassigned task impossible to move.
+  const { data: task, error: readError } = await supabase
     .from('workflow_tasks')
-    .update({ assigned_to: toUserId, claimed_by: null, claimed_at: null, updated_at: new Date().toISOString() })
+    .select('id, assigned_to, claimed_by')
     .eq('id', taskId)
-    .eq('assigned_to', fromUserId)
-    .select('id');
+    .maybeSingle();
+  if (readError) return { success: false, code: 'INTERNAL', error: readError.message };
+  if (!task) return { success: false, code: 'NOT_FOUND', error: 'Task not found.' };
+
+  const assignedTo = (task as { assigned_to: string | null }).assigned_to;
+  const claimedBy = (task as { claimed_by: string | null }).claimed_by;
+  if (assignedTo !== fromUserId && claimedBy !== fromUserId) {
+    return { success: false, code: 'CONFLICT', error: 'You do not hold this task.' };
+  }
+
+  const guard = assignedTo === fromUserId
+    ? supabase.from('workflow_tasks').update({ assigned_to: toUserId, claimed_by: null, claimed_at: null, updated_at: new Date().toISOString() }).eq('id', taskId).eq('assigned_to', fromUserId)
+    : supabase.from('workflow_tasks').update({ assigned_to: toUserId, claimed_by: null, claimed_at: null, updated_at: new Date().toISOString() }).eq('id', taskId).eq('claimed_by', fromUserId);
+  const { data: reassigned, error } = await guard.select('id');
 
   if (error) return { success: false, code: 'INTERNAL', error: error.message };
   if (!reassigned || reassigned.length === 0) {
-    return { success: false, code: 'CONFLICT', error: 'Task is not assigned to you.' };
+    return { success: false, code: 'CONFLICT', error: 'Task moved while you were acting. Reload and try again.' };
   }
 
   await notify([toUserId], {

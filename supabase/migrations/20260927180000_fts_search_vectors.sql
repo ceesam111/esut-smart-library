@@ -53,7 +53,7 @@ create index if not exists idx_catalogue_items_search on public.catalogue_items 
 update public.repository_items set search_vector =
   setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
   setweight(to_tsvector('english', coalesce(abstract, '')), 'B') ||
-  setweight(to_tsvector('english', coalesce(array_to_string(keywords, ' '), '')), 'C') ||
+  setweight(to_tsvector('english', coalesce(keywords::text, '')), 'C') ||
   setweight(to_tsvector('english', coalesce(department, '')), 'D')
 where search_vector is null;
 
