@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AgentJob, HandlerContext } from './types';
 import type { WorkerConfig } from './config';
 import { getHandler } from './handlers';
@@ -7,7 +8,7 @@ import { nextRetryAt, shouldRetry } from './retry';
 export class WorkerRunner {
   private active = 0;
 
-  constructor(private supabase: any, private config: WorkerConfig, private signal: AbortSignal, private onStats?: (event: 'processed' | 'failed' | 'active', value: number) => void) {}
+  constructor(private supabase: SupabaseClient, private config: WorkerConfig, private signal: AbortSignal, private onStats?: (event: 'processed' | 'failed' | 'active', value: number) => void, private onJob?: (jobType: string, outcome: 'processed' | 'failed') => void) {}
 
   get activeCount() {
     return this.active;
@@ -38,6 +39,7 @@ export class WorkerRunner {
       if (agentRunId) await finishAgentRun(this.supabase, agentRunId, 'completed', result.data);
       await writeWorkerAudit(this.supabase, job, 'agent_job_completed', { jobType: job.job_type, result: result.data });
       this.onStats?.('processed', 1);
+      this.onJob?.(job.job_type, 'processed');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unexpected worker error';
       const retry = shouldRetry(job.attempts, job.max_attempts);
@@ -52,6 +54,7 @@ export class WorkerRunner {
       if (agentRunId) await finishAgentRun(this.supabase, agentRunId, 'failed', {}, message);
       await writeWorkerAudit(this.supabase, job, retry ? 'agent_job_retry_scheduled' : 'agent_job_failed', { jobType: job.job_type, error: message, attempt: job.attempts, maxAttempts: job.max_attempts });
       this.onStats?.('failed', 1);
+      this.onJob?.(job.job_type, 'failed');
     } finally {
       this.active -= 1;
       this.onStats?.('active', this.active);

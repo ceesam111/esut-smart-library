@@ -8,6 +8,9 @@ export interface WorkerHealthState {
   active: number;
   lastPollAt: string | null;
   shuttingDown: boolean;
+  /** Per job-type counters so preservation throughput is visible in /health. */
+  byType: Record<string, { processed: number; failed: number; lastRunAt: string | null }>;
+  preservation: { pendingJobs: number; lastProducerRunAt: string | null; lastVerifyRunAt: string | null };
 }
 
 export function startHealthServer(port: number, state: WorkerHealthState): Server {

@@ -64,6 +64,7 @@ const adminNav: { group: string; items: NavItem[] }[] = [
   ]},
   { group: 'System', items: [
     { label: 'Account Management', href: '/admin/accounts',              icon: '🔐', accountManager: true },
+    { label: 'Preservation',        href: '/admin/preservation',           icon: '◆' },
   ]},
 ];
 
@@ -79,9 +80,8 @@ export default function AdminLayout() {
 
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      await supabase.auth.signOut();
-      navigate('/login');
+    timerRef.current = setTimeout(() => {
+      void supabase.auth.signOut().then(() => navigate('/login'));
     }, INACTIVITY_MS);
   }, [navigate]);
 

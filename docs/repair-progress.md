@@ -133,3 +133,35 @@ Session: REPAIR SESSION 1 · Started: 2026-09-29
 | 6.13 | Documentation | Workflow behaviour undocumented | — | `docs/repository-workflow.md` (new), `docs/workflow-closure-audit.md` (rewritten) | — | — | — | — | COMPLETE | — |
 
 **BATCH 6 COMPLETE** for code, tests, build and schema. Two BLOCKED items carried forward: the `theses` insert contract (6.11) and the unapplied Batch 5 repository/preservation migrations (6.2).
+
+### BATCH 7 — Preservation / Fixity / AIP Completion (B1–B25)
+
+| # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 7.1 | Preservation schema | No fixity columns, no widened event types, no restore-run indexes | Never built | — | `20260930080000_preservation_batch7_schema.sql` | — | Applied to `rnnjspkdjoigncdgmy` via `live-sql.ps1` (exit 0); `pg_constraint` + `information_schema` re-verified | Additive only; no RLS change | COMPLETE | — |
+| 7.2 | Fixity worker | No producer, no verifier, no cadence | Never built | `src/server/preservation/fixity.ts`, `worker/handlers/preservation.ts`, `worker/handlers/index.ts` | — | 12 tests (`fixity.test.ts`) | Live E2E 37/37 (`scripts/e2e-fixity-live.ts`) | Service role only | COMPLETE | — |
+| 7.3 | Object store abstraction | Fixity could not read Supabase or B2 | Never built | `src/server/preservation/objectStore.ts` | — | — | `describeStores()` reports B2 inactive with explicit reason | B2 writes disabled until configured | COMPLETE | B2 not configured in this environment |
+| 7.4 | Stale storage reads | `download()` served CDN-cached bytes for up to 1h after overwrite/delete | Supabase `/object/` returns `cache-control: public, max-age=3600` | `src/server/preservation/objectStore.ts` | — | — | Probe proved `?cb=` and signed URLs bypass; `createSignedUrl` + `fetch(cache:'no-store')` adopted | — | COMPLETE | Other callers still use `download()` |
+| 7.5 | Incidents | No incident lifecycle or audit | Never built | `src/server/preservation/incidents.ts` | — | — | Live E2E: open → acknowledge → resolve, each with its own event | Library-admin only | COMPLETE | — |
+| 7.6 | Preservation overview | No aggregate view for the dashboard | Never built | `src/server/preservation/service.ts`, `app/api/preservation/overview/route.ts` | — | — | Route returns 401 unauthenticated | Library-admin only | COMPLETE | — |
+| 7.7 | Manual recheck | No way to force a re-verify | Never built | `src/server/preservation/fixity.ts`, `app/api/preservation/files/route.ts` | — | — | Live E2E S7 producer dedupe | Library-admin only | COMPLETE | — |
+| 7.8 | AIP bundle | No BagIt packaging | Never built | `src/server/preservation/aipBundle.ts` | — | — | Live E2E: 11 objects, re-validates | No secrets in metadata | COMPLETE | — |
+| 7.9 | AIP validation | No structural or secret validation | Never built | `src/server/preservation/aipBundle.ts` | — | — | Live E2E re-validation of downloaded bundle | Signed-URL leak scan | COMPLETE | — |
+| 7.10 | AIP export | No export path | Never built | `src/server/preservation/aipExport.ts`, `app/api/preservation/**` | — | 11 tests (`aipExport.test.ts`) | Live E2E 41/41 (`scripts/e2e-aip-live.ts`) | Library-admin only | COMPLETE | — |
+| 7.11 | Export validation ordering | Invalid AIP was written to storage before validation | Validate-after-write | `src/server/preservation/aipExport.ts` | — | — | Validation now runs before any write; failure records `AIP_VALIDATED{valid:false,exported:false}` and writes nothing | — | COMPLETE | — |
+| 7.12 | Restore | No restore path | Never built | `src/server/preservation/restore.ts` | — | — | Live E2E: isolated restore of 2 payloads, `complete` | Target guard fail-closed | COMPLETE | — |
+| 7.13 | Restore safety | No preflight or traversal guard | Never built | `src/server/preservation/restore.ts` | — | — | `RESTORE_TARGETS = isolated,test,staging`; `production` rejected live | Path traversal blocked | COMPLETE | — |
+| 7.14 | Restore API | No route | Never built | `app/api/preservation/restore/route.ts` | — | — | 401 unauthenticated | Library-admin only | COMPLETE | — |
+| 7.15 | Preservation tests | No coverage | Never built | `src/server/preservation/{aipExport,fixity,restoreSafety,preservationRoutes}.test.ts` | — | 41 tests | Full suite 325 passed / 59 files | — | COMPLETE | — |
+| 7.16 | Live fixity E2E | No live proof | Never built | `scripts/e2e-fixity-live.ts` | — | — | 37/37 passed against `rnnjspkdjoigncdgmy`; fixtures removed, frozen windows restored | — | COMPLETE | — |
+| 7.17 | Live AIP E2E | No live proof | Never built | `scripts/e2e-aip-live.ts` | — | — | 41/41 passed; export → download → re-validate → isolated restore → cleanup | — | COMPLETE | — |
+| 7.18 | Route auth | Preservation routes unprotected | Never built | `app/api/preservation/**` | — | 7 tests | 401 unauthenticated on all 7 handlers | `requireRole(LIBRARY_ADMIN_ROLES)` | COMPLETE | — |
+| 7.19 | Dashboard | No preservation UI | Never built | `src/app-pages/admin/Preservation.tsx`, `src/App.tsx`, `src/components/layout/AdminLayout.tsx` | — | — | Route `/admin/preservation` registered | Role-gated nav entry | COMPLETE | — |
+| 7.20 | Worker observability | Preservation jobs invisible | No per-type counters | `worker/runner.ts`, `worker/health.ts`, `worker/index.ts` | — | — | `byType` + `preservation` blocks in health payload | — | COMPLETE | — |
+| 7.21 | Worker registration | `preservation.fixityProducer` had no handler | Never built | `worker/handlers/index.ts` | — | — | Handler registered; live E2E S7 queued a real job | — | COMPLETE | — |
+| 7.22 | Documentation | Preservation undocumented | Never built | `docs/preservation.md`, `docs/aip-format.md`, `docs/restore-procedure.md`, `docs/repair-progress.md` | — | — | — | — | COMPLETE | — |
+| 7.23 | Live schema evidence | Migration applied without recorded proof | — | — | `20260930080000_preservation_batch7_schema.sql` | — | `live-sql.ps1` exit 0; `pg_constraint`/`information_schema` re-verified | — | COMPLETE | — |
+| 7.24 | Quality gates | — | — | — | — | — | `tsc` 0, `vitest` 325/325, `next build` 0, eslint 0/0 on changed files | — | COMPLETE | — |
+| 7.25 | Report | — | — | — | — | — | 27-point report delivered | — | COMPLETE | — |
+
+**BATCH 7 COMPLETE.** Fixity, incidents, AIP export/validation, restore and the preservation dashboard are built, tested, live-verified and documented. Two production defects were found and fixed by the live E2E: stale CDN-cached storage reads (7.4) and validate-after-write AIP export (7.11).

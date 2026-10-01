@@ -113,6 +113,7 @@ const AdminReports        = lazy(() => import('@/pages/admin/Reports'));
 const AdminMigration      = lazy(() => import('@/pages/admin/Migration'));
 const AdminContentEngine  = lazy(() => import('@/pages/admin/ContentEngine'));
 const AdminAgents         = lazy(() => import('@/pages/admin/Agents'));
+const AdminPreservation   = lazy(() => import('@/pages/admin/Preservation'));
 const AdminAnalytics      = lazy(() => import('@/pages/admin/Analytics'));
 const AdminResearchers    = lazy(() => import('@/pages/admin/ResearcherProfiles'));
 const AdminWebometrics    = lazy(() => import('@/pages/admin/Webometrics'));
@@ -277,6 +278,7 @@ export default function App() {
             <Route path="/admin/migration" element={<AdminMigration />} />
             <Route path="/admin/content-engine" element={<AdminContentEngine />} />
             <Route path="/admin/agents" element={<AdminAgents />} />
+            <Route path="/admin/preservation" element={<AdminPreservation />} />
             <Route path="/admin/analytics" element={<FeatureRoute feature="analytics"><AdminAnalytics /></FeatureRoute>} />
             <Route path="/admin/researchers" element={<FeatureRoute feature="researcherProfiles"><AdminResearchers /></FeatureRoute>} />
             <Route path="/admin/webometrics" element={<FeatureRoute feature="webometrics"><AdminWebometrics /></FeatureRoute>} />
