@@ -5,6 +5,8 @@ import { extractRepositoryMetadata } from './repository';
 import { draftNewsletter, overdueReminders, sendOverdueEmails, sendDueSoonEmails } from './communications';
 import { weeklyTenantReport, systemHealthCheck } from './reports';
 import { produceFixity, verifyFixity } from './preservation';
+import { extractRepositoryText } from './extraction';
+import { produceSearchReindex, reindexSearch } from './searchIndex';
 
 export const handlers: Record<string, AgentJobHandler> = {
   'catalogue.enrich': enrichCatalogue,
@@ -19,6 +21,9 @@ export const handlers: Record<string, AgentJobHandler> = {
   'circulation.sendDueSoonEmails': sendDueSoonEmails,
   'preservation.verifyFixity': verifyFixity,
   'preservation.fixityProducer': produceFixity,
+  'repository.extractText': extractRepositoryText,
+  'search.reindex': reindexSearch,
+  'search.reindexProducer': produceSearchReindex,
 };
 
 export function getHandler(jobType: string) {

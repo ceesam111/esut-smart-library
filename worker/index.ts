@@ -7,7 +7,7 @@ import { enqueueDueSchedules } from './scheduler';
 
 const config = loadWorkerConfig();
 const controller = new AbortController();
-const state: WorkerHealthState = { startedAt: new Date().toISOString(), workerId: config.workerId, processed: 0, failed: 0, active: 0, lastPollAt: null, shuttingDown: false, byType: {}, preservation: { pendingJobs: 0, lastProducerRunAt: null, lastVerifyRunAt: null } };
+const state: WorkerHealthState = { startedAt: new Date().toISOString(), workerId: config.workerId, processed: 0, failed: 0, active: 0, lastPollAt: null, shuttingDown: false, byType: {}, preservation: { pendingJobs: 0, lastProducerRunAt: null, lastVerifyRunAt: null }, extraction: { pending: 0, processing: 0, complete: 0, failed: 0, notSupported: 0, noTextLayer: 0, blockedExternal: 0, lastRunAt: null }, searchIndex: { pendingReindexJobs: 0, documents: 0, lastReindexAt: null } };
 const server = startHealthServer(config.healthPort, state);
 const supabase = createWorkerSupabase(config);
 const runner = new WorkerRunner(supabase, config, controller.signal, (event, value) => {
@@ -24,6 +24,12 @@ const runner = new WorkerRunner(supabase, config, controller.signal, (event, val
     state.preservation.lastVerifyRunAt = new Date().toISOString();
     if (jobType === 'preservation.fixityProducer') state.preservation.lastProducerRunAt = bucket.lastRunAt;
   }
+  if (jobType === 'repository.extractText') {
+    state.extraction.lastRunAt = new Date().toISOString();
+  }
+  if (jobType === 'search.reindex') {
+    state.searchIndex.lastReindexAt = new Date().toISOString();
+  }
 });
 
 async function refreshPreservationStats() {
@@ -34,6 +40,48 @@ async function refreshPreservationStats() {
       .like('job_type', 'preservation.%')
       .in('status', ['pending', 'running']);
     if (!error) state.preservation.pendingJobs = count ?? 0;
+  } catch {
+    // Health reporting must never take the worker down.
+  }
+}
+
+async function refreshExtractionStats() {
+  try {
+    const { data, error } = await supabase
+      .from('repository_files')
+      .select('extracted_text_status')
+      .limit(10000);
+    if (error) return;
+    const counts: Record<string, number> = {};
+    for (const row of data ?? []) {
+      const status = row.extracted_text_status ?? 'pending';
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+    state.extraction.pending = counts['PENDING'] ?? 0;
+    state.extraction.processing = counts['PROCESSING'] ?? 0;
+    state.extraction.complete = counts['COMPLETE'] ?? 0;
+    state.extraction.failed = counts['FAILED'] ?? 0;
+    state.extraction.notSupported = counts['NOT_SUPPORTED'] ?? 0;
+    state.extraction.noTextLayer = counts['NO_TEXT_LAYER'] ?? 0;
+    state.extraction.blockedExternal = counts['BLOCKED_EXTERNAL'] ?? 0;
+  } catch {
+    // Health reporting must never take the worker down.
+  }
+}
+
+async function refreshSearchIndexStats() {
+  try {
+    const { count, error } = await supabase
+      .from('agent_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('job_type', 'search.reindex')
+      .eq('status', 'pending');
+    if (!error) state.searchIndex.pendingReindexJobs = count ?? 0;
+
+    const { count: documents, error: docError } = await supabase
+      .from('repository_search_documents')
+      .select('id', { count: 'exact', head: true });
+    if (!docError) state.searchIndex.documents = documents ?? 0;
   } catch {
     // Health reporting must never take the worker down.
   }
@@ -58,6 +106,8 @@ while (!state.shuttingDown) {
       lastSchedulerAt = Date.now();
       await enqueueDueSchedules(supabase, config);
       await refreshPreservationStats();
+      await refreshExtractionStats();
+      await refreshSearchIndexStats();
     }
     await runner.pollOnce();
   } catch (error) {

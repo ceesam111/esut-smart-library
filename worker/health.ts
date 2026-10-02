@@ -11,6 +11,17 @@ export interface WorkerHealthState {
   /** Per job-type counters so preservation throughput is visible in /health. */
   byType: Record<string, { processed: number; failed: number; lastRunAt: string | null }>;
   preservation: { pendingJobs: number; lastProducerRunAt: string | null; lastVerifyRunAt: string | null };
+  extraction: {
+    pending: number;
+    processing: number;
+    complete: number;
+    failed: number;
+    notSupported: number;
+    noTextLayer: number;
+    blockedExternal: number;
+    lastRunAt: string | null;
+  };
+  searchIndex: { pendingReindexJobs: number; documents: number; lastReindexAt: string | null };
 }
 
 export function startHealthServer(port: number, state: WorkerHealthState): Server {

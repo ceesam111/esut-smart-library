@@ -165,3 +165,43 @@ Session: REPAIR SESSION 1 · Started: 2026-09-29
 | 7.25 | Report | — | — | — | — | — | 27-point report delivered | — | COMPLETE | — |
 
 **BATCH 7 COMPLETE.** Fixity, incidents, AIP export/validation, restore and the preservation dashboard are built, tested, live-verified and documented. Two production defects were found and fixed by the live E2E: stale CDN-cached storage reads (7.4) and validate-after-write AIP export (7.11).
+
+### BATCH 8 — Full-Text Extraction, Access-Aware Search, Server-Side Facets & Ranking
+
+| # | Task | Original Problem | Root Cause | Files Changed | Migration | Tests Added | Runtime Verification | Security Impact | Status | Remaining Limitation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 8.1 | Search audit | Architecture undocumented and partly wrong | Never audited against live schema | `docs/search-architecture.md` (new) | — | — | Live `information_schema` + `pg_proc` inspection | — | COMPLETE | — |
+| 8.2 | Extraction pipeline | Nothing was wired; `extractFileText` was orphaned | Never built | `src/server/preservation/textExtraction.ts`, `worker/handlers/extraction.ts` | — | — | Live E2E: upload → extract → index → search | — | COMPLETE | — |
+| 8.3 | PDF extraction | Unsupported | No library | `worker/extraction/pdfText.ts` | — | 2 tests | `pdf-parse` 2.4.5 extracts text layer; image-only PDF → `NO_TEXT_LAYER` | Page/size limits, encrypted-PDF handling | COMPLETE | — |
+| 8.4 | DOCX extraction | Unsupported | No library | `worker/extraction/docxText.ts` | — | 2 tests | `mammoth` + `jszip`; headings and table cells preserved | CRC check, entry and decompressed-size caps | COMPLETE | — |
+| 8.5 | OCR adapter | Absent | Never built | `worker/extraction/ocr.ts`, `tesseractOcr.ts`, `httpOcr.ts` | — | — | `BLOCKED_EXTERNAL` when unconfigured; tesseract and HTTP providers | Timeout + temp-dir cleanup | COMPLETE | No OCR engine configured in this environment |
+| 8.6 | Supported formats | txt/csv/json only | — | `worker/extraction/types.ts` | — | — | + pdf, docx, odt, html | — | COMPLETE | Legacy DOC rejected |
+| 8.7 | Extraction security | No limits or isolation | Never built | `worker/extraction/sandbox.ts`, `engine.ts` | — | 3 tests | Worker-thread sandbox; timeout terminates the worker; size/page/entry caps | No macro execution; parser crashes contained | COMPLETE | — |
+| 8.8 | Index weights | Weights stored but unused | No `ts_rank` | `supabase/migrations/20261001090000_search_extraction_batch8.sql` | Applied live (exit 0) | — | A/B/C/D weights + `ts_rank` verified live | — | COMPLETE | — |
+| 8.9 | Per-file provenance | None | Never built | same migration | Applied live (exit 0) | — | One row per file with access level, embargo, version, extraction status | — | COMPLETE | — |
+| 8.10 | Access-aware search | File access ignored in search | Never built | `src/server/search/*`, `app/api/repository/route.ts` | Applied live (exit 0) | 5 tests | Live: private-only term returns 0 anonymously, 1 for owner; snippet and facet safe | Server-side evaluation; no private text in results | COMPLETE | — |
+| 8.11 | Embargo + reindexing | Inconsistent across routes | Filter on one route only | migration triggers + `src/server/search/reindex.ts` | Applied live (exit 0) | — | Query-time embargo evaluation; triggers enqueue reindex | — | COMPLETE | — |
+| 8.12 | Version awareness | None | Never built | `src/server/search/indexModel.ts` | — | 2 tests | `is_current_version` flag; current version preferred | — | COMPLETE | — |
+| 8.13 | Server-side facets | Client-side only, no counts | Never built | `repository_search` RPC | Applied live (exit 0) | — | 7 facet groups counted over the filtered set | — | COMPLETE | — |
+| 8.14 | Search filtering | Only `department` | Never built | `app/api/repository/route.ts` | — | — | faculty, department, years, type, subject, access level | — | COMPLETE | — |
+| 8.15 | Sorting | `created_at` only | Never built | `repository_search` RPC | Applied live (exit 0) | 1 test | relevance, newest, oldest, title | — | COMPLETE | — |
+| 8.16 | Pagination | Hard `limit`, no metadata | Never built | `app/api/repository/route.ts` | — | 1 test | `page`, `pageSize`, `total`, `totalPages` | — | COMPLETE | — |
+| 8.17 | Snippets | None | Never built | `repository_search` RPC | Applied live (exit 0) | — | `ts_headline` on abstract then file text; tags stripped | Plain-text snippets, XSS-safe | COMPLETE | — |
+| 8.18 | Match provenance | None | Never built | `repository_search` RPC | Applied live (exit 0) | — | `matchedIn`: title, author, subject, abstract, fullText | — | COMPLETE | — |
+| 8.19 | Google Scholar metadata | Absent | Never built | `src/app-pages/RepositoryItem.tsx` | — | — | `citation_title/author/publication_date/doi` on public pages only | No `citation_pdf_url` for non-public files | COMPLETE | — |
+| 8.20 | AI search safety | AI received unfiltered results | Never built | `app/api/repository/route.ts` | — | — | AI consumes the access-filtered RPC output | Private text never reaches AI | COMPLETE | — |
+| 8.21 | Reindex | None | Never built | `worker/handlers/searchIndex.ts`, `app/api/repository/reindex/route.ts` | Applied live (exit 0) | — | Item / file / all scopes; background job | — | COMPLETE | — |
+| 8.22 | Extraction retry | `max_attempts` only | Never built | `worker/handlers/extraction.ts` | — | — | Transient vs permanent vs unsupported distinguished | — | COMPLETE | — |
+| 8.23 | Observability | No extraction metrics | Never built | `worker/health.ts`, `worker/index.ts` | — | — | `extraction` and `searchIndex` health blocks | — | COMPLETE | — |
+| 8.24 | Test fixtures | None | Never built | `worker/extraction/fixtures.ts` | — | — | PDF with/without text, DOCX, ODT, TXT, CSV, JSON, corrupt PDF, unsupported | — | COMPLETE | — |
+| 8.25 | Extraction tests | None | Never built | `worker/extraction/extraction.test.ts` | — | 15 tests | Full suite 355 passed / 62 files | — | COMPLETE | — |
+| 8.26 | Access tests | None | Never built | `scripts/e2e-search-live.ts` | — | — | Live: 12 access scenarios covered by the live E2E | No restricted text leaks | COMPLETE | — |
+| 8.27 | Search tests | None | Never built | `src/server/search/*.test.ts` | — | 15 tests | Ranking, facets, pagination, sorting, filters asserted | — | COMPLETE | — |
+| 8.28 | Live E2E | No live proof | Never built | `scripts/e2e-search-live.ts` | — | — | 24/24 passed against `rnnjspkdhojoigncdgmy` | — | COMPLETE | — |
+| 8.29 | Performance | Unverified | Never built | — | — | — | `EXPLAIN ANALYZE` on the search RPC; GIN index used | — | COMPLETE | — |
+| 8.30 | Documentation | Undocumented | Never built | `docs/search-architecture.md`, `docs/full-text-extraction.md`, `docs/repair-progress.md` | — | — | — | — | COMPLETE | — |
+
+**BATCH 8 COMPLETE.** Two production defects were found and fixed: the
+`extracted_text` column did not exist so every extraction run failed, and
+`ts_headline` returns a fragment even without a match, which made snippets fall
+back to the abstract instead of the matching full text.

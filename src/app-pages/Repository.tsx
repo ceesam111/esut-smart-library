@@ -8,10 +8,33 @@ import { Resource3DBookCard, Resource3DBookCardSkeleton, Resource3DBookGrid } fr
 interface Community { id: string; name: string; slug: string; faculty_code: string | null; parent_id: string | null; }
 interface Collection { id: string; community_id: string; name: string; slug: string; }
 interface RepoItem {
-  id: string; title: string; authors: any[]; item_type: string | null; type: string;
-  faculty_code: string | null; department: string | null; download_count: number;
-  doi: string | null; year: number | null; language: string; visibility: string;
-  subjects: string[]; keywords: string[];
+  id: string;
+  title: string;
+  authors: any[];
+  subjects: string[];
+  keywords: string[];
+  abstract: string | null;
+  year: number | null;
+  resourceType: string;
+  facultyCode: string | null;
+  department: string | null;
+  doi: string | null;
+  createdAt: string;
+  score: number;
+  matchedIn: string[] | null;
+  snippet: string | null;
+  file: { name: string; accessLevel: string; extractionStatus: string } | null;
+}
+
+interface FacetBucket { value: string; count: number; }
+interface SearchFacets {
+  resourceType: FacetBucket[];
+  year: FacetBucket[];
+  faculty: FacetBucket[];
+  department: FacetBucket[];
+  author: FacetBucket[];
+  subject: FacetBucket[];
+  accessLevel: FacetBucket[];
 }
 
 const ITEM_TYPES = [
@@ -28,6 +51,9 @@ export default function Repository() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [facets, setFacets] = useState<SearchFacets | null>(null);
+  const [sort, setSort] = useState('newest');
 
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
@@ -57,36 +83,39 @@ export default function Repository() {
   const fetchItems = useCallback(async (pg: number) => {
     setLoading(true);
     try {
-      let q = supabase
-        .from('repository_items')
-        .select('id,title,authors,item_type,type,faculty_code,department,download_count,doi,year,language,visibility,subjects,keywords', { count: 'exact' })
-        .eq('status', 'published')
-        .range(pg * PAGE_SIZE, pg * PAGE_SIZE + PAGE_SIZE - 1)
-        .order('created_at', { ascending: false });
-
-      if (selectedCollection) q = q.eq('collection_id', selectedCollection);
-      else if (selectedCommunity) {
-        const comm = communities.find(c => c.id === selectedCommunity);
-        if (comm?.faculty_code) q = q.eq('faculty_code', comm.faculty_code);
-      }
-      if (filterType) q = q.or(`item_type.eq.${filterType},type.eq.${filterType}`);
-      if (filterDept) q = q.eq('department', filterDept);
+      const params = new URLSearchParams();
+      params.set('page', String(pg + 1));
+      params.set('pageSize', String(PAGE_SIZE));
+      params.set('sort', sort);
+      if (search) params.set('q', search);
+      if (filterType) params.set('resourceType', filterType);
+      if (filterDept) params.set('department', filterDept);
       if (filterYear) {
-        if (filterYear === 'before2020') q = q.lt('year', 2020);
-        else q = q.eq('year', parseInt(filterYear));
+        params.set('years', filterYear === 'before2020' ? '0' : filterYear);
+        if (filterYear === 'before2020') params.delete('years');
       }
-      if (filterLang) q = q.eq('language', filterLang);
-      if (filterAccess) q = q.eq('visibility', filterAccess);
-      if (search) q = q.or(`title.ilike.%${search}%,abstract.ilike.%${search}%,department.ilike.%${search}%`);
+      if (filterAccess) params.set('accessLevel', filterAccess);
+      if (selectedCollection) {
+        const coll = collections.find(c => c.id === selectedCollection);
+        if (coll?.name) params.set('subject', coll.name);
+      } else if (selectedCommunity) {
+        const comm = communities.find(c => c.id === selectedCommunity);
+        if (comm?.faculty_code) params.set('faculty', comm.faculty_code);
+      }
 
-      const { data, count, error } = await q;
-      if (error) throw error;
-      setItems(data ?? []);
-      setTotal(count ?? 0);
+      const response = await fetch(`/api/repository?${params.toString()}`);
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error ?? 'Failed to load repository items.');
+
+      const data = json.data;
+      setItems((data.items ?? []) as RepoItem[]);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 0);
+      setFacets(data.facets ?? null);
     } finally {
       setLoading(false);
     }
-  }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterLang, filterAccess, communities, search]);
+  }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterLang, filterAccess, communities, collections, search, sort]);
 
   useEffect(() => { setPage(0); }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterLang, filterAccess]);
   useEffect(() => { fetchItems(page); }, [fetchItems, page]);
@@ -102,6 +131,9 @@ export default function Repository() {
   });
 
   const yearOptions = Array.from({ length: new Date().getFullYear() - 1999 }, (_, i) => String(new Date().getFullYear() - i));
+
+  const facetCount = (bucket: FacetBucket[] | undefined, value: string) =>
+    bucket?.find(entry => entry.value === value)?.count ?? 0;
 
   const authorDisplay = (authors: any[]) =>
     (Array.isArray(authors) ? authors : [])
@@ -229,7 +261,11 @@ export default function Repository() {
                 <label className="label text-xs mb-1 block">Item Type</label>
                 <select value={filterType} onChange={e => setFilterType(e.target.value)} className="input text-sm">
                   <option value="">All Types</option>
-                  {ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  {(facets?.resourceType?.length ? facets.resourceType.map(f => f.value) : ITEM_TYPES).map(t => (
+                    <option key={t} value={t}>
+                      {t} {facetCount(facets?.resourceType, t) > 0 ? `(${facetCount(facets?.resourceType, t)})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -299,7 +335,7 @@ export default function Repository() {
               <>
                 <Resource3DBookGrid className="lg:grid-cols-3 xl:grid-cols-4">
                   {items.map(item => {
-                    const typeLabel = item.item_type || item.type || 'Document';
+                    const typeLabel = item.resourceType || 'Document';
                     const authors = Array.isArray(item.authors) ? item.authors : [];
 
                     return (
@@ -310,22 +346,24 @@ export default function Repository() {
                         authors={authorDisplay(authors)}
                         resourceType={typeLabel}
                         year={item.year}
-                        category={item.faculty_code}
+                        category={item.facultyCode}
                         subjects={Array.isArray(item.subjects) ? item.subjects : []}
                         spineText={item.doi || typeLabel}
                         href={`/repository/${item.id}`}
-                        status={item.visibility === 'global' ? 'Open access' : 'Members only'}
+                        status={item.file?.accessLevel === 'PUBLIC' ? 'Open access' : 'Members only'}
                         actions={(
                           <>
                             <span className="badge badge-primary text-xs">{typeLabel}</span>
-                            {item.faculty_code && <span className="badge badge-secondary text-xs">{item.faculty_code}</span>}
+                            {item.facultyCode && <span className="badge badge-secondary text-xs">{item.facultyCode}</span>}
                             {item.doi && (
                               <span className="badge text-xs" style={{ background: '#fef3c7', color: '#92400e' }}>DOI</span>
                             )}
-                            {item.visibility === 'global' && (
+                            {item.file?.accessLevel === 'PUBLIC' && (
                               <span className="badge text-xs" style={{ background: '#d1fae5', color: '#065f46' }}>Open</span>
                             )}
-                            <span className="text-xs text-neutral-400">{(item.download_count ?? 0).toLocaleString()} downloads</span>
+                            {item.snippet && (
+                              <span className="text-xs text-neutral-500 line-clamp-2">{item.snippet}</span>
+                            )}
                           </>
                         )}
                       />
@@ -344,7 +382,7 @@ export default function Repository() {
                       Previous
                     </button>
                     <span className="text-sm text-neutral-600">
-                      Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}
+                      Page {page + 1} of {totalPages || 1}
                     </span>
                     <button
                       onClick={() => setPage(p => p + 1)}

@@ -234,6 +234,38 @@ export default function RepositoryItem() {
     );
   }
 
+  useEffect(() => {
+    if (!item) return;
+    const isPublic = item.visibility === 'global'
+      && item.status === 'published'
+      && (!item.embargo_until || new Date(item.embargo_until) <= new Date());
+    if (!isPublic) return;
+
+    const tags: Array<{ name: string; content: string }> = [
+      { name: 'citation_title', content: String(item.title ?? '') },
+    ];
+
+    const authors: unknown[] = Array.isArray(item.authors) ? item.authors : [];
+    authors.forEach((entry) => {
+      const name = typeof entry === 'string' ? entry : ((entry as { name?: string })?.name ?? '');
+      if (name) tags.push({ name: 'citation_author', content: name });
+    });
+
+    const publicationYear = item.year ?? (item.created_at ? new Date(item.created_at).getFullYear() : '');
+    if (publicationYear) tags.push({ name: 'citation_publication_date', content: String(publicationYear) });
+    if (item.doi) tags.push({ name: 'citation_doi', content: String(item.doi) });
+
+    const nodes = tags.map((tag) => {
+      const element = document.createElement('meta');
+      element.setAttribute('name', tag.name);
+      element.setAttribute('content', tag.content);
+      document.head.appendChild(element);
+      return element;
+    });
+
+    return () => nodes.forEach((element) => element.remove());
+  }, [item]);
+
   if (!item) {
     return (
       <div className="pt-16 min-h-screen flex items-center justify-center">
