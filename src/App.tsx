@@ -127,6 +127,7 @@ const AdminTheses         = lazy(() => import('@/pages/admin/Theses'));
 const AdminCirculation    = lazy(() => import('@/pages/admin/Circulation'));
 const AdminFines          = lazy(() => import('@/pages/admin/Fines'));
 const AdminCatalogueAuthorities = lazy(() => import('@/pages/admin/CatalogueAuthorities'));
+const AdminMarcImportPreview = lazy(() => import('@/pages/admin/MarcImportPreview'));
 const AdminCatalogueStats = lazy(() => import('@/pages/admin/CatalogueStats'));
 const AdminShelves        = lazy(() => import('@/pages/admin/Shelves'));
 const AdminConsortium     = lazy(() => import('@/pages/admin/Consortium'));
@@ -292,6 +293,7 @@ export default function App() {
             <Route path="/admin/circulation" element={<AdminCirculation />} />
             <Route path="/admin/fines" element={<AdminFines />} />
             <Route path="/admin/catalogue/authorities" element={<AdminCatalogueAuthorities />} />
+            <Route path="/admin/catalogue/marc-import" element={<AdminMarcImportPreview />} />
             <Route path="/admin/catalogue/stats" element={<AdminCatalogueStats />} />
             <Route path="/admin/shelves" element={<AdminShelves />} />
             <Route path="/admin/repository/stats" element={<RepositoryStats />} />
