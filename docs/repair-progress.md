@@ -1,34 +1,54 @@
-# Batch 10 — SRU + Z39.50
+# Batch 11 — MARC Cataloguing Depth + Authority Control
 
-## SRU (Search/Retrieve via URL) 1.2
+## MARC Frameworks
+- 4 frameworks: BOOK, SERIAL, THESIS, ELECTRONIC_RESOURCE
+- 44 framework fields seeded
+- Framework selector in CatalogueNew.tsx
+- API: GET/POST /api/catalogue/frameworks
 
-- CQL parser with boolean operators, relations, field mappings
-- MARCXML and Dublin Core serialization
-- SRW diagnostics (10, 11, 12, 13, 14, 15)
-- Pagination with nextRecordPosition
-- 49/49 tests pass
-- Live E2E: 13/13 scenarios pass against localhost:3000
-- Independent Python validation: PASS
+## MARC Validation
+- Leader format, tag syntax, indicator, subfield validation
+- Required field checking per framework
+- ISBN-10/ISBN-13 check digit validation
+- ISSN check digit validation
+- ERROR/WARNING separation
+- 15 validation tests pass
 
-## Z39.50 Client
+## Staged MARC Import
+- Import batch model with record states
+- Parse → validate → stage → duplicate detection → import
+- API: POST /api/catalogue/marc-import
+- Server-side complete
 
-- YAZ 5.34.0 via CLI (yaz-client, yaz-marcdump)
-- BIB-1 attribute mapping (title=4, author=1003, subject=21, isbn=7, issn=8, keyword=1016)
-- SSRF protection with trusted-target model
-- Duplicate detection (NO_MATCH, POSSIBLE_MATCH, STRONG_MATCH)
-- 32/32 unit tests pass
-- Docker image built with YAZ installed
-- Live verification: yaz-client in Docker against Library of Congress (151 hits, 2 records)
+## Overlay Rules
+- Configurable rules: replace, preserve, append, protect
+- Protected 9xx fields
+- Overlay preview generation
+- Overlay audit logging
+- 4 overlay tests pass
+
+## Authority Control
+- Enhanced schema: preferred_heading, see_references, see_also, identifiers, source, status
+- Authority merge with dependent relinking
+- Item-authority many-to-many links
+- Merge history tracking
+- API: GET/POST/PATCH /api/authorities
 
 ## Migration
-
-- `20261002100000_z3950_targets.sql` applied live
-- Tables: z3950_targets, z3950_search_audit
-- 2 default targets seeded (Library of Congress, British Library)
+- 20261003090000_marc_frameworks.sql applied live
+- Tables: marc_frameworks, marc_framework_fields, marc_import_batches, marc_import_records, marc_overlay_rules, marc_overlay_audit, authority_merge_history, item_authority_links
+- Authority control enhanced with 6 new columns
 
 ## Gates
-
 - tsc: 0 errors
 - eslint (new files): 0 errors
-- vitest: 466 passed, 2 failed (pre-existing SIP2 timeouts)
+- vitest: 485 passed, 2 failed (pre-existing SIP2)
 - build: PASS
+
+## Partially Implemented
+- Authority autocomplete UI (server-side search exists)
+- Staged import UI (server-side exists)
+- Overlay UI (server-side exists)
+- External authority lookup
+- Batch modification
+- Live E2E tests

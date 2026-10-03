@@ -1,45 +1,87 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
-import { GLOBAL_ADMIN_ROLES } from '@/server/auth/permissions';
-import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
+import { listAuthorities, getAuthority, createAuthority, updateAuthority, searchAuthorities, linkItemToAuthority, unlinkItemFromAuthority, mergeAuthorities, getMergeHistory } from '@/server/catalogue/authority';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdminClient();
-    const { data, error } = await supabase.from('authority_control').select('*').order('term');
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, data: data ?? [] });
+    await requireRole(request, LIBRARY_ADMIN_ROLES);
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    const type = searchParams.get('type');
+    const id = searchParams.get('id');
+
+    if (id) {
+      const authority = await getAuthority(id);
+      if (!authority) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const mergeHistory = await getMergeHistory(id);
+      return NextResponse.json({ authority, mergeHistory });
+    }
+
+    if (search) {
+      const results = await searchAuthorities(search, type ?? undefined);
+      return NextResponse.json({ results });
+    }
+
+    const authorities = await listAuthorities({ type: type ?? undefined });
+    return NextResponse.json({ authorities });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden.' ? 403 : 401 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(request, GLOBAL_ADMIN_ROLES);
-    const body = await request.json().catch(() => ({}));
-    const { item_type, item_id, authority_id, heading } = body as {
-      item_type?: 'catalogue' | 'repository';
-      item_id?: string;
-      authority_id?: string;
-      heading?: string;
-    };
-    if (!item_type || !item_id || !authority_id) {
-      return NextResponse.json({ success: false, error: 'item_type, item_id, and authority_id required' }, { status: 400 });
+    const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
+    const body = await request.json();
+
+    if (body.action === 'merge') {
+      if (!body.sourceId || !body.targetId) {
+        return NextResponse.json({ error: 'sourceId and targetId are required' }, { status: 400 });
+      }
+      await mergeAuthorities(body.sourceId, body.targetId, ctx.user.id);
+      return NextResponse.json({ ok: true });
     }
-    const table = item_type === 'catalogue' ? 'catalogue_items' : 'repository_items';
-    const supabase = getSupabaseAdminClient();
-    const { data, error } = await supabase
-      .from(table)
-      .update({ authority_id, authority_heading: heading || null })
-      .eq('id', item_id)
-      .select('id, authority_id, authority_heading')
-      .single();
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, data });
+
+    if (body.action === 'link') {
+      if (!body.itemId || !body.authorityId || !body.fieldTag) {
+        return NextResponse.json({ error: 'itemId, authorityId, and fieldTag are required' }, { status: 400 });
+      }
+      await linkItemToAuthority(body.itemId, body.authorityId, body.fieldTag, body.fieldSubfield);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (body.action === 'unlink') {
+      if (!body.itemId || !body.authorityId || !body.fieldTag) {
+        return NextResponse.json({ error: 'itemId, authorityId, and fieldTag are required' }, { status: 400 });
+      }
+      await unlinkItemFromAuthority(body.itemId, body.authorityId, body.fieldTag);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!body.term || !body.term_type) {
+      return NextResponse.json({ error: 'term and term_type are required' }, { status: 400 });
+    }
+    const authority = await createAuthority(body);
+    return NextResponse.json({ authority }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden.' ? 403 : 400 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    await requireRole(request, LIBRARY_ADMIN_ROLES);
+    const body = await request.json();
+    if (!body.id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+    const authority = await updateAuthority(body.id, body);
+    return NextResponse.json({ authority });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden.' ? 403 : 400 });
   }
 }

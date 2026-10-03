@@ -185,6 +185,8 @@ export default function CatalogueNew() {
   const [z3950Error, setZ3950Error] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [frameworkCode, setFrameworkCode] = useState('BOOK');
+  const [frameworks, setFrameworks] = useState<Array<{ code: string; name: string }>>([]);
 
   // Shelf options filtered by selected library
   const [availableShelves, setAvailableShelves] = useState<{ shelf_code: string; description: string }[]>([]);
@@ -212,6 +214,14 @@ export default function CatalogueNew() {
   useEffect(() => {
     const saved = localStorage.getItem('marc_mode_preference');
     if (saved === 'simple' || saved === 'advanced') setMode(saved);
+  }, []);
+
+  // Load MARC frameworks
+  useEffect(() => {
+    fetch('/api/catalogue/frameworks')
+      .then(r => r.ok ? r.json() : { frameworks: [] })
+      .then(data => setFrameworks(data.frameworks?.map((f: any) => ({ code: f.code, name: f.name })) ?? []))
+      .catch(() => {});
   }, []);
 
   // Load shelves when library selection changes
@@ -595,6 +605,18 @@ export default function CatalogueNew() {
           </button>
         ))}
       </div>
+
+      {/* Framework selector */}
+      {frameworks.length > 0 && (
+        <div className="flex items-center gap-3">
+          <label className="label mb-0">Cataloguing Framework</label>
+          <select className="input max-w-xs" value={frameworkCode} onChange={e => setFrameworkCode(e.target.value)}>
+            {frameworks.map(f => (
+              <option key={f.code} value={f.code}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* ── SIMPLE MODE ──────────────────────────────────────────────────────── */}
       {mode === 'simple' && (
