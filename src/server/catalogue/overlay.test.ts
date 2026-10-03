@@ -44,4 +44,28 @@ describe('generateOverlayPreview', () => {
     const previews = generateOverlayPreview(current, incoming, rules);
     expect(previews[0].action).toBe('replace');
   });
+
+  it('protected 9xx survives overlay while 245 replaces', () => {
+    const current = makeRecord([
+      { tag: '245', ind1: '1', ind2: '0', subfields: [{ code: 'a', value: 'Existing Title' }] },
+      { tag: '900', ind1: ' ', ind2: ' ', subfields: [{ code: 'a', value: 'LOCAL DATA' }] },
+    ]);
+    const incoming = makeRecord([
+      { tag: '245', ind1: '1', ind2: '0', subfields: [{ code: 'a', value: 'Incoming Title' }] },
+      { tag: '900', ind1: ' ', ind2: ' ', subfields: [{ code: 'a', value: 'EXTERNAL DATA' }] },
+    ]);
+
+    const previews = generateOverlayPreview(current, incoming, rules);
+    expect(previews).toHaveLength(2);
+
+    const titlePreview = previews.find(p => p.tag === '245');
+    expect(titlePreview?.action).toBe('replace');
+    expect(titlePreview?.currentValue).toBe('Existing Title');
+    expect(titlePreview?.incomingValue).toBe('Incoming Title');
+
+    const protectedPreview = previews.find(p => p.tag === '900');
+    expect(protectedPreview?.action).toBe('protect');
+    expect(protectedPreview?.currentValue).toBe('LOCAL DATA');
+    expect(protectedPreview?.incomingValue).toBe('EXTERNAL DATA');
+  });
 });

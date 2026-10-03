@@ -3,6 +3,8 @@ import { requireRole } from '@/server/auth/requireRole';
 import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
 import { listAuthorities, getAuthority, createAuthority, updateAuthority, searchAuthorities, linkItemToAuthority, unlinkItemFromAuthority, mergeAuthorities, getMergeHistory } from '@/server/catalogue/authority';
 
+const AUTHORITY_MERGE_ROLES = ['super_admin', 'catalog_admin', 'admin'];
+
 export async function GET(request: NextRequest) {
   try {
     await requireRole(request, LIBRARY_ADMIN_ROLES);
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
       if (!body.sourceId || !body.targetId) {
         return NextResponse.json({ error: 'sourceId and targetId are required' }, { status: 400 });
       }
+      await requireRole(request, AUTHORITY_MERGE_ROLES);
       await mergeAuthorities(body.sourceId, body.targetId, ctx.user.id);
       return NextResponse.json({ ok: true });
     }
