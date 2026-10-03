@@ -28,6 +28,14 @@ interface StagedRecord {
   error_detail: string | null;
 }
 
+interface OverlayPreview {
+  tag: string;
+  subfield: string;
+  currentValue: string;
+  incomingValue: string;
+  action: string;
+}
+
 export default function MarcImportPreview() {
   const navigate = useNavigate();
   const { loading: authLoading, hasRole } = useAuth();
@@ -36,6 +44,10 @@ export default function MarcImportPreview() {
   const [records, setRecords] = useState<StagedRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
+  const [overlayRecord, setOverlayRecord] = useState<StagedRecord | null>(null);
+  const [overlayTarget, setOverlayTarget] = useState('');
+  const [_overlayPreview, _setOverlayPreview] = useState<OverlayPreview[]>([]);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   useEffect(() => {
     fetch('/api/catalogue/marc-import')
@@ -136,6 +148,9 @@ export default function MarcImportPreview() {
                     </div>
                     <div className="flex gap-1 ml-2">
                       <button onClick={() => {}} className="btn-primary text-xs px-2 py-1">Import</button>
+                      {r.duplicate_status !== 'NO_MATCH' && (
+                        <button onClick={() => { setOverlayRecord(r); setShowOverlay(true); }} className="btn-outline text-xs px-2 py-1">Overlay</button>
+                      )}
                       <button onClick={() => {}} className="btn-ghost text-xs px-2 py-1">Skip</button>
                       <button onClick={() => {}} className="btn-ghost text-xs px-2 py-1">Reject</button>
                     </div>
@@ -146,6 +161,28 @@ export default function MarcImportPreview() {
           )}
         </div>
       </div>
+
+      {showOverlay && overlayRecord && (
+        <div className="card p-4 space-y-4">
+          <h2 className="font-semibold">Overlay Preview</h2>
+          <p className="text-sm text-neutral-500">Select target record for overlay</p>
+          {overlayRecord.duplicate_candidates.length > 0 && (
+            <div className="space-y-2">
+              {overlayRecord.duplicate_candidates.map(c => (
+                <label key={c.id} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-neutral-50">
+                  <input type="radio" name="overlayTarget" value={c.id} checked={overlayTarget === c.id} onChange={() => setOverlayTarget(c.id)} />
+                  <span className="text-sm">{c.title}</span>
+                  {c.isbn && <span className="text-xs text-neutral-400 font-mono">{c.isbn}</span>}
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={() => {}} disabled={!overlayTarget} className="btn-primary disabled:opacity-50">Apply Overlay</button>
+            <button onClick={() => setShowOverlay(false)} className="btn-ghost">Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

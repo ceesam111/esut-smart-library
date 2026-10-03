@@ -128,6 +128,8 @@ const AdminCirculation    = lazy(() => import('@/pages/admin/Circulation'));
 const AdminFines          = lazy(() => import('@/pages/admin/Fines'));
 const AdminCatalogueAuthorities = lazy(() => import('@/pages/admin/CatalogueAuthorities'));
 const AdminMarcImportPreview = lazy(() => import('@/pages/admin/MarcImportPreview'));
+const AdminBatchModification = lazy(() => import('@/pages/admin/BatchModification'));
+const AdminAuthorityMerge = lazy(() => import('@/pages/admin/AuthorityMerge'));
 const AdminCatalogueStats = lazy(() => import('@/pages/admin/CatalogueStats'));
 const AdminShelves        = lazy(() => import('@/pages/admin/Shelves'));
 const AdminConsortium     = lazy(() => import('@/pages/admin/Consortium'));
@@ -294,6 +296,8 @@ export default function App() {
             <Route path="/admin/fines" element={<AdminFines />} />
             <Route path="/admin/catalogue/authorities" element={<AdminCatalogueAuthorities />} />
             <Route path="/admin/catalogue/marc-import" element={<AdminMarcImportPreview />} />
+            <Route path="/admin/catalogue/batch-modify" element={<AdminBatchModification />} />
+            <Route path="/admin/catalogue/authority-merge" element={<AdminAuthorityMerge />} />
             <Route path="/admin/catalogue/stats" element={<AdminCatalogueStats />} />
             <Route path="/admin/shelves" element={<AdminShelves />} />
             <Route path="/admin/repository/stats" element={<RepositoryStats />} />
