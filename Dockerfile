@@ -1,10 +1,10 @@
-FROM node:22-alpine AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm (while true; do echo 'npm ci still running...'; sleep 20; done) & heartbeat=$!; npm ci --no-audit --no-fund; status=$?; kill "$heartbeat" >/dev/null 2>&1 || true; wait "$heartbeat" 2>/dev/null || true; exit "$status"
 
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -28,13 +28,14 @@ COPY . .
 ARG CACHE_BUST=1
 RUN echo "Rebuilding: $CACHE_BUST $(date)" && (while true; do echo 'next build still running...'; sleep 20; done) & heartbeat=$!; npm run build; status=$?; kill "$heartbeat" >/dev/null 2>&1 || true; wait "$heartbeat" 2>/dev/null || true; exit "$status"
 
-FROM node:22-alpine AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends yaz && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public

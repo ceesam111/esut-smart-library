@@ -52,9 +52,46 @@ const DEFAULT_MARC_FIELDS = [
   { tag: '650', ind1: ' ', ind2: '0', subfields: [{ code: 'a', value: '' }] },
 ];
 
-const EXTERNAL_SEARCH_SOURCE = 'Open Library';
-
 const FORMATS = CATALOG_ITEM_TYPES;
+
+interface Z3950Target {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  database: string;
+  enabled: boolean;
+  default_index: string;
+}
+
+interface Z3950Result {
+  controlNumber: string;
+  title: string;
+  authors: string[];
+  isbn: string | null;
+  issn: string | null;
+  publisher: string | null;
+  placeOfPublication: string | null;
+  year: number | null;
+  edition: string | null;
+  subjects: string[];
+  callNumber: string | null;
+  language: string | null;
+  abstract: string | null;
+  series: string | null;
+  physicalDescription: string | null;
+  notes: string[];
+  duplicateStatus: 'NO_MATCH' | 'POSSIBLE_MATCH' | 'STRONG_MATCH';
+}
+
+const Z3950_INDEXES = [
+  { key: 'keyword', label: 'Keyword' },
+  { key: 'title', label: 'Title' },
+  { key: 'author', label: 'Author' },
+  { key: 'subject', label: 'Subject' },
+  { key: 'isbn', label: 'ISBN' },
+  { key: 'issn', label: 'ISSN' },
+] as const;
 
 function extractPublicationYear(value: unknown): number | null {
   const match = String(value ?? '').match(/(?:18|19|20)\d{2}/);
@@ -140,8 +177,12 @@ export default function CatalogueNew() {
   const [aiLoading, setAiLoading] = useState(false);
   const [z3950Open, setZ3950Open] = useState(false);
   const [z3950Query, setZ3950Query] = useState('');
-  const [z3950Results, setZ3950Results] = useState<any[]>([]);
+  const [z3950Results, setZ3950Results] = useState<Z3950Result[]>([]);
   const [z3950Searching, setZ3950Searching] = useState(false);
+  const [z3950Targets, setZ3950Targets] = useState<Z3950Target[]>([]);
+  const [z3950TargetId, setZ3950TargetId] = useState('');
+  const [z3950Index, setZ3950Index] = useState<string>('keyword');
+  const [z3950Error, setZ3950Error] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -305,54 +346,65 @@ export default function CatalogueNew() {
   };
 
   // ── Z39.50 Copy Cataloguing ─────────────────────────────────────────────────
-  const z3950Search = async () => {
-    setZ3950Searching(true);
-    setZ3950Results([]);
+  const loadZ3950Targets = async () => {
     try {
-      // Use Open Library as Z39.50 proxy (real Z39.50 requires server-side)
-      const q = z3950Query.replace(/[-\s]/g, '');
-      const isISBN = /^\d{10,13}$/.test(q);
-      let url = isISBN
-        ? `https://openlibrary.org/api/books?bibkeys=ISBN:${q}&format=json&jscmd=data`
-        : `https://openlibrary.org/search.json?q=${encodeURIComponent(z3950Query)}&limit=5`;
-
-      const res = await fetch(url);
+      const res = await fetch('/api/z3950/targets');
+      if (!res.ok) return;
       const data = await res.json();
-
-      if (isISBN) {
-        const book = data[`ISBN:${q}`];
-        if (book) setZ3950Results([{ ...book, _isbn: q }]);
-      } else {
-        const docs = data.docs ?? [];
-        setZ3950Results(docs.slice(0, 5).map((d: any) => ({
-          title: d.title,
-          authors: d.author_name?.map((a: string) => ({ name: a })) ?? [],
-          publishers: d.publisher?.map((p: string) => ({ name: p })) ?? [],
-          publish_date: d.first_publish_year?.toString() ?? '',
-          subjects: d.subject?.slice(0, 8).map((s: string) => ({ name: s })) ?? [],
-          _isbn: d.isbn?.[0] ?? '',
-        })));
+      setZ3950Targets(data.targets ?? []);
+      if (data.targets?.length > 0 && !z3950TargetId) {
+        setZ3950TargetId(data.targets[0].id);
       }
-    } catch {
-      setErrorMsg('Search failed. Please try again.');
-      setTimeout(() => setErrorMsg(''), 3000);
-    } finally { setZ3950Searching(false); }
+    } catch { /* silent */ }
   };
 
-  const importZ3950Record = (record: any) => {
+  const z3950Search = async () => {
+    if (!z3950TargetId) {
+      setZ3950Error('No Z39.50 target configured. Ask an administrator to add one.');
+      return;
+    }
+    setZ3950Searching(true);
+    setZ3950Results([]);
+    setZ3950Error('');
+    try {
+      const res = await fetch('/api/z3950/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId: z3950TargetId, query: z3950Query, index: z3950Index }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setZ3950Error(data.error || 'Search failed.');
+        return;
+      }
+      setZ3950Results(data.records ?? []);
+    } catch {
+      setZ3950Error('Search failed. Please try again.');
+    } finally {
+      setZ3950Searching(false);
+    }
+  };
+
+  const importZ3950Record = (record: Z3950Result) => {
     applyBookData({
       title: record.title ?? '',
-      authors: record.authors?.map((a: any) => a.name).join(', ') ?? '',
-      publisher: record.publishers?.[0]?.name ?? '',
-      place_of_publication: record.publish_places?.[0]?.name ?? '',
-      year: extractPublicationYear(record.publish_date) ?? form.year,
-      subjects: record.subjects?.map((s: any) => s.name ?? s).join('; ') ?? '',
-      isbn: record._isbn ?? form.isbn,
-      cover_image: record.cover?.large ?? record.cover?.medium ?? '',
+      authors: record.authors?.join(', ') ?? '',
+      publisher: record.publisher ?? '',
+      place_of_publication: record.placeOfPublication ?? '',
+      year: record.year ?? form.year,
+      subjects: record.subjects?.join('; ') ?? '',
+      isbn: record.isbn ?? form.isbn,
+      edition: record.edition ?? undefined,
+      call_number: record.callNumber ?? undefined,
+      language: record.language ?? undefined,
+      abstract: record.abstract ?? undefined,
+      series: record.series ?? undefined,
+      physical_description: record.physicalDescription ?? undefined,
+      notes: record.notes?.join('\n') ?? undefined,
     });
     if (mode === 'advanced') syncSimpleToMarc();
     setZ3950Open(false);
-    setSuccessMsg(`Record imported from ${EXTERNAL_SEARCH_SOURCE}.`);
+    setSuccessMsg(`Record imported from Z39.50 target.`);
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
@@ -648,7 +700,7 @@ export default function CatalogueNew() {
                     {source.label}
                   </a>
                 ))}
-                <button onClick={() => setZ3950Open(true)} className="btn-primary text-xs">Z39.50 Import</button>
+                <button onClick={() => { setZ3950Open(true); loadZ3950Targets(); }} className="btn-primary text-xs">Z39.50 Import</button>
               </div>
             </div>
           </div>
@@ -933,17 +985,44 @@ export default function CatalogueNew() {
 
             <div className="p-5 space-y-4">
               <div className="text-sm text-neutral-500">
-                Searching {EXTERNAL_SEARCH_SOURCE} (open-access books)
+                Search configured Z39.50 library targets
               </div>
+
+              {z3950Targets.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Target</label>
+                    <select className="input" value={z3950TargetId} onChange={e => setZ3950TargetId(e.target.value)}>
+                      {z3950Targets.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.host}:{t.port}/{t.database})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Index</label>
+                    <select className="input" value={z3950Index} onChange={e => setZ3950Index(e.target.value)}>
+                      {Z3950_INDEXES.map(idx => (
+                        <option key={idx.key} value={idx.key}>{idx.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-amber-600">No Z39.50 targets configured. Ask an administrator to add one.</p>
+              )}
 
               <div className="flex gap-2">
                 <input type="text" className="input flex-1" value={z3950Query} onChange={e => setZ3950Query(e.target.value)}
-                  placeholder="Enter ISBN, title, or author…"
+                  placeholder="Enter search term…"
                   onKeyDown={e => e.key === 'Enter' && z3950Search()} />
-                <button onClick={z3950Search} disabled={z3950Searching || !z3950Query.trim()} className="btn-primary disabled:opacity-50">
+                <button onClick={z3950Search} disabled={z3950Searching || !z3950Query.trim() || !z3950TargetId} className="btn-primary disabled:opacity-50">
                   {z3950Searching ? <Spinner /> : 'Search'}
                 </button>
               </div>
+
+              {z3950Error && (
+                <p className="text-sm text-red-600">{z3950Error}</p>
+              )}
 
               {z3950Results.length > 0 && (
                 <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -951,13 +1030,21 @@ export default function CatalogueNew() {
                     <div key={i} className="border border-neutral-200 rounded-xl p-3 hover:border-primary-300 hover:bg-primary-50 transition-all">
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-neutral-800 line-clamp-1">{r.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm text-neutral-800 line-clamp-1">{r.title}</p>
+                            {r.duplicateStatus === 'STRONG_MATCH' && (
+                              <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded shrink-0">Duplicate</span>
+                            )}
+                            {r.duplicateStatus === 'POSSIBLE_MATCH' && (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">Possible match</span>
+                            )}
+                          </div>
                           <p className="text-xs text-neutral-500 mt-0.5">
-                            {r.authors?.map((a: any) => a.name ?? a).join(', ')}
-                            {r.publish_date && ` · ${r.publish_date}`}
-                            {r.publishers?.[0]?.name && ` · ${r.publishers[0].name}`}
+                            {r.authors?.join(', ')}
+                            {r.year && ` · ${r.year}`}
+                            {r.publisher && ` · ${r.publisher}`}
                           </p>
-                          {r._isbn && <p className="text-xs font-mono text-neutral-400 mt-0.5">ISBN: {r._isbn}</p>}
+                          {r.isbn && <p className="text-xs font-mono text-neutral-400 mt-0.5">ISBN: {r.isbn}</p>}
                         </div>
                         <button onClick={() => importZ3950Record(r)} className="btn-primary text-xs px-3 py-1.5 shrink-0">
                           Import
@@ -971,12 +1058,12 @@ export default function CatalogueNew() {
               {z3950Searching && (
                 <div className="flex items-center justify-center py-6 gap-2 text-neutral-400 text-sm">
                   <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                  Searching {EXTERNAL_SEARCH_SOURCE}…
+                  Searching Z39.50 target…
                 </div>
               )}
 
-              {!z3950Searching && z3950Results.length === 0 && z3950Query && (
-                <p className="text-sm text-neutral-400 text-center py-4">No records found. Try a different query or source.</p>
+              {!z3950Searching && !z3950Error && z3950Results.length === 0 && z3950Query && z3950TargetId && (
+                <p className="text-sm text-neutral-400 text-center py-4">No records found. Try a different query or target.</p>
               )}
             </div>
           </div>
