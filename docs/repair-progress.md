@@ -1,54 +1,65 @@
-# Batch 11 — MARC Cataloguing Depth + Authority Control
+# Repair Progress — Batch 13
 
-## MARC Frameworks
-- 4 frameworks: BOOK, SERIAL, THESIS, ELECTRONIC_RESOURCE
-- 44 framework fields seeded
-- Framework selector in CatalogueNew.tsx
-- API: GET/POST /api/catalogue/frameworks
+## Completed
 
-## MARC Validation
-- Leader format, tag syntax, indicator, subfield validation
-- Required field checking per framework
-- ISBN-10/ISBN-13 check digit validation
-- ISSN check digit validation
-- ERROR/WARNING separation
-- 15 validation tests pass
+### Notice System
+- Expanded notice types from 5 to 28 (full taxonomy: circulation, account, repository, acquisitions, admin)
+- Template model with variable schema, versioning, and channel support
+- Variable rendering with HTML escaping and script tag stripping
+- Template preview with SAMPLE DATA marking
+- Template management API (list, preview, toggle, duplicate)
+- Template permissions (global admin only)
+- Email delivery via existing Resend + Gmail fallback
+- In-app delivery via user_notifications table
+- Print delivery via printer-friendly HTML
+- SMS adapter architecture (optional, not configured)
+- Checkout/checkin/hold-ready/due-soon/overdue notice dispatch API
+- Workflow notice dispatch API
+- Delivery logging with idempotency keys
+- Delivery states (PENDING, QUEUED, SENT, DELIVERED, FAILED, CANCELLED, SUPPRESSED)
+- Retry behavior with bounded retries
+- Duplicate protection via idempotency keys
+- Staff delivery history UI
+- Test send endpoint
+- Overdue worker (scans overdue loans, sends notices)
+- Due-soon worker (scans due-soon loans, sends reminders)
 
-## Staged MARC Import
-- Import batch model with record states
-- Parse → validate → stage → duplicate detection → import
-- API: POST /api/catalogue/marc-import
-- Server-side complete
+### Report Writer
+- Report builder with dataset/column/filter/sort/group support
+- 8 datasets with column whitelists
+- Sensitive column marking
+- CSV export with formula-injection protection
+- XLSX export (TSV-based)
+- Saved reports (create/read/delete)
+- Report run history
+- Built-in report pack (12 reports)
+- Report builder UI
+- Report permissions (owner-based with shared/public visibility)
 
-## Overlay Rules
-- Configurable rules: replace, preserve, append, protect
-- Protected 9xx fields
-- Overlay preview generation
-- Overlay audit logging
-- 4 overlay tests pass
+### Security
+- Column whitelist enforcement
+- Sensitive column detection
+- Formula injection protection in CSV
+- IDOR protection via ownership checks
+- Template HTML script stripping
 
-## Authority Control
-- Enhanced schema: preferred_heading, see_references, see_also, identifiers, source, status
-- Authority merge with dependent relinking
-- Item-authority many-to-many links
-- Merge history tracking
-- API: GET/POST/PATCH /api/authorities
+### Tests
+- 12 notice template tests
+- 12 report builder tests
+- 6 delivery service tests
+- Full suite: 557 passed, 0 failed
 
-## Migration
-- 20261003090000_marc_frameworks.sql applied live
-- Tables: marc_frameworks, marc_framework_fields, marc_import_batches, marc_import_records, marc_overlay_rules, marc_overlay_audit, authority_merge_history, item_authority_links
-- Authority control enhanced with 6 new columns
+### Quality Gates
+- TypeScript: 0 errors
+- Lint: 0 errors on changed files
+- Build: exit 0
 
-## Gates
-- tsc: 0 errors
-- eslint (new files): 0 errors
-- vitest: 485 passed, 2 failed (pre-existing SIP2)
-- build: PASS
+## Not Completed / Limitations
 
-## Partially Implemented
-- Authority autocomplete UI (server-side search exists)
-- Staged import UI (server-side exists)
-- Overlay UI (server-side exists)
-- External authority lookup
-- Batch modification
-- Live E2E tests
+- SMS provider not configured (adapter exists, status: NOT_CONFIGURED)
+- No PDF report export
+- No email delivery of scheduled reports
+- XLSX export is TSV-based (not true OOXML)
+- Templates stored in-memory by default (database table exists but not fully integrated)
+- No live E2E for notices/reports (unit tests only)
+- No scheduled report worker (infrastructure exists, not wired to cron)

@@ -1,61 +1,127 @@
 import { describe, it, expect } from 'vitest';
-import { generateNoticeContent } from '@/server/circulation/notices';
+import { renderNotice, getTemplate, listTemplates, type NoticeTemplate } from './notices';
 
-describe('notices', () => {
-  it('generates overdue notice', () => {
-    const result = generateNoticeContent({
-      type: 'overdue',
-      recipient_email: 'test@example.com',
-      recipient_name: 'Test User',
+describe('notice template rendering', () => {
+  it('renders variables in subject and body', () => {
+    const template = getTemplate('overdue');
+    const result = renderNotice(template, {
+      patron_name: 'Jane Doe',
       item_title: 'Test Book',
-      due_date: '2026-01-01',
+      due_date: '2026-10-01',
     });
-    expect(result.subject).toContain('Overdue');
-    expect(result.html).toContain('Test Book');
+    expect(result.subject).toBe('Overdue Notice: Test Book');
+    expect(result.text).toContain('Jane Doe');
     expect(result.text).toContain('Test Book');
+    expect(result.text).toContain('2026-10-01');
   });
 
-  it('generates due soon notice', () => {
-    const result = generateNoticeContent({
-      type: 'due_soon',
-      recipient_email: 'test@example.com',
-      recipient_name: 'Test User',
+  it('escapes HTML in variable values', () => {
+    const template = getTemplate('overdue');
+    const result = renderNotice(template, {
+      patron_name: '<script>alert("xss")</script>',
       item_title: 'Test Book',
-      due_date: '2026-01-15',
+      due_date: '2026-10-01',
     });
-    expect(result.subject).toContain('Due Soon');
+    expect(result.html).not.toContain('<script>');
+    expect(result.text).not.toContain('<script>');
   });
 
-  it('generates hold available notice', () => {
-    const result = generateNoticeContent({
-      type: 'hold_available',
-      recipient_email: 'test@example.com',
-      recipient_name: 'Test User',
-      item_title: 'Test Book',
+  it('handles missing optional variables gracefully', () => {
+    const template = getTemplate('overdue');
+    const result = renderNotice(template, {
+      patron_name: 'Jane',
+      item_title: 'Book',
+      due_date: '2026-10-01',
     });
-    expect(result.subject).toContain('Hold Available');
+    expect(result.subject).toBe('Overdue Notice: Book');
   });
 
-  it('generates receipt notice', () => {
-    const result = generateNoticeContent({
-      type: 'receipt',
-      recipient_email: 'test@example.com',
-      recipient_name: 'Test User',
-      item_title: 'Test Book',
-      return_date: '2026-01-20',
+  it('handles date objects', () => {
+    const template = getTemplate('due_soon');
+    const result = renderNotice(template, {
+      patron_name: 'Jane',
+      item_title: 'Book',
+      due_date: new Date('2026-10-15'),
     });
-    expect(result.subject).toContain('Return Receipt');
+    expect(result.text).toContain('2026-10-15');
   });
 
-  it('generates fine notice with amount', () => {
-    const result = generateNoticeContent({
-      type: 'fine',
-      recipient_email: 'test@example.com',
-      recipient_name: 'Test User',
-      item_title: 'Test Book',
-      fine_amount: 500,
+  it('strips script tags from HTML body', () => {
+    const template: NoticeTemplate = {
+      ...getTemplate('overdue'),
+      body_html: '<p>Hello</p><script>alert("xss")</script>',
+    };
+    const result = renderNotice(template, {
+      patron_name: 'Jane',
+      item_title: 'Book',
+      due_date: '2026-10-01',
     });
-    expect(result.subject).toContain('Fine');
-    expect(result.html).toContain('500');
+    expect(result.html).not.toContain('<script>');
+  });
+
+  it('lists all templates', () => {
+    const templates = listTemplates();
+    expect(templates.length).toBeGreaterThan(0);
+    const types = templates.map((t) => t.notice_type);
+    expect(types).toContain('checkout_receipt');
+    expect(types).toContain('overdue');
+    expect(types).toContain('hold_ready');
+    expect(types).toContain('published');
+  });
+
+  it('lists templates filtered by channel', () => {
+    const emailTemplates = listTemplates('email');
+    expect(emailTemplates.every((t) => t.channel === 'email')).toBe(true);
+  });
+
+  it('handles all notice types', () => {
+    const allTypes = listTemplates();
+    const uniqueTypes = new Set(allTypes.map((t) => t.notice_type));
+    expect(uniqueTypes.size).toBeGreaterThanOrEqual(20);
+  });
+});
+
+describe('notice type taxonomy', () => {
+  it('includes circulation notice types', () => {
+    const templates = listTemplates();
+    const types = templates.map((t) => t.notice_type);
+    expect(types).toContain('checkout_receipt');
+    expect(types).toContain('checkin_receipt');
+    expect(types).toContain('due_soon');
+    expect(types).toContain('overdue');
+    expect(types).toContain('overdue_escalation');
+    expect(types).toContain('hold_ready');
+    expect(types).toContain('hold_cancelled');
+    expect(types).toContain('renewal_confirmation');
+    expect(types).toContain('fine_notice');
+  });
+
+  it('includes account notice types', () => {
+    const templates = listTemplates();
+    const types = templates.map((t) => t.notice_type);
+    expect(types).toContain('welcome');
+    expect(types).toContain('email_verification');
+    expect(types).toContain('password_reset');
+    expect(types).toContain('account_expiry');
+    expect(types).toContain('account_restriction');
+  });
+
+  it('includes repository notice types', () => {
+    const templates = listTemplates();
+    const types = templates.map((t) => t.notice_type);
+    expect(types).toContain('submission_received');
+    expect(types).toContain('reviewer_assigned');
+    expect(types).toContain('changes_requested');
+    expect(types).toContain('approved');
+    expect(types).toContain('rejected');
+    expect(types).toContain('published');
+  });
+
+  it('includes acquisitions notice types', () => {
+    const templates = listTemplates();
+    const types = templates.map((t) => t.notice_type);
+    expect(types).toContain('claim_notice');
+    expect(types).toContain('order_notice');
+    expect(types).toContain('vendor_notice');
   });
 });

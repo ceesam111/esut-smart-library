@@ -1,535 +1,535 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { institutionConfig } from '@config/institution.config';
+'use client';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Play, Download, Save, History, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface PhysicalData {
-  building_sqm: number;
-  seating_capacity: number;
-  computer_terminals: number;
-  reading_rooms: number;
-  group_study_rooms: number;
-  internet_speed_mbps: number;
+interface ReportDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  report_type: string;
+  dataset: string;
+  filters: unknown[];
+  columns: unknown[];
+  visibility: string;
+  created_at: string;
 }
 
-interface LiveStats {
-  total_catalogue: number;
-  total_repo: number;
-  total_patrons: number;
-  total_loans_year: number;
-  total_ill_year: number;
-  total_theses: number;
-  total_events: number;
-  professional_librarians: number;
+interface ReportRun {
+  id: string;
+  status: string;
+  row_count: number;
+  started_at: string;
+  completed_at?: string;
+  error_message?: string;
 }
 
-interface OperationalFilter {
-  from: string;
-  to: string;
-  report: string;
+interface ReportResult {
+  data: Record<string, unknown>[];
+  totalRows: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  columns: string[];
 }
 
-const DEFAULT_PHYSICAL: PhysicalData = {
-  building_sqm: 450,
-  seating_capacity: 120,
-  computer_terminals: 25,
-  reading_rooms: 3,
-  group_study_rooms: 5,
-  internet_speed_mbps: 100,
-};
+const DATASETS = [
+  { value: 'circulation', label: 'Circulation' },
+  { value: 'patrons', label: 'Patrons' },
+  { value: 'catalogue', label: 'Catalogue' },
+  { value: 'repository', label: 'Repository' },
+  { value: 'acquisitions', label: 'Acquisitions' },
+  { value: 'serials', label: 'Serials' },
+  { value: 'analytics', label: 'Analytics' },
+  { value: 'fines', label: 'Fines' },
+];
 
-const TABS = ['NUC Compliance', 'Annual Returns', 'Operational Reports'] as const;
-type Tab = (typeof TABS)[number];
+const BUILT_IN_REPORTS = [
+  { name: 'Current Loans', dataset: 'circulation', description: 'All active loans' },
+  { name: 'Overdue Loans', dataset: 'circulation', description: 'Loans past due date' },
+  { name: 'Checkouts by Period', dataset: 'circulation', description: 'Checkouts in date range' },
+  { name: 'Most Borrowed Titles', dataset: 'circulation', description: 'Top borrowed items' },
+  { name: 'Patrons by Category', dataset: 'patrons', description: 'Patrons grouped by role' },
+  { name: 'Expiring Accounts', dataset: 'patrons', description: 'Accounts expiring soon' },
+  { name: 'Items by Status', dataset: 'catalogue', description: 'Catalogue items by status' },
+  { name: 'Recently Added', dataset: 'catalogue', description: 'New catalogue items' },
+  { name: 'Submissions by Status', dataset: 'repository', description: 'Repository submissions' },
+  { name: 'Publications by Period', dataset: 'repository', description: 'Published items in range' },
+  { name: 'Orders by Status', dataset: 'acquisitions', description: 'Purchase orders' },
+  { name: 'Active Subscriptions', dataset: 'serials', description: 'Serial subscriptions' },
+];
 
-// ─── NUC Compliance Row ────────────────────────────────────────────────────────
+export default function ReportsPage() {
+  const [activeTab, setActiveTab] = useState('builder');
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<string>('');
+  const [columns, setColumns] = useState<string[]>([]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [filters, setFilters] = useState<ReportFilter[]>([]);
+  const [sorting, setSorting] = useState<ReportSort[]>([]);
+  const [reportResult, setReportResult] = useState<ReportResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [reportName, setReportName] = useState('');
+  const [savedReports, setSavedReports] = useState<ReportDefinition[]>([]);
+  const [reportHistory, setReportHistory] = useState<ReportRun[]>([]);
+  const [page, setPage] = useState(1);
 
-function statusOf(current: number, benchmark: number): 'met' | 'partial' | 'unmet' {
-  if (current >= benchmark) return 'met';
-  if (current >= benchmark * 0.8) return 'partial';
-  return 'unmet';
-}
-
-function Badge({ status }: { status: 'met' | 'partial' | 'unmet' }) {
-  const cls =
-    status === 'met'
-      ? 'bg-green-100 text-green-700'
-      : status === 'partial'
-        ? 'bg-yellow-100 text-yellow-700'
-        : 'bg-red-100 text-red-700';
-  const label = status === 'met' ? 'Met' : status === 'partial' ? 'Partial' : 'Unmet';
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{label}</span>;
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-export default function Reports() {
-  const [tab, setTab] = useState<Tab>('NUC Compliance');
-  const [physical, setPhysical] = useState<PhysicalData>(DEFAULT_PHYSICAL);
-  const [physicalDirty, setPhysicalDirty] = useState(false);
-  const [savingPhysical, setSavingPhysical] = useState(false);
-  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [scheduleMonthly, setScheduleMonthly] = useState(true);
-  const [opFilter, setOpFilter] = useState<OperationalFilter>({
-    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
-    report: 'circulation',
-  });
-  const [expandedReturn, setExpandedReturn] = useState<string | null>(null);
-
-  // Load saved physical snapshot + live stats
-  useEffect(() => {
-    const load = async () => {
-      // Saved physical data
-      const { data: snapshot } = await supabase
-        .from('report_snapshots')
-        .select('data')
-        .eq('section', 'physical_infrastructure')
-        .order('recorded_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (snapshot?.data) setPhysical({ ...DEFAULT_PHYSICAL, ...snapshot.data });
-
-      // Live stats from DB
-      const [
-        catalogue,
-        repo,
-        patrons,
-        loansYear,
-        illYear,
-        theses,
-        events,
-      ] = await Promise.all([
-        supabase.from('catalogue_items').select('id', { count: 'exact', head: true }),
-        supabase.from('repository_items').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-        supabase.from('patrons').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('loans').select('id', { count: 'exact', head: true })
-          .gte('loan_date', new Date(new Date().getFullYear(), 0, 1).toISOString()),
-        supabase.from('ill_requests').select('id', { count: 'exact', head: true })
-          .gte('created_at', new Date(new Date().getFullYear(), 0, 1).toISOString()),
-        supabase.from('theses').select('id', { count: 'exact', head: true }),
-        supabase.from('events').select('id', { count: 'exact', head: true })
-          .gte('start_at', new Date(new Date().getFullYear(), 0, 1).toISOString()),
-      ]);
-
-      setLiveStats({
-        total_catalogue: catalogue.count ?? 0,
-        total_repo: repo.count ?? 0,
-        total_patrons: patrons.count ?? 0,
-        total_loans_year: loansYear.count ?? 0,
-        total_ill_year: illYear.count ?? 0,
-        total_theses: theses.count ?? 0,
-        total_events: events.count ?? 0,
-        professional_librarians: institutionConfig.totalStaff || 8,
+  const fetchDatasets = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list' }),
       });
-      setLoadingStats(false);
-    };
-    load();
+      const data = await res.json();
+      if (data.success) {
+        setSavedReports(data.reports);
+      }
+    } catch (err) {
+      toast.error('Failed to load saved reports');
+    }
   }, []);
 
-  const savePhysical = async () => {
-    setSavingPhysical(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('report_snapshots').insert({
-      section: 'physical_infrastructure',
-      data: physical,
-      recorded_by: user?.id,
-    });
-    setSavingPhysical(false);
-    setPhysicalDirty(false);
+  useEffect(() => {
+    fetchDatasets();
+  }, [fetchDatasets]);
+
+  const handleDatasetChange = async (dataset: string) => {
+    setSelectedDataset(dataset);
+    setColumns([]);
+    setSelectedColumns([]);
+    setFilters([]);
+    setSorting([]);
+    setReportResult(null);
+
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'run',
+          query: { dataset, pageSize: 1 },
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.result.columns) {
+        setColumns(data.result.columns);
+        setSelectedColumns(data.result.columns);
+      }
+    } catch (err) {
+      toast.error('Failed to load dataset columns');
+    }
   };
 
-  const updatePhysical = (key: keyof PhysicalData, val: number) => {
-    setPhysical((p) => ({ ...p, [key]: val }));
-    setPhysicalDirty(true);
+  const handleRun = async () => {
+    if (!selectedDataset) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'run',
+          query: {
+            dataset: selectedDataset,
+            columns: selectedColumns.map((c) => ({ field: c, label: c, type: 'string' })),
+            filters,
+            sorting,
+            page,
+            pageSize: 50,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReportResult(data.result);
+      } else {
+        toast.error(data.error || 'Report failed');
+      }
+    } catch (err) {
+      toast.error('Report failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const enrolment = institutionConfig.totalEnrolment || 10000;
-  const patronRatio = liveStats ? Math.round(enrolment / Math.max(liveStats.professional_librarians, 1)) : 0;
-
-  // NUC minimum benchmarks
-  const nucSections = liveStats
-    ? [
-        {
-          title: 'Section A: Physical Library Infrastructure',
-          note: 'Manual figures — update and save below.',
-          rows: [
-            { metric: 'Library Floor Space', current: physical.building_sqm, benchmark: 400, unit: 'sq. metres', note: '' },
-            { metric: 'Seating Capacity', current: physical.seating_capacity, benchmark: 100, unit: 'seats', note: 'NUC min 1 seat per 10 students' },
-            { metric: 'Computer Terminals', current: physical.computer_terminals, benchmark: 30, unit: 'units', note: '' },
-            { metric: 'Reading Rooms', current: physical.reading_rooms, benchmark: 2, unit: 'rooms', note: '' },
-            { metric: 'Group Study Rooms', current: physical.group_study_rooms, benchmark: 3, unit: 'rooms', note: '' },
-            { metric: 'Internet Speed', current: physical.internet_speed_mbps, benchmark: 50, unit: 'Mbps', note: '' },
-          ],
-        },
-        {
-          title: 'Section B: Collections',
-          note: 'Auto-computed from catalogue.',
-          rows: [
-            { metric: 'Total Catalogued Items', current: liveStats.total_catalogue, benchmark: 12000, unit: 'volumes', note: 'NUC BMAS Section 5' },
-            { metric: 'Digital Repository Items (Published)', current: liveStats.total_repo, benchmark: 2000, unit: 'items', note: '' },
-            { metric: 'Thesis Records', current: liveStats.total_theses, benchmark: 500, unit: 'records', note: '' },
-          ],
-        },
-        {
-          title: 'Section C: Digital Services',
-          note: 'Auto-computed from system records.',
-          rows: [
-            { metric: 'Active Patrons', current: liveStats.total_patrons, benchmark: Math.round(enrolment * 0.6), unit: 'patrons', note: 'Target: 60% of enrolment registered' },
-            { metric: 'Loans Issued (This Year)', current: liveStats.total_loans_year, benchmark: 5000, unit: 'loans', note: '' },
-            { metric: 'ILL Requests (This Year)', current: liveStats.total_ill_year, benchmark: 200, unit: 'requests', note: '' },
-            { metric: 'Library Events (This Year)', current: liveStats.total_events, benchmark: 12, unit: 'events', note: '' },
-          ],
-        },
-        {
-          title: 'Section D: Staff Establishment',
-          note: 'Update staff count in institution config.',
-          rows: [
-            { metric: 'Professional Librarians', current: liveStats.professional_librarians, benchmark: 5, unit: 'staff', note: 'NUC minimum 5 professionals' },
-            { metric: 'Librarian-to-Student Ratio', current: patronRatio, benchmark: 500, unit: ':1 (lower is better)', note: 'NUC benchmark ≤500:1', invert: true },
-          ],
-        },
-      ]
-    : [];
-
-  const allRows = nucSections.flatMap((s) => s.rows);
-  const metCount = allRows.filter((r) =>
-    (r as { invert?: boolean }).invert ? r.current <= r.benchmark : statusOf(r.current, r.benchmark) === 'met'
-  ).length;
-  const compliancePct = allRows.length ? Math.round((metCount / allRows.length) * 100) : 0;
-
-  const exportCSV = (data: Record<string, unknown>[], filename: string) => {
-    if (!data.length) return;
-    const headers = Object.keys(data[0]);
-    const csv = [
-      headers.join(','),
-      ...data.map((row) => headers.map((h) => `"${row[h] ?? ''}"`).join(',')),
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async (format: 'csv' | 'xlsx') => {
+    if (!selectedDataset) return;
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'export',
+          query: {
+            dataset: selectedDataset,
+            columns: selectedColumns.map((c) => ({ field: c, label: c, type: 'string' })),
+            filters,
+            sorting,
+            page: 1,
+            pageSize: 500,
+          },
+          format,
+        }),
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${selectedDataset}_${Date.now()}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    } catch (err) {
+      toast.error('Export failed');
+    }
   };
 
-  const exportNUCReport = () => {
-    const rows = nucSections.flatMap((s) =>
-      s.rows.map((r) => ({
-        Section: s.title,
-        Metric: r.metric,
-        'Current Value': r.current,
-        Benchmark: r.benchmark,
-        Unit: r.unit,
-        Status: (r as { invert?: boolean }).invert
-          ? r.current <= r.benchmark ? 'Met' : 'Unmet'
-          : statusOf(r.current, r.benchmark),
-      }))
-    );
-    exportCSV(rows, `NUC_Compliance_${new Date().toISOString().split('T')[0]}.csv`);
+  const handleSave = async () => {
+    if (!reportName || !selectedDataset) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save',
+          definition: {
+            name: reportName,
+            dataset: selectedDataset,
+            reportType: selectedDataset,
+            columns: selectedColumns.map((c) => ({ field: c, label: c, type: 'string' })),
+            filters,
+            sorting,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Report saved');
+        setReportName('');
+        fetchDatasets();
+      } else {
+        toast.error(data.error || 'Save failed');
+      }
+    } catch (err) {
+      toast.error('Save failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const annualReturnStats = liveStats ? [
-    { label: 'Total Enrolment', value: (institutionConfig.totalEnrolment || 0).toLocaleString(), sub: 'Students registered', detail: 'Entered in institution configuration. Update totalEnrolment when Registry releases the approved enrolment figure.' },
-    { label: 'Registered Patrons', value: liveStats.total_patrons.toLocaleString(), sub: 'Active library accounts', detail: 'Generated from active patrons. Use Admin > Patrons or Patrons CSV Import to add staff/students; withdrawn, graduated, retired, or disengaged patrons are excluded from active use.' },
-    { label: 'Catalogue Holdings', value: liveStats.total_catalogue.toLocaleString(), sub: 'Total catalogued items', detail: 'Generated from catalogue_items. Use Catalogue > Add New, CSV Import, Copy Cataloguing, or Catalogue Staging to add books, journals, articles, projects, dissertations, theses, and e-resources.' },
-    { label: 'Loans Issued (YTD)', value: liveStats.total_loans_year.toLocaleString(), sub: 'Circulations this year', detail: 'Generated from loan transactions for the current calendar year.' },
-    { label: 'ILL Requests (YTD)', value: liveStats.total_ill_year.toLocaleString(), sub: 'Interlibrary loans', detail: 'Generated from interlibrary loan requests created this year. Use Admin > ILL to update request status.' },
-    { label: 'Repository Items', value: liveStats.total_repo.toLocaleString(), sub: 'Published open-access items', detail: 'Generated from published repository items. Use Admin > Repository for uploads, review, and publication.' },
-    { label: 'Thesis Records', value: liveStats.total_theses.toLocaleString(), sub: 'All thesis records', detail: 'Generated from thesis submissions and thesis records.' },
-    { label: 'Events (YTD)', value: liveStats.total_events.toLocaleString(), sub: 'Library events held', detail: 'Generated from events with start dates in the current year. Use Admin > Events to create and manage events.' },
-    { label: 'Professional Staff', value: liveStats.professional_librarians.toString(), sub: 'Qualified librarians', detail: 'Entered in institution configuration as totalStaff. Update when staff establishment changes.' },
-  ] : [];
+  const handleDelete = async (reportId: string) => {
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', reportId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Report deleted');
+        fetchDatasets();
+      }
+    } catch (err) {
+      toast.error('Delete failed');
+    }
+  };
+
+  const addFilter = () => {
+    setFilters([...filters, { field: columns[0] ?? '', operator: 'eq', value: '' }]);
+  };
+
+  const updateFilter = (index: number, key: string, value: unknown) => {
+    const updated = [...filters];
+    updated[index] = { ...updated[index], [key]: value };
+    setFilters(updated);
+  };
+
+  const removeFilter = (index: number) => {
+    setFilters(filters.filter((_, i) => i !== index));
+  };
 
   return (
-    <div className="p-4 sm:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Reporting Centre</h1>
-          <p className="text-neutral-500 text-sm mt-1">
-            {institutionConfig.regulatoryBody} &bull; Academic Session {institutionConfig.currentSession}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={exportNUCReport} className="btn-outline text-sm px-4 py-2">
-            Export CSV
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Report Builder</h1>
+        <p className="text-sm text-muted-foreground">Build, run, and export reports from approved datasets</p>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-neutral-200">
-        <div className="flex gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                tab === t
-                  ? 'border-primary-600 text-primary-700'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-800'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="builder">Builder</TabsTrigger>
+          <TabsTrigger value="saved">Saved Reports</TabsTrigger>
+          <TabsTrigger value="history">Run History</TabsTrigger>
+          <TabsTrigger value="built-in">Built-in Reports</TabsTrigger>
+        </TabsList>
 
-      {/* ── NUC Compliance Tab ── */}
-      {tab === 'NUC Compliance' && (
-        <div className="space-y-6">
-          {/* Monthly schedule toggle */}
-          <div className="card bg-white rounded-xl border border-neutral-200 p-5 flex items-center justify-between">
-            <div>
-              <div className="font-medium text-neutral-900 text-sm">Monthly NUC Report Delivery</div>
-              <div className="text-xs text-neutral-500 mt-0.5">Auto-generate and email this report at month end</div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={scheduleMonthly} onChange={(e) => setScheduleMonthly(e.target.checked)} className="sr-only peer" />
-              <div className="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:bg-primary-600 peer-focus:ring-2 peer-focus:ring-primary-300 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-neutral-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
-            </label>
-          </div>
+        <TabsContent value="builder" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Dataset</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={selectedDataset} onValueChange={handleDatasetChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select dataset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DATASETS.map((d) => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
 
-          {/* Compliance summary */}
-          <div className={`rounded-xl p-6 border ${compliancePct >= 80 ? 'bg-green-50 border-green-200' : compliancePct >= 60 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
-            <div className="flex flex-wrap gap-8">
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Overall NUC Compliance</div>
-                <div className={`text-4xl font-bold ${compliancePct >= 80 ? 'text-green-700' : compliancePct >= 60 ? 'text-yellow-700' : 'text-red-700'}`}>
-                  {compliancePct}%
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Metrics Met</div>
-                <div className="text-2xl font-bold text-neutral-900">{metCount} / {allRows.length}</div>
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Last Snapshot</div>
-                <div className="text-sm font-semibold text-neutral-900">{new Date().toLocaleDateString()}</div>
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Next Review</div>
-                <div className="text-sm font-semibold text-neutral-900">30 days</div>
-              </div>
-            </div>
-          </div>
-
-          {loadingStats ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-700" />
-            </div>
-          ) : (
-            nucSections.map((section, si) => (
-              <div key={si} className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-                <div className="px-6 py-4 bg-neutral-50 border-b border-neutral-200">
-                  <div className="font-semibold text-neutral-900">{section.title}</div>
-                  {section.note && <div className="text-xs text-neutral-500 mt-0.5">{section.note}</div>}
-                </div>
-
-                {/* Physical inputs */}
-                {si === 0 && (
-                  <div className="px-6 py-5 grid sm:grid-cols-3 gap-4 border-b border-neutral-100">
-                    {(Object.keys(physical) as (keyof PhysicalData)[]).map((key) => (
-                      <div key={key}>
-                        <label className="text-xs font-medium text-neutral-500 block mb-1 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </label>
+              {columns.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Columns</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 max-h-64 overflow-auto">
+                    {columns.map((col) => (
+                      <label key={col} className="flex items-center gap-2 text-sm">
                         <input
-                          type="number"
-                          value={physical[key]}
-                          onChange={(e) => updatePhysical(key, Number(e.target.value))}
-                          className="input text-sm py-1.5"
-                          min={0}
+                          type="checkbox"
+                          checked={selectedColumns.includes(col)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedColumns([...selectedColumns, col]);
+                            } else {
+                              setSelectedColumns(selectedColumns.filter((c) => c !== col));
+                            }
+                          }}
                         />
-                      </div>
+                        {col}
+                      </label>
                     ))}
-                    <div className="sm:col-span-3 flex items-center gap-3">
-                      <button
-                        onClick={savePhysical}
-                        disabled={!physicalDirty || savingPhysical}
-                        className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50"
-                      >
-                        {savingPhysical ? 'Saving…' : 'Save Snapshot'}
-                      </button>
-                      {!physicalDirty && <span className="text-xs text-green-600">Saved</span>}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Filters</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {filters.map((filter, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Select value={filter.field} onValueChange={(v) => updateFilter(i, 'field', v)}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {columns.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={filter.operator} onValueChange={(v) => updateFilter(i, 'operator', v)}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="eq">=</SelectItem>
+                          <SelectItem value="neq">!=</SelectItem>
+                          <SelectItem value="gt">&gt;</SelectItem>
+                          <SelectItem value="gte">&ge;</SelectItem>
+                          <SelectItem value="lt">&lt;</SelectItem>
+                          <SelectItem value="lte">&le;</SelectItem>
+                          <SelectItem value="like">LIKE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="Value"
+                        value={String(filter.value ?? '')}
+                        onChange={(e) => updateFilter(i, 'value', e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button variant="ghost" size="sm" onClick={() => removeFilter(i)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addFilter}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Filter
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="lg:col-span-2 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Button onClick={handleRun} disabled={loading || !selectedDataset}>
+                      {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+                      Run Report
+                    </Button>
+                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={!reportResult}>
+                      <Download className="h-4 w-4 mr-1" /> CSV
+                    </Button>
+                    <Button variant="outline" onClick={() => handleExport('xlsx')} disabled={!reportResult}>
+                      <Download className="h-4 w-4 mr-1" /> XLSX
+                    </Button>
                   </div>
-                )}
 
-                <table className="w-full text-sm">
-                  <thead className="bg-neutral-50 border-b border-neutral-200">
-                    <tr>
-                      <th className="text-left p-3 font-semibold text-neutral-700">Metric</th>
-                      <th className="text-left p-3 font-semibold text-neutral-700">Current</th>
-                      <th className="text-left p-3 font-semibold text-neutral-700">NUC Benchmark</th>
-                      <th className="text-left p-3 font-semibold text-neutral-700">Unit</th>
-                      <th className="text-left p-3 font-semibold text-neutral-700">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {section.rows.map((row, ri) => {
-                      const inv = (row as { invert?: boolean }).invert;
-                      const status = inv
-                        ? row.current <= row.benchmark ? 'met' : row.current <= row.benchmark * 1.2 ? 'partial' : 'unmet'
-                        : statusOf(row.current, row.benchmark);
-                      return (
-                        <tr key={ri} className="border-b border-neutral-100 hover:bg-neutral-50">
-                          <td className="p-3 font-medium text-neutral-800">
-                            {row.metric}
-                            {row.note && <div className="text-xs text-neutral-400 font-normal">{row.note}</div>}
-                          </td>
-                          <td className="p-3 font-semibold text-neutral-900">{row.current.toLocaleString()}</td>
-                          <td className="p-3 text-neutral-600">{row.benchmark.toLocaleString()}</td>
-                          <td className="p-3 text-neutral-500 text-xs">{row.unit}</td>
-                          <td className="p-3"><Badge status={status} /></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                  {reportResult && (
+                    <>
+                      <Alert className="mb-4">
+                        <AlertDescription>
+                          {reportResult.totalRows} total rows | Page {reportResult.page} of {reportResult.totalPages} | Showing {reportResult.data.length} rows
+                        </AlertDescription>
+                      </Alert>
 
-                <div className="px-6 py-3 bg-neutral-50 border-t border-neutral-100 flex gap-4 text-xs">
-                  {(['met', 'partial', 'unmet'] as const).map((s) => {
-                    const count = section.rows.filter((r) => {
-                      const inv = (r as { invert?: boolean }).invert;
-                      const st = inv
-                        ? r.current <= r.benchmark ? 'met' : r.current <= r.benchmark * 1.2 ? 'partial' : 'unmet'
-                        : statusOf(r.current, r.benchmark);
-                      return st === s;
-                    }).length;
-                    const cls = s === 'met' ? 'text-green-600' : s === 'partial' ? 'text-yellow-600' : 'text-red-600';
-                    return count > 0 ? (
-                      <span key={s} className={cls}>{count} {s.charAt(0).toUpperCase() + s.slice(1)}</span>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+                      <div className="overflow-auto max-h-96 border rounded-md">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted sticky top-0">
+                            <tr>
+                              {reportResult.columns.map((col) => (
+                                <th key={col} className="p-2 text-left font-medium">{col}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportResult.data.map((row, i) => (
+                              <tr key={i} className="border-t">
+                                {reportResult.columns.map((col) => (
+                                  <td key={col} className="p-2">{String(row[col] ?? '')}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
 
-      {/* ── Annual Returns Tab ── */}
-      {tab === 'Annual Returns' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-neutral-200 p-6">
-            <h2 className="text-xl font-semibold text-neutral-900 mb-6">
-              Annual Returns — Governing Council Format
-            </h2>
-            <p className="text-sm text-neutral-500 mb-6">
-              Internal governing council report. Click any return card to view what records make up the figure and where to enter or edit source data.
-            </p>
-            {liveStats ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {annualReturnStats.map((stat) => (
-                  <button key={stat.label} onClick={() => setExpandedReturn(expandedReturn === stat.label ? null : stat.label)} className="text-left bg-neutral-50 rounded-lg p-4 border border-neutral-100 hover:border-primary-300">
-                    <div className="text-xs text-neutral-500 mb-1">{stat.label}</div>
-                    <div className="text-2xl font-bold text-neutral-900">{stat.value}</div>
-                    <div className="text-xs text-neutral-400 mt-1">{stat.sub}</div>
-                    {expandedReturn === stat.label && <div className="mt-3 rounded-lg bg-white border border-neutral-200 p-3 text-xs text-neutral-600 leading-relaxed">{stat.detail}</div>}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-700" />
+                      <div className="flex items-center gap-2 mt-4">
+                        <Input
+                          placeholder="Report name"
+                          value={reportName}
+                          onChange={(e) => setReportName(e.target.value)}
+                          className="max-w-xs"
+                        />
+                        <Button onClick={handleSave} disabled={saving || !reportName}>
+                          <Save className="h-4 w-4 mr-1" /> Save
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {!reportResult && !loading && (
+                    <div className="text-center text-muted-foreground py-12">
+                      Select a dataset and run a report to see results
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="saved">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {savedReports.map((report) => (
+              <Card key={report.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium">{report.name}</p>
+                      <p className="text-xs text-muted-foreground">{report.description}</p>
+                      <Badge variant="outline" className="mt-1">{report.dataset}</Badge>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(report.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {savedReports.length === 0 && (
+              <div className="col-span-full text-center text-muted-foreground py-12">
+                No saved reports yet
               </div>
             )}
           </div>
-          <div className="flex justify-end">
-            <button
-              onClick={() => liveStats && exportCSV([
-                { Metric: 'Total Enrolment', Value: institutionConfig.totalEnrolment || 0 },
-                { Metric: 'Registered Patrons', Value: liveStats.total_patrons },
-                { Metric: 'Catalogue Holdings', Value: liveStats.total_catalogue },
-                { Metric: 'Loans Issued YTD', Value: liveStats.total_loans_year },
-                { Metric: 'ILL Requests YTD', Value: liveStats.total_ill_year },
-                { Metric: 'Repository Items', Value: liveStats.total_repo },
-                { Metric: 'Thesis Records', Value: liveStats.total_theses },
-                { Metric: 'Events YTD', Value: liveStats.total_events },
-                { Metric: 'Professional Librarians', Value: liveStats.professional_librarians },
-              ], `Annual_Returns_${new Date().getFullYear()}.csv`)}
-              className="btn-outline text-sm px-5 py-2"
-            >
-              Export CSV
-            </button>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Run History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reportHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {reportHistory.map((run) => (
+                    <div key={run.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
+                      <div>
+                        <p className="text-sm font-medium">{run.status}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(run.started_at).toLocaleString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={run.status === 'completed' ? 'default' : 'destructive'}>{run.status}</Badge>
+                        {run.row_count !== null && <span className="text-xs">{run.row_count} rows</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-12">
+                  No run history yet
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="built-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {BUILT_IN_REPORTS.map((report) => (
+              <Card key={report.name}>
+                <CardContent className="p-4">
+                  <p className="font-medium">{report.name}</p>
+                  <p className="text-xs text-muted-foreground">{report.description}</p>
+                  <Badge variant="outline" className="mt-2">{report.dataset}</Badge>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      )}
-
-      {/* ── Operational Reports Tab ── */}
-      {tab === 'Operational Reports' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-neutral-200 p-6">
-            <h2 className="text-xl font-semibold text-neutral-900 mb-4">Operational Reports</h2>
-
-            <div className="grid sm:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="label text-xs">Report Type</label>
-                <select
-                  value={opFilter.report}
-                  onChange={(e) => setOpFilter((f) => ({ ...f, report: e.target.value }))}
-                  className="input text-sm"
-                >
-                  <option value="circulation">Circulation</option>
-                  <option value="patron_analytics">Patron Analytics</option>
-                  <option value="repository_usage">Repository Usage</option>
-                  <option value="course_reserves">Course Reserves</option>
-                  <option value="nuc_project_pipeline">NUC Project Pipeline</option>
-                  <option value="ai_librarian">AI Reference Librarian</option>
-                  <option value="acquisitions">Acquisitions</option>
-                </select>
-              </div>
-              <div>
-                <label className="label text-xs">From</label>
-                <input
-                  type="date"
-                  value={opFilter.from}
-                  onChange={(e) => setOpFilter((f) => ({ ...f, from: e.target.value }))}
-                  className="input text-sm"
-                />
-              </div>
-              <div>
-                <label className="label text-xs">To</label>
-                <input
-                  type="date"
-                  value={opFilter.to}
-                  onChange={(e) => setOpFilter((f) => ({ ...f, to: e.target.value }))}
-                  className="input text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="border border-neutral-200 rounded-lg p-8 text-center text-neutral-400">
-              <div className="text-4xl mb-3">📊</div>
-              <div className="font-medium text-neutral-600 mb-1">
-                {opFilter.report.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} Report
-              </div>
-              <div className="text-sm">
-                {opFilter.from} → {opFilter.to}
-              </div>
-              <div className="mt-4 text-xs text-neutral-400">
-                Connect a business intelligence tool to the Supabase read replica for full operational dashboards,
-                or use the CSV export from the relevant admin section.
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end gap-2">
-              <a
-                href={`/admin/${opFilter.report === 'circulation' ? 'catalogue' : opFilter.report === 'nuc_project_pipeline' ? 'repository' : opFilter.report === 'ai_librarian' ? 'content-engine' : opFilter.report}`}
-                className="btn-outline text-sm px-5 py-2"
-              >
-                Open {opFilter.report.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} Manager
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
+}
+
+interface Dataset {
+  value: string;
+  label: string;
+}
+
+interface ReportFilter {
+  field: string;
+  operator: string;
+  value: unknown;
+}
+
+interface ReportSort {
+  field: string;
+  direction: 'asc' | 'desc';
 }
