@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
 import { GLOBAL_ADMIN_ROLES } from '@/server/auth/permissions';
+import { routeError } from '@/server/http/routeError';
 import { noticeDeliveryService } from '@/server/circulation/deliveryService';
-import { getTemplate, renderNotice, type NoticeType } from '@/server/circulation/notices';
+import { renderNotice, type NoticeType } from '@/server/circulation/notices';
+import { resolveTemplate } from '@/server/circulation/templateRepository';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,41 +12,42 @@ export async function POST(request: NextRequest) {
   try {
     await requireRole(request, GLOBAL_ADMIN_ROLES);
     const body = await request.json().catch(() => ({}));
-    const { noticeType, channel, email, context } = body as {
+    const { action, deliveryId, noticeType, channel, email, context, userId } = body as {
+      action?: 'retry';
+      deliveryId?: string;
       noticeType?: NoticeType;
       channel?: 'email' | 'in-app' | 'print' | 'sms';
       email?: string;
       context?: Record<string, unknown>;
+      userId?: string;
     };
+
+    if (action === 'retry') {
+      if (!deliveryId) {
+        return NextResponse.json({ success: false, error: 'deliveryId required' }, { status: 400 });
+      }
+      const delivery = await noticeDeliveryService.retry(deliveryId);
+      return NextResponse.json({ success: true, delivery });
+    }
 
     if (!noticeType || !channel || !email || !context) {
       return NextResponse.json({ success: false, error: 'noticeType, channel, email, and context required' }, { status: 400 });
     }
-
-    const template = getTemplate(noticeType);
-    const rendered = renderNotice(template, context as Parameters<typeof renderNotice>[1]);
-
-    if (channel === 'email') {
-      const result = await noticeDeliveryService.send({
-        noticeType,
-        templateId: template.id,
-        channel: 'email',
-        email,
-        context: context as Parameters<typeof renderNotice>[1],
-        idempotencyKey: `test:${noticeType}:${email}:${Date.now()}`,
-        isTest: true,
-      });
-      return NextResponse.json({ success: true, delivery: result, rendered: { subject: rendered.subject } });
+    if (channel === 'in-app' && !userId) {
+      return NextResponse.json({ success: false, error: 'userId required for in-app test send' }, { status: 400 });
     }
 
-    if (channel === 'in-app') {
+    const template = await resolveTemplate(noticeType);
+    const rendered = renderNotice(template, context as Parameters<typeof renderNotice>[1]);
+
+    if (channel === 'email' || channel === 'in-app' || channel === 'sms') {
       const result = await noticeDeliveryService.send({
         noticeType,
-        templateId: template.id,
-        channel: 'in-app',
+        channel,
         email,
+        userId,
         context: context as Parameters<typeof renderNotice>[1],
-        idempotencyKey: `test:${noticeType}:${email}:${Date.now()}`,
+        idempotencyKey: `test:${noticeType}:${channel}:${email}:${Date.now()}`,
         isTest: true,
       });
       return NextResponse.json({ success: true, delivery: result, rendered: { subject: rendered.subject } });
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: false, error: 'Unsupported channel for test send' }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    return routeError(error);
   }
 }
 
@@ -76,6 +79,6 @@ export async function GET(request: NextRequest) {
     const history = await noticeDeliveryService.listHistory({ limit, offset, channel, status });
     return NextResponse.json({ success: true, history, count: history.length });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    return routeError(error);
   }
 }

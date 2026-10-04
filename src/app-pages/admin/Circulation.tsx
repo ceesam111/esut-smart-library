@@ -10,6 +10,7 @@ import { useBarcodeScanner } from '@/features/barcode/useBarcodeScanner';
 interface Patron {
   id: string;
   patron_id: string;
+  user_id?: string | null;
   full_name: string;
   email: string;
   patron_category: string;
@@ -34,7 +35,16 @@ interface ActiveLoan {
   due_date: string;
   status: string;
   catalogue_items: { title: string; call_number: string };
-  patrons: { full_name: string; patron_id: string };
+  patrons: { full_name: string; patron_id: string; user_id?: string | null };
+}
+
+interface HoldRow {
+  id: string;
+  status: string;
+  priority: number;
+  created_at: string;
+  catalogue_items: { title: string } | null;
+  patrons: { full_name: string; patron_id: string } | null;
 }
 
 interface OfflineTx {
@@ -97,7 +107,7 @@ export default function Circulation() {
   const [holdsItemQuery, setHoldsItemQuery]     = useState('');
   const [holdsItem, setHoldsItem]               = useState<CatalogueItem | null>(null);
   const [holdsAlert, setHoldsAlert]             = useState<{ type: string; msg: string } | null>(null);
-  const [holds, setHolds]                       = useState<any[]>([]);
+  const [holds, setHolds]                       = useState<HoldRow[]>([]);
 
   // ── Offline
   const [offlineQueue, setOfflineQueue]   = useState<OfflineTx[]>(loadOfflineQueue);
@@ -113,7 +123,7 @@ export default function Circulation() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  useEffect(() => { fetchHolds(); }, []);
+  useEffect(() => { void fetchHolds(); }, []);
 
   // ── Patron search
   const searchPatrons = async (q: string) => {
@@ -121,7 +131,7 @@ export default function Circulation() {
     if (q.length < 2) { setPatronResults([]); return; }
     const { data } = await supabase
       .from('patrons')
-      .select('id, patron_id, full_name, email, patron_category, faculty_name')
+      .select('id, patron_id, user_id, full_name, email, patron_category, faculty_name')
       .or(`full_name.ilike.%${q}%,patron_id.ilike.%${q}%,email.ilike.%${q}%`)
       .limit(8);
     setPatronResults(data ?? []);
@@ -147,6 +157,14 @@ export default function Circulation() {
   };
 
   // ── Checkout
+  const fireNotice = (action: string, payload: Record<string, unknown>) => {
+    void fetch('/api/admin/notices/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, channel: 'in-app', ...payload }),
+    }).catch(() => undefined);
+  };
+
   const handleCheckout = async () => {
     if (!selectedPatron || !selectedItem) return;
     setCoLoading(true);
@@ -227,10 +245,19 @@ export default function Circulation() {
         metadata: { title: selectedItem.title, item_id: selectedItem.id },
       });
 
+      if (selectedPatron.user_id) {
+        fireNotice('checkout', {
+          userId: selectedPatron.user_id,
+          itemTitle: selectedItem.title,
+          loanId: loan.id,
+          dueDate: due,
+        });
+      }
+
       setCoAlert({ type: 'success', msg: `Checked out "${selectedItem.title}" to ${selectedPatron.full_name}. Due: ${due}.` });
       resetCheckout();
-    } catch (err: any) {
-      setCoAlert({ type: 'error', msg: err?.message ?? 'Checkout failed.' });
+    } catch (err) {
+      setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Checkout failed.' });
     } finally {
       setCoLoading(false);
     }
@@ -252,7 +279,7 @@ export default function Circulation() {
     if (q.length < 2) { setCheckinResults([]); return; }
     const { data } = await supabase
       .from('loans')
-      .select('id, patron_id, catalogue_item_id, checkout_date, due_date, status, catalogue_items(title, call_number), patrons(full_name, patron_id)')
+      .select('id, patron_id, catalogue_item_id, checkout_date, due_date, status, catalogue_items(title, call_number), patrons(full_name, patron_id, user_id)')
       .eq('status', 'active')
       .or(`catalogue_items.title.ilike.%${q}%,catalogue_items.call_number.ilike.%${q}%,patrons.full_name.ilike.%${q}%`)
       .limit(10);
@@ -336,7 +363,7 @@ export default function Circulation() {
       // Notify next patron in hold queue
       const { data: nextHold } = await supabase
         .from('reservations')
-        .select('id, patron_id, patrons(email, full_name)')
+        .select('id, patron_id, patrons(email, full_name, user_id)')
         .eq('catalogue_item_id', loan.catalogue_item_id)
         .eq('status', 'pending')
         .order('priority')
@@ -351,6 +378,24 @@ export default function Circulation() {
           message: `"${loan.catalogue_items?.title}" is now available for collection. Please collect within 3 days.`,
           type: 'hold',
         });
+        const nextPatronUser = Array.isArray(nextHold.patrons)
+          ? nextHold.patrons[0]?.user_id
+          : (nextHold.patrons as { user_id?: string | null } | null)?.user_id;
+        if (nextPatronUser) {
+          fireNotice('hold_ready', {
+            userId: nextPatronUser,
+            itemTitle: loan.catalogue_items?.title ?? 'Library item',
+            holdId: nextHold.id,
+          });
+        }
+      }
+
+      if (loan.patrons?.user_id) {
+        fireNotice('checkin', {
+          userId: loan.patrons.user_id,
+          itemTitle: loan.catalogue_items?.title ?? 'Library item',
+          loanId: loan.id,
+        });
       }
 
       setCiAlert({
@@ -359,15 +404,15 @@ export default function Circulation() {
       });
       setCheckinResults([]);
       setCheckinQuery('');
-    } catch (err: any) {
-      setCiAlert({ type: 'error', msg: err?.message ?? 'Check-in failed.' });
+    } catch (err) {
+      setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Check-in failed.' });
     } finally {
       setCiLoading(false);
     }
   };
 
   // ── Holds
-  const checkoutFromHold = async (hold: any) => {
+  const checkoutFromHold = async (hold: HoldRow) => {
     setCoLoading(true);
     setCoAlert(null);
     try {
@@ -378,7 +423,7 @@ export default function Circulation() {
         .maybeSingle();
       if (!freshHold || freshHold.status !== 'ready_for_collection') {
         setCoAlert({ type: 'error', msg: 'Hold is no longer eligible for checkout.' });
-        fetchHolds();
+        void fetchHolds();
         return;
       }
       const { data: existingLoan } = await supabase
@@ -409,9 +454,9 @@ export default function Circulation() {
         .update({ status: 'fulfilled' })
         .eq('id', freshHold.id);
       setCoAlert({ type: 'success', msg: 'Checked out from hold.' });
-      fetchHolds();
-    } catch (err: any) {
-      setCoAlert({ type: 'error', msg: err?.message ?? 'Checkout from hold failed.' });
+      void fetchHolds();
+    } catch (err) {
+      setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Checkout from hold failed.' });
     } finally {
       setCoLoading(false);
     }
@@ -423,7 +468,7 @@ export default function Circulation() {
       .select('id, status, priority, created_at, catalogue_items(title), patrons(full_name, patron_id)')
       .eq('status', 'pending')
       .order('created_at');
-    setHolds((data ?? []) as any[]);
+    setHolds((data ?? []) as unknown as HoldRow[]);
   };
 
   const placeHold = async () => {
@@ -449,7 +494,7 @@ export default function Circulation() {
     setHoldsItem(null);
     setHoldsPatronQuery('');
     setHoldsItemQuery('');
-    fetchHolds();
+    void fetchHolds();
   };
 
   // ── Offline sync
@@ -644,7 +689,7 @@ export default function Circulation() {
             <PatronDropdown
               query={patronQuery}
               results={patronResults}
-              onQuery={searchPatrons}
+              onQuery={(q) => void searchPatrons(q)}
               onSelect={(p) => { setSelectedPatron(p); setPatronResults([]); }}
             />
             {selectedPatron && (
@@ -660,7 +705,7 @@ export default function Circulation() {
             <ItemDropdown
               query={itemQuery}
               results={itemResults}
-              onQuery={searchItems}
+              onQuery={(q) => void searchItems(q)}
               onSelect={(it) => { setSelectedItem(it); setItemResults([]); }}
             />
             <button
@@ -679,7 +724,7 @@ export default function Circulation() {
           </div>
 
           <button
-            onClick={handleCheckout}
+            onClick={() => void handleCheckout()}
             disabled={!selectedPatron || !selectedItem || coLoading}
             className="btn-primary w-full py-3 text-base disabled:opacity-50"
           >
@@ -703,7 +748,7 @@ export default function Circulation() {
               className="input w-full"
               placeholder="Search by patron name or item title…"
               value={checkinQuery}
-              onChange={(e) => searchLoans(e.target.value)}
+              onChange={(e) => void searchLoans(e.target.value)}
             />
           </div>
 
@@ -739,7 +784,7 @@ export default function Circulation() {
                         </td>
                         <td className="p-3">
                           <button
-                            onClick={() => handleCheckin(loan)}
+                            onClick={() => void handleCheckin(loan)}
                             disabled={ciLoading}
                             className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
                           >
@@ -771,7 +816,7 @@ export default function Circulation() {
               <PatronDropdown
                 query={holdsPatronQuery}
                 results={patronResults}
-                onQuery={(q) => { setHoldsPatronQuery(q); searchPatrons(q); }}
+                onQuery={(q) => { setHoldsPatronQuery(q); void searchPatrons(q); }}
                 onSelect={(p) => { setHoldsPatron(p); setPatronResults([]); setHoldsPatronQuery(p.full_name); }}
               />
             </div>
@@ -780,12 +825,12 @@ export default function Circulation() {
               <ItemDropdown
                 query={holdsItemQuery}
                 results={itemResults}
-                onQuery={(q) => { setHoldsItemQuery(q); searchItems(q); }}
+                onQuery={(q) => { setHoldsItemQuery(q); void searchItems(q); }}
                 onSelect={(it) => { setHoldsItem(it); setItemResults([]); setHoldsItemQuery(it.title); }}
               />
             </div>
             <button
-              onClick={placeHold}
+              onClick={() => void placeHold()}
               disabled={!holdsPatron || !holdsItem}
               className="btn-primary w-full disabled:opacity-50"
             >
@@ -823,7 +868,7 @@ export default function Circulation() {
                       <td className="p-3">
                         {h.status === 'ready_for_collection' && (
                           <button
-                            onClick={() => checkoutFromHold(h)}
+                            onClick={() => void checkoutFromHold(h)}
                             disabled={coLoading}
                             className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
                           >
@@ -848,7 +893,7 @@ export default function Circulation() {
               Transactions queued while offline are stored locally and synced when you reconnect.
             </p>
             <button
-              onClick={syncOffline}
+              onClick={() => void syncOffline()}
               disabled={!isOnline || offlineQueue.length === 0 || syncing}
               className="btn-primary disabled:opacity-50"
             >
@@ -912,16 +957,16 @@ export default function Circulation() {
               <video ref={scanner.videoRef} className="w-full" autoPlay playsInline muted />
               {!scanner.error && scanner.status !== 'scanning' && (
                 <div className="absolute inset-0 flex items-center justify-center text-white text-sm">
-                  <button onClick={scanner.start} className="btn-primary">Start Camera</button>
+                  <button onClick={() => void scanner.start()} className="btn-primary">Start Camera</button>
                 </div>
               )}
             </div>
             <p className="text-xs text-gray-500">Point camera at barcode. Scan will populate the item search field.</p>
             <div className="flex gap-2">
               {scanner.status === 'scanning' && (
-                <button onClick={scanner.stop} className="btn-secondary flex-1">Stop</button>
+                <button onClick={() => void scanner.stop()} className="btn-secondary flex-1">Stop</button>
               )}
-              <button onClick={() => { scanner.stop(); setScannerOpen(false); }} className="btn-secondary flex-1">Cancel</button>
+              <button onClick={() => { void scanner.stop(); setScannerOpen(false); }} className="btn-secondary flex-1">Cancel</button>
             </div>
           </div>
         </div>

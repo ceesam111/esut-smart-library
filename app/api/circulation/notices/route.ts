@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
 import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
-import { renderNotice, getTemplate, type NoticeType, type NoticeContext, listTemplates } from '@/server/circulation/notices';
+import { routeError } from '@/server/http/routeError';
+import { renderNotice, type NoticeType, type NoticeContext } from '@/server/circulation/notices';
+import { listTemplatesDb, resolveTemplate } from '@/server/circulation/templateRepository';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,16 +21,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'type and context required' }, { status: 400 });
     }
 
-    // Use the specified template or look up default for the type
-    const template = templateId
-      ? (listTemplates().find((t) => t.id === templateId) ?? getTemplate(type))
-      : getTemplate(type);
-
+    const template = await resolveTemplate(type, templateId);
     const rendered = renderNotice(template, context);
 
-    return NextResponse.json({ success: true, template: template.id, type: template.notice_type, ...rendered });
+    return NextResponse.json({ success: true, template: template.id, type: template.notice_type, source: template.source, ...rendered });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    return routeError(error);
   }
 }
 
@@ -41,9 +39,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const channel = searchParams.get('channel') as 'email' | 'in-app' | 'print' | undefined;
     const enabledOnly = searchParams.get('enabled') !== 'false';
-    const templates = listTemplates(channel, enabledOnly);
+    const templates = await listTemplatesDb(channel, enabledOnly);
     return NextResponse.json({ success: true, templates });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    return routeError(error);
   }
 }

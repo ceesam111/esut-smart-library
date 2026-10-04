@@ -4,6 +4,7 @@ import { createWorkerSupabase } from './supabase';
 import { startHealthServer, type WorkerHealthState } from './health';
 import { WorkerRunner } from './runner';
 import { enqueueDueSchedules } from './scheduler';
+import { enqueueDueScheduledReports } from '@/server/reports/reportScheduler';
 
 const config = loadWorkerConfig();
 const controller = new AbortController();
@@ -105,6 +106,7 @@ while (!state.shuttingDown) {
     if (Date.now() - lastSchedulerAt >= config.schedulerIntervalMs) {
       lastSchedulerAt = Date.now();
       await enqueueDueSchedules(supabase, config);
+      await enqueueDueScheduledReports(supabase);
       await refreshPreservationStats();
       await refreshExtractionStats();
       await refreshSearchIndexStats();

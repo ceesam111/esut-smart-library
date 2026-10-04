@@ -28,11 +28,12 @@ create table if not exists notice_delivery_log (
 
 alter table notice_delivery_log enable row level security;
 
+drop policy if exists "notice_delivery_log_admin" on notice_delivery_log;
 create policy "notice_delivery_log_admin" on notice_delivery_log for all to authenticated using (
   exists (
     select 1 from user_roles ur
     where ur.user_id = auth.uid()
-    and ur.role in ('super_admin', 'librarian', 'admin')
+    and ur.role in ('super_admin', 'librarian', 'faculty_librarian', 'catalog_admin')
   )
 );
 

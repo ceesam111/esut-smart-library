@@ -18,9 +18,8 @@ export async function createInAppNotice(input: InAppNoticeInput) {
       user_id: input.user_id,
       title: input.title,
       body: input.message,
+      url: input.action_url ?? '/dashboard',
       type: input.notice_type,
-      action_url: input.action_url,
-      metadata: input.metadata,
       is_read: false,
       created_at: new Date().toISOString(),
     })

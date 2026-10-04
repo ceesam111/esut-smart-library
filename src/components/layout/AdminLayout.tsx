@@ -53,6 +53,8 @@ const adminNav: { group: string; items: NavItem[] }[] = [
     { label: 'Team Members',       href: '/admin/team',                  icon: '🧑‍💼' },
     { label: 'AI Content Engine',  href: '/admin/content-engine',        icon: '🤖' },
     { label: 'AI Agent Workers',   href: '/admin/agents',                icon: '⚙️' },
+    { label: 'Notice Templates',   href: '/admin/notices',               icon: '🔔' },
+    { label: 'Delivery History',   href: '/admin/notices/delivery',      icon: '📨' },
   ]},
   { group: 'Reporting', items: [
     { label: 'Reports',            href: '/admin/reports',               icon: '📋' },

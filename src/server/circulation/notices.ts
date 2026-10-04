@@ -74,8 +74,9 @@ export function renderNotice(
   template: NoticeTemplate,
   context: NoticeContext
 ): { subject: string; text: string; html: string; printHtml: string } {
-  // Build a full context merge: known context fields + defaults
+  // Build a full context merge: caller-provided fields + normalized defaults.
   const merged: Record<string, unknown> = {
+    ...context,
     patron_name: context.patron_name || '',
     item_title: context.item_title || '',
     item_barcode: context.item_barcode || undefined,
@@ -107,7 +108,7 @@ export function renderNotice(
     });
 
   // Render subject
-  let subject = resolveVars(template.subject);
+  const subject = resolveVars(template.subject);
 
   // Render html body if present; otherwise render text body
   let html: string;
@@ -654,6 +655,10 @@ const templateStore: Record<NoticeType, Omit<NoticeTemplate, 'created_at' | 'upd
     },
   },
 } as unknown as Record<NoticeType, Omit<NoticeTemplate, 'created_at' | 'updated_at' | 'version'>>;
+
+/** Built-in defaults used to bootstrap notice_templates and as last-resort fallback. */
+export const DEFAULT_TEMPLATES: Record<NoticeType, Omit<NoticeTemplate, 'created_at' | 'updated_at' | 'version'>> =
+  templateStore;
 
 const resolvedStore: Record<NoticeType, NoticeTemplate> = Object.fromEntries(
   Object.entries(templateStore).map(([key, value]) => [key, makeTemplate(value)])

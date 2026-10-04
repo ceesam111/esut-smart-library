@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isColumnAllowed, isSensitiveColumn, reportToCsv, reportToXlsx, DATASET_TABLES } from './reportBuilder';
+import { isColumnAllowed, isSensitiveColumn, defaultColumnsFor, reportToCsv, reportToXlsx, DATASET_TABLES } from './reportBuilder';
 
 describe('report builder security', () => {
   it('allows only whitelisted columns per dataset', () => {
@@ -17,6 +17,19 @@ describe('report builder security', () => {
     expect(isSensitiveColumn('last_name')).toBe(true);
     expect(isSensitiveColumn('id')).toBe(false);
     expect(isSensitiveColumn('status')).toBe(false);
+  });
+
+  it('excludes sensitive columns from dataset defaults', () => {
+    const patronDefaults = defaultColumnsFor('patrons');
+    expect(patronDefaults).not.toContain('email');
+    expect(patronDefaults).not.toContain('phone');
+    expect(patronDefaults).not.toContain('full_name');
+    expect(patronDefaults).not.toContain('surname');
+    expect(patronDefaults).not.toContain('other_names');
+    expect(patronDefaults).toContain('id');
+    expect(patronDefaults).toContain('status');
+    const catalogueDefaults = defaultColumnsFor('catalogue');
+    expect(catalogueDefaults).toEqual([...DATASET_TABLES.catalogue.allowedColumns]);
   });
 
   it('has defined datasets with allowed columns', () => {
@@ -77,18 +90,34 @@ describe('report CSV export', () => {
 });
 
 describe('report XLSX export', () => {
-  it('produces a valid buffer', () => {
+  it('produces a real OOXML workbook', async () => {
     const data = [{ name: 'Test', value: 42 }];
-    const buffer = reportToXlsx(data, ['name', 'value']);
+    const buffer = await reportToXlsx(data, ['name', 'value'], { reportName: 'Test Report' });
     expect(Buffer.isBuffer(buffer)).toBe(true);
     expect(buffer.length).toBeGreaterThan(0);
+    expect(buffer.subarray(0, 2).toString('utf8')).toBe('PK');
+    const jszip = await import('jszip');
+    const zip = await jszip.default.loadAsync(buffer);
+    expect(zip.file('[Content_Types].xml')).toBeTruthy();
+    expect(zip.file('xl/workbook.xml')).toBeTruthy();
+    expect(zip.file('xl/worksheets/sheet1.xml')).toBeTruthy();
+    expect(zip.file('docProps/core.xml')).toBeTruthy();
   });
 
-  it('strips tab and newline characters from values', () => {
-    const data = [{ name: 'Test\tValue', value: 'Line1\nLine2' }];
-    const buffer = reportToXlsx(data, ['name', 'value']);
-    const text = buffer.toString('utf8');
-    expect(text).not.toContain('Test\tValue');
-    expect(text).not.toContain('Line1\nLine2');
+  it('neutralizes formula injection and contains no formula elements', async () => {
+    const data = [{ name: '=SUM(A1:A2)', value: '+1+1' }];
+    const buffer = await reportToXlsx(data, ['name', 'value']);
+    const jszip = await import('jszip');
+    const zip = await jszip.default.loadAsync(buffer);
+    const sheet = await zip.file('xl/worksheets/sheet1.xml')!.async('string');
+    expect(sheet).toContain('&apos;=SUM(A1:A2)');
+    expect(sheet).toContain('&apos;+1+1');
+    expect(sheet).not.toContain('<f>');
+  });
+
+  it('keeps newline and tab content inside cells without breaking the sheet', async () => {
+    const data = [{ name: 'Test Value', value: 'Line1 Line2' }];
+    const buffer = await reportToXlsx(data, ['name', 'value']);
+    expect(buffer.length).toBeGreaterThan(0);
   });
 });

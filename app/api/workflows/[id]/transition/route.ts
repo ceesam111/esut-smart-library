@@ -120,6 +120,14 @@ export async function POST(
       return NextResponse.json({ error: 'Not permitted.' }, { status: 403 });
     }
 
+    if (result.success && STATE_ACTIONS.includes(action)) {
+      void import('@/server/circulation/workflowNotices')
+        .then(({ dispatchWorkflowNotice }) =>
+          dispatchWorkflowNotice({ instanceId: id, action, actorId: ctx.user.id, comment }),
+        )
+        .catch(() => undefined);
+    }
+
     return NextResponse.json(result, { status: result.success ? 200 : statusFor(result.code) });
   } catch (error) {
     return authError(error) ?? NextResponse.json({ error: 'Internal error' }, { status: 500 });

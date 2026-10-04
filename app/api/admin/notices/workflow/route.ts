@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
 import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
+import { routeError } from '@/server/http/routeError';
 import { noticeDeliveryService } from '@/server/circulation/deliveryService';
-import { getTemplate, type NoticeType, type NoticeContext } from '@/server/circulation/notices';
-import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { renderNotice, type NoticeType, type NoticeContext } from '@/server/circulation/notices';
+import { resolveTemplate } from '@/server/circulation/templateRepository';
+import { getPatronNoticeProfile } from '@/server/circulation/patronNotice';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +23,13 @@ export async function POST(request: NextRequest) {
   try {
     await requireRole(request, LIBRARY_ADMIN_ROLES);
     const body = await request.json().catch(() => ({}));
-    const { action, userId, itemTitle, channel, metadata } = body as {
+    const { action, userId, itemTitle, channel, metadata, instanceId } = body as {
       action: string;
       userId?: string;
       itemTitle?: string;
       channel?: 'email' | 'in-app' | 'print';
       metadata?: Record<string, unknown>;
+      instanceId?: string;
     };
 
     if (!action || !userId || !itemTitle) {
@@ -38,15 +41,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: `Unknown workflow action: ${action}` }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdminClient();
-    const { data: patron } = await supabase
-      .from('patrons')
-      .select('email, first_name, last_name')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    const patronName = patron ? `${patron.first_name ?? ''} ${patron.last_name ?? ''}`.trim() || 'Patron' : 'Patron';
-    const email = patron?.email ?? undefined;
+    const profile = await getPatronNoticeProfile({ userId });
+    const patronName = profile?.fullName ?? 'Patron';
+    const email = profile?.email ?? undefined;
     const useChannel = channel || 'email';
 
     const context: NoticeContext = {
@@ -57,19 +54,19 @@ export async function POST(request: NextRequest) {
       ...metadata,
     };
 
-    const template = getTemplate(noticeType);
-    const idemKey = `workflow:${userId}:${action}:${itemTitle}`;
+    const idemKey = instanceId
+      ? `workflow:${instanceId}:${action}:${useChannel}`
+      : `workflow:${userId}:${action}:${useChannel}`;
 
     if (useChannel === 'email' && email) {
       const result = await noticeDeliveryService.send({
         noticeType,
-        templateId: template.id,
         channel: 'email',
         email,
         userId,
         context,
         entityType: 'workflow',
-        entityId: `${userId}:${action}`,
+        entityId: instanceId ?? `${userId}:${action}`,
         idempotencyKey: idemKey,
       });
       return NextResponse.json({ success: true, delivery: result });
@@ -78,20 +75,19 @@ export async function POST(request: NextRequest) {
     if (useChannel === 'in-app') {
       const result = await noticeDeliveryService.send({
         noticeType,
-        templateId: template.id,
         channel: 'in-app',
         email: email ?? '',
         userId,
         context,
         entityType: 'workflow',
-        entityId: `${userId}:${action}`,
+        entityId: instanceId ?? `${userId}:${action}`,
         idempotencyKey: idemKey,
       });
       return NextResponse.json({ success: true, delivery: result });
     }
 
     if (useChannel === 'print') {
-      const { renderNotice } = await import('@/server/circulation/notices');
+      const template = await resolveTemplate(noticeType);
       const rendered = renderNotice(template, context);
       return NextResponse.json({
         success: true,
@@ -102,6 +98,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: false, error: 'Invalid channel or missing email' }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    return routeError(error);
   }
 }

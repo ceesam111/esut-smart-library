@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, Send, Copy, Power } from 'lucide-react';
+import { Loader2, Eye, Send, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NoticeTemplate {
@@ -76,6 +76,21 @@ export default function NoticesPage() {
   const [testEmail, setTestEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [editDraft, setEditDraft] = useState<{ name: string; subject: string; body_text: string; body_html: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!selectedTemplate) {
+      setEditDraft(null);
+      return;
+    }
+    setEditDraft({
+      name: selectedTemplate.name,
+      subject: selectedTemplate.subject,
+      body_text: selectedTemplate.body_text,
+      body_html: selectedTemplate.body_html ?? '',
+    });
+  }, [selectedTemplate?.id]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -87,7 +102,7 @@ export default function NoticesPage() {
           setSelectedTemplate(data.templates[0]);
         }
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load templates');
     } finally {
       setLoading(false);
@@ -95,7 +110,7 @@ export default function NoticesPage() {
   }, [selectedTemplate]);
 
   useEffect(() => {
-    fetchTemplates();
+    void fetchTemplates();
   }, [fetchTemplates]);
 
   const handlePreview = async () => {
@@ -110,7 +125,7 @@ export default function NoticesPage() {
       if (data.success) {
         setPreviewData(data.rendered);
       }
-    } catch (err) {
+    } catch {
       toast.error('Preview failed');
     }
   };
@@ -135,10 +150,46 @@ export default function NoticesPage() {
       } else {
         toast.error(data.error || 'Test send failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Test send failed');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedTemplate || !editDraft) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/notices/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          templateId: selectedTemplate.id,
+          expectedVersion: selectedTemplate.version,
+          changes: {
+            name: editDraft.name,
+            subject: editDraft.subject,
+            body_text: editDraft.body_text,
+            body_html: editDraft.body_html || null,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updated: NoticeTemplate = data.template;
+        setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setSelectedTemplate(updated);
+        toast.success(`Template saved (v${updated.version})`);
+      } else {
+        toast.error(data.error || 'Save failed');
+        if (res.status === 409) void fetchTemplates();
+      }
+    } catch {
+      toast.error('Save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -154,7 +205,7 @@ export default function NoticesPage() {
         setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, enabled } : t)));
         toast.success(enabled ? 'Template enabled' : 'Template disabled');
       }
-    } catch (err) {
+    } catch {
       toast.error('Toggle failed');
     }
   };
@@ -169,9 +220,9 @@ export default function NoticesPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('Template duplicated');
-        fetchTemplates();
+        void fetchTemplates();
       }
-    } catch (err) {
+    } catch {
       toast.error('Duplicate failed');
     }
   };
@@ -256,7 +307,10 @@ export default function NoticesPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Name</Label>
-                        <Input value={selectedTemplate.name} readOnly />
+                        <Input
+                          value={editDraft?.name ?? ''}
+                          onChange={(e) => setEditDraft((d) => (d ? { ...d, name: e.target.value } : d))}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Channel</Label>
@@ -265,28 +319,43 @@ export default function NoticesPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Subject</Label>
-                      <Input value={selectedTemplate.subject} readOnly />
+                      <Input
+                        value={editDraft?.subject ?? ''}
+                        onChange={(e) => setEditDraft((d) => (d ? { ...d, subject: e.target.value } : d))}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Body (Text)</Label>
-                      <Textarea value={selectedTemplate.body_text} readOnly rows={6} />
+                      <Textarea
+                        value={editDraft?.body_text ?? ''}
+                        onChange={(e) => setEditDraft((d) => (d ? { ...d, body_text: e.target.value } : d))}
+                        rows={6}
+                      />
                     </div>
-                    {selectedTemplate.body_html && (
+                    {selectedTemplate.body_html !== undefined && (
                       <div className="space-y-2">
                         <Label>Body (HTML)</Label>
-                        <Textarea value={selectedTemplate.body_html} readOnly rows={6} />
+                        <Textarea
+                          value={editDraft?.body_html ?? ''}
+                          onChange={(e) => setEditDraft((d) => (d ? { ...d, body_html: e.target.value } : d))}
+                          rows={6}
+                        />
                       </div>
                     )}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={selectedTemplate.enabled}
-                          onCheckedChange={(checked) => handleToggle(selectedTemplate.id, checked)}
+                          onCheckedChange={(checked) => void handleToggle(selectedTemplate.id, checked)}
                         />
                         <Label>Enabled</Label>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => handleDuplicate(selectedTemplate)}>
+                      <Button variant="outline" size="sm" onClick={() => void handleDuplicate(selectedTemplate)}>
                         <Copy className="h-4 w-4 mr-1" /> Duplicate
+                      </Button>
+                      <Button size="sm" onClick={() => void handleSave()} disabled={saving || !editDraft}>
+                        {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                        Save (v{selectedTemplate.version})
                       </Button>
                     </div>
                   </CardContent>
@@ -302,7 +371,7 @@ export default function NoticesPage() {
                     <Alert>
                       <AlertDescription>SAMPLE DATA — preview only, not sent</AlertDescription>
                     </Alert>
-                    <Button onClick={handlePreview} variant="outline" size="sm">
+                    <Button onClick={() => void handlePreview()} variant="outline" size="sm">
                       <Eye className="h-4 w-4 mr-1" /> Render Preview
                     </Button>
                     {previewData && (
@@ -347,7 +416,7 @@ export default function NoticesPage() {
                         onChange={(e) => setTestEmail(e.target.value)}
                       />
                     </div>
-                    <Button onClick={handleTestSend} disabled={sending || !testEmail}>
+                    <Button onClick={() => void handleTestSend()} disabled={sending || !testEmail}>
                       {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
                       Send Test
                     </Button>

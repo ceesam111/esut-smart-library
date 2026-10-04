@@ -1,7 +1,13 @@
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { escapeCsvValue } from '@/server/analytics/csv';
+import { buildXlsx, type XlsxOptions } from './xlsx';
 
 export type ReportDataset = 'circulation' | 'patrons' | 'catalogue' | 'repository' | 'acquisitions' | 'serials' | 'analytics' | 'fines';
+
+export const MAX_PAGE_SIZE = 500;
+export const EXPORT_MAX_ROWS = 5000;
+export const MAX_FILTERS = 20;
+export const REPORT_QUERY_TIMEOUT_MS = 15_000;
 
 export interface ReportFilter {
   field: string;
@@ -54,39 +60,39 @@ export interface ReportResult {
 const DATASET_TABLES: Record<ReportDataset, { table: string; allowedColumns: string[] }> = {
   circulation: {
     table: 'loans',
-    allowedColumns: ['id', 'item_id', 'patron_id', 'checkout_date', 'due_date', 'returned_date', 'status', 'fine_amount', 'created_at'],
+    allowedColumns: ['id', 'patron_id', 'catalogue_item_id', 'checkout_date', 'due_date', 'return_date', 'renewed_count', 'status', 'created_at'],
   },
   patrons: {
     table: 'patrons',
-    allowedColumns: ['id', 'user_id', 'first_name', 'last_name', 'email', 'phone', 'faculty', 'department', 'patron_role', 'status', 'account_expiry', 'created_at'],
+    allowedColumns: ['id', 'user_id', 'full_name', 'surname', 'other_names', 'email', 'phone', 'patron_category', 'faculty_code', 'faculty_name', 'department', 'programme', 'status', 'account_role', 'membership_expires_at', 'created_at'],
   },
   catalogue: {
     table: 'catalogue_items',
-    allowedColumns: ['id', 'title', 'author', 'isbn', 'faculty_code', 'department', 'status', 'collection', 'location', 'created_at'],
+    allowedColumns: ['id', 'title', 'authors', 'isbn', 'publisher', 'year', 'faculty_code', 'call_number', 'format', 'language', 'status', 'item_type', 'total_copies', 'available_copies', 'created_at'],
   },
   repository: {
     table: 'repository_items',
-    allowedColumns: ['id', 'title', 'authors', 'item_type', 'status', 'visibility', 'created_at', 'updated_at'],
+    allowedColumns: ['id', 'title', 'authors', 'item_type', 'type', 'status', 'visibility', 'year', 'faculty_code', 'community_id', 'collection_id', 'submitter_id', 'created_at', 'updated_at'],
   },
   acquisitions: {
     table: 'purchase_orders',
-    allowedColumns: ['id', 'po_number', 'supplier_id', 'status', 'total_amount', 'currency', 'order_date', 'created_at'],
+    allowedColumns: ['id', 'po_number', 'supplier_id', 'status', 'currency', 'order_date', 'expected_date', 'faculty_code', 'created_at'],
   },
   serials: {
     table: 'serials_subscriptions',
-    allowedColumns: ['id', 'title', 'issn', 'publisher', 'status', 'start_date', 'renewal_date', 'created_at'],
+    allowedColumns: ['id', 'title', 'issn', 'issn_online', 'publisher', 'frequency', 'start_date', 'renewal_date', 'cost_per_year', 'currency', 'supplier_id', 'status', 'created_at'],
   },
   analytics: {
     table: 'analytics_events',
-    allowedColumns: ['id', 'event_type', 'patron_id', 'entity_id', 'search_query', 'bot_flag', 'created_at'],
+    allowedColumns: ['id', 'event_type', 'user_id', 'entity_type', 'entity_id', 'search_query', 'bot_flag', 'event_category', 'faculty', 'created_at'],
   },
   fines: {
     table: 'fines',
-    allowedColumns: ['id', 'loan_id', 'patron_id', 'amount', 'status', 'created_at'],
+    allowedColumns: ['id', 'patron_id', 'amount', 'reason', 'reference_type', 'reference_id', 'status', 'paid_at', 'created_at'],
   },
 };
 
-const SENSITIVE_COLUMNS = new Set(['email', 'phone', 'first_name', 'last_name']);
+const SENSITIVE_COLUMNS = new Set(['email', 'phone', 'first_name', 'last_name', 'full_name', 'surname', 'other_names']);
 
 export function isColumnAllowed(dataset: ReportDataset, field: string): boolean {
   return DATASET_TABLES[dataset]?.allowedColumns.includes(field) ?? false;
@@ -96,16 +102,27 @@ export function isSensitiveColumn(field: string): boolean {
   return SENSITIVE_COLUMNS.has(field);
 }
 
+/** Default columns for a dataset: every allowed column except sensitive PII. */
+export function defaultColumnsFor(dataset: ReportDataset): string[] {
+  return DATASET_TABLES[dataset].allowedColumns.filter((c) => !isSensitiveColumn(c));
+}
+
 export async function runReport(query: ReportQuery): Promise<ReportResult> {
   const supabase = getSupabaseAdminClient();
   const dataset = DATASET_TABLES[query.dataset];
   if (!dataset) throw new Error(`Unknown dataset: ${query.dataset}`);
 
+  if (query.filters && query.filters.length > MAX_FILTERS) {
+    throw new Error(`Too many filters: maximum ${MAX_FILTERS}`);
+  }
+
   const page = Math.max(1, query.page ?? 1);
-  const pageSize = Math.min(Math.max(1, query.pageSize ?? 50), 500);
+  const pageSize = Math.min(Math.max(1, query.pageSize ?? 50), MAX_PAGE_SIZE);
   const offset = (page - 1) * pageSize;
 
-  const requestedColumns = query.columns?.map((c) => c.field) ?? dataset.allowedColumns;
+  const requestedColumns = query.columns?.length
+    ? query.columns.map((c) => c.field)
+    : defaultColumnsFor(query.dataset);
   const safeColumns = requestedColumns.filter((c) => isColumnAllowed(query.dataset, c));
   if (safeColumns.length === 0) throw new Error('No valid columns selected');
 
@@ -140,7 +157,24 @@ export async function runReport(query: ReportQuery): Promise<ReportResult> {
 
   supabaseQuery = supabaseQuery.range(offset, offset + pageSize - 1);
 
-  const { data, error, count } = await supabaseQuery;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REPORT_QUERY_TIMEOUT_MS);
+  let data: unknown[] | null;
+  let error: { message: string } | null;
+  let count: number | null;
+  try {
+    const response = await supabaseQuery.abortSignal(controller.signal);
+    data = response.data;
+    error = response.error;
+    count = response.count;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Report query timed out after ${REPORT_QUERY_TIMEOUT_MS}ms`, { cause: err });
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   if (error) throw new Error(`Report query failed: ${error.message}`);
 
   const totalRows = count ?? 0;
@@ -166,17 +200,41 @@ export function reportToCsv(data: ReportRow[], columns: string[]): string {
   return [header, ...rows].join('\n') + '\n';
 }
 
-export function reportToXlsx(data: ReportRow[], columns: string[]): Buffer {
-  const header = columns.join('\t');
-  const rows = data.map((row) =>
-    columns.map((col) => {
-      const val = row[col];
-      if (val === null || val === undefined) return '';
-      return String(val).replace(/[\t\n\r]/g, ' ');
-    }).join('\t')
-  );
-  const tsv = [header, ...rows].join('\n');
-  return Buffer.from(tsv, 'utf8');
+export async function reportToXlsx(
+  data: ReportRow[],
+  columns: string[],
+  options?: XlsxOptions,
+): Promise<Buffer> {
+  return buildXlsx(data, columns, options ?? {});
+}
+
+/** Fetches up to `maxRows` rows across pages (each page capped at MAX_PAGE_SIZE). */
+export async function runReportPaged(
+  query: ReportQuery,
+  maxRows = EXPORT_MAX_ROWS,
+): Promise<ReportResult> {
+  const rows: ReportRow[] = [];
+  let columns: string[] = [];
+  let totalRows = 0;
+  let page = 1;
+  while (rows.length < maxRows) {
+    const result = await runReport({ ...query, page });
+    columns = result.columns;
+    totalRows = result.totalRows;
+    rows.push(...result.data);
+    if (result.data.length === 0 || page >= result.totalPages) break;
+    page += 1;
+  }
+  const data = rows.slice(0, maxRows);
+  return {
+    data,
+    totalRows,
+    page: 1,
+    pageSize: data.length,
+    totalPages: 1,
+    columns,
+    rowCountEstimate: totalRows,
+  };
 }
 
 export async function saveReportDefinition(userId: string, definition: {
@@ -283,15 +341,28 @@ export async function logReportRun(reportId: string | null, reportType: string, 
   return true;
 }
 
-export async function listReportHistory(reportId: string, userId: string, limit = 50) {
+export async function listReportHistory(reportId: string | null, userId: string, limit = 50) {
   const supabase = getSupabaseAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('report_run_history')
     .select('*')
-    .eq('report_id', reportId)
     .order('started_at', { ascending: false })
     .limit(limit);
 
+  if (reportId) {
+    query = query.eq('report_id', reportId);
+  } else {
+    const { data: owned } = await supabase
+      .from('saved_reports')
+      .select('id')
+      .eq('owner_id', userId);
+    const ownedIds = (owned ?? []).map((row: { id: string }) => row.id);
+    query = ownedIds.length > 0
+      ? query.or(`triggered_by.eq.${userId},report_id.in.(${ownedIds.join(',')})`)
+      : query.eq('triggered_by', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to list report history: ${error.message}`);
   return data ?? [];
 }

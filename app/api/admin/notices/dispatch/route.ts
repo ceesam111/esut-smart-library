@@ -1,32 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
 import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
+import { routeError } from '@/server/http/routeError';
 import { noticeDeliveryService } from '@/server/circulation/deliveryService';
-import { getTemplate, renderNotice, type NoticeType, type NoticeContext } from '@/server/circulation/notices';
-import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { renderNotice, type NoticeType, type NoticeContext } from '@/server/circulation/notices';
+import { resolveTemplate } from '@/server/circulation/templateRepository';
+import { getPatronNoticeProfile } from '@/server/circulation/patronNotice';
 
 export const dynamic = 'force-dynamic';
-
-async function getPatronEmail(userId: string): Promise<string | null> {
-  const supabase = getSupabaseAdminClient();
-  const { data: patron } = await supabase
-    .from('patrons')
-    .select('email, first_name, last_name')
-    .eq('user_id', userId)
-    .maybeSingle();
-  return patron?.email ?? null;
-}
-
-async function getPatronName(userId: string): Promise<string> {
-  const supabase = getSupabaseAdminClient();
-  const { data: patron } = await supabase
-    .from('patrons')
-    .select('first_name, last_name')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (!patron) return 'Patron';
-  return `${patron.first_name ?? ''} ${patron.last_name ?? ''}`.trim() || 'Patron';
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,8 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'action, userId, and itemTitle required' }, { status: 400 });
     }
 
-    const patronName = await getPatronName(userId);
-    const email = await getPatronEmail(userId);
+    const profile = await getPatronNoticeProfile({ userId });
+    const patronName = profile?.fullName ?? 'Patron';
+    const email = profile?.email ?? null;
     const useChannel = channel || 'email';
 
     const noticeTypeMap: Record<string, NoticeType> = {
@@ -71,13 +53,11 @@ export async function POST(request: NextRequest) {
       return_date: action === 'checkin' ? new Date() : undefined,
     };
 
-    const template = getTemplate(noticeType);
-    const idemKey = `${noticeType}:${loanId ?? holdId ?? userId}:${action}`;
+    const idemKey = `${noticeType}:${loanId ?? holdId ?? userId}:${action}:${useChannel}`;
 
     if (useChannel === 'email' && email) {
       const result = await noticeDeliveryService.send({
         noticeType,
-        templateId: template.id,
         channel: 'email',
         email,
         userId,
@@ -92,7 +72,6 @@ export async function POST(request: NextRequest) {
     if (useChannel === 'in-app') {
       const result = await noticeDeliveryService.send({
         noticeType,
-        templateId: template.id,
         channel: 'in-app',
         email: email ?? '',
         userId,
@@ -105,6 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (useChannel === 'print') {
+      const template = await resolveTemplate(noticeType);
       const rendered = renderNotice(template, context);
       return NextResponse.json({
         success: true,
@@ -115,6 +95,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: false, error: 'Invalid channel or missing email' }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+    return routeError(error);
   }
 }

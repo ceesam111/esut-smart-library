@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Play, Download, Save, History, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Play, Download, Save, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ReportDefinition {
@@ -22,15 +22,27 @@ interface ReportDefinition {
   columns: unknown[];
   visibility: string;
   created_at: string;
+  schedule_enabled?: boolean;
+  schedule_frequency?: string | null;
+  schedule_time?: string | null;
+  schedule_day?: number | null;
+  schedule_delivery?: string | null;
+  schedule_next_run_at?: string | null;
+  schedule_last_run_at?: string | null;
+  schedule_last_status?: string | null;
 }
 
 interface ReportRun {
   id: string;
   status: string;
-  row_count: number;
+  row_count: number | null;
   started_at: string;
-  completed_at?: string;
-  error_message?: string;
+  completed_at?: string | null;
+  error_message?: string | null;
+  report_type?: string;
+  output_format?: string | null;
+  schedule_period_key?: string | null;
+  delivery_status?: string | null;
 }
 
 interface ReportResult {
@@ -70,7 +82,6 @@ const BUILT_IN_REPORTS = [
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('builder');
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<string>('');
   const [columns, setColumns] = useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -82,7 +93,7 @@ export default function ReportsPage() {
   const [reportName, setReportName] = useState('');
   const [savedReports, setSavedReports] = useState<ReportDefinition[]>([]);
   const [reportHistory, setReportHistory] = useState<ReportRun[]>([]);
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
 
   const fetchDatasets = useCallback(async () => {
     try {
@@ -95,14 +106,32 @@ export default function ReportsPage() {
       if (data.success) {
         setSavedReports(data.reports);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load saved reports');
     }
   }, []);
 
   useEffect(() => {
-    fetchDatasets();
+    void fetchDatasets();
   }, [fetchDatasets]);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'history' }),
+      });
+      const data = await res.json();
+      if (data.success) setReportHistory(data.history);
+    } catch {
+      toast.error('Failed to load run history');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'history') void loadHistory();
+  }, [activeTab, loadHistory]);
 
   const handleDatasetChange = async (dataset: string) => {
     setSelectedDataset(dataset);
@@ -126,7 +155,7 @@ export default function ReportsPage() {
         setColumns(data.result.columns);
         setSelectedColumns(data.result.columns);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load dataset columns');
     }
   };
@@ -140,6 +169,7 @@ export default function ReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'run',
+          logRun: true,
           query: {
             dataset: selectedDataset,
             columns: selectedColumns.map((c) => ({ field: c, label: c, type: 'string' })),
@@ -156,7 +186,7 @@ export default function ReportsPage() {
       } else {
         toast.error(data.error || 'Report failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Report failed');
     } finally {
       setLoading(false);
@@ -190,7 +220,7 @@ export default function ReportsPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`Exported as ${format.toUpperCase()}`);
-    } catch (err) {
+    } catch {
       toast.error('Export failed');
     }
   };
@@ -218,11 +248,11 @@ export default function ReportsPage() {
       if (data.success) {
         toast.success('Report saved');
         setReportName('');
-        fetchDatasets();
+        void fetchDatasets();
       } else {
         toast.error(data.error || 'Save failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Save failed');
     } finally {
       setSaving(false);
@@ -239,10 +269,32 @@ export default function ReportsPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('Report deleted');
-        fetchDatasets();
+        void fetchDatasets();
       }
-    } catch (err) {
+    } catch {
       toast.error('Delete failed');
+    }
+  };
+
+  const handleSchedule = async (
+    reportId: string,
+    schedule: { enabled: boolean; frequency?: string | null; time?: string | null; day?: number | null; delivery?: string | null },
+  ) => {
+    try {
+      const res = await fetch('/api/admin/reports/builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'schedule', reportId, schedule }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, ...data.schedule } : r)));
+        toast.success(schedule.enabled ? 'Schedule saved' : 'Schedule disabled');
+      } else {
+        toast.error(data.error || 'Schedule save failed');
+      }
+    } catch {
+      toast.error('Schedule save failed');
     }
   };
 
@@ -283,7 +335,7 @@ export default function ReportsPage() {
                   <CardTitle className="text-base">Dataset</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Select value={selectedDataset} onValueChange={handleDatasetChange}>
+                  <Select value={selectedDataset} onValueChange={(value) => void handleDatasetChange(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select dataset" />
                     </SelectTrigger>
@@ -378,14 +430,14 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2 mb-4">
-                    <Button onClick={handleRun} disabled={loading || !selectedDataset}>
+                    <Button onClick={() => void handleRun()} disabled={loading || !selectedDataset}>
                       {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
                       Run Report
                     </Button>
-                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={!reportResult}>
+                    <Button variant="outline" onClick={() => void handleExport('csv')} disabled={!reportResult}>
                       <Download className="h-4 w-4 mr-1" /> CSV
                     </Button>
-                    <Button variant="outline" onClick={() => handleExport('xlsx')} disabled={!reportResult}>
+                    <Button variant="outline" onClick={() => void handleExport('xlsx')} disabled={!reportResult}>
                       <Download className="h-4 w-4 mr-1" /> XLSX
                     </Button>
                   </div>
@@ -426,7 +478,7 @@ export default function ReportsPage() {
                           onChange={(e) => setReportName(e.target.value)}
                           className="max-w-xs"
                         />
-                        <Button onClick={handleSave} disabled={saving || !reportName}>
+                        <Button onClick={() => void handleSave()} disabled={saving || !reportName}>
                           <Save className="h-4 w-4 mr-1" /> Save
                         </Button>
                       </div>
@@ -454,11 +506,17 @@ export default function ReportsPage() {
                       <p className="font-medium">{report.name}</p>
                       <p className="text-xs text-muted-foreground">{report.description}</p>
                       <Badge variant="outline" className="mt-1">{report.dataset}</Badge>
+                      {report.schedule_enabled && (
+                        <Badge className="ml-1 mt-1">
+                          {report.schedule_frequency} {report.schedule_time}
+                        </Badge>
+                      )}
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(report.id)}>
+                    <Button variant="ghost" size="sm" onClick={() => void handleDelete(report.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+                  <ScheduleEditor report={report} onSave={handleSchedule} />
                 </CardContent>
               </Card>
             ))}
@@ -481,10 +539,18 @@ export default function ReportsPage() {
                   {reportHistory.map((run) => (
                     <div key={run.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                       <div>
-                        <p className="text-sm font-medium">{run.status}</p>
+                        <p className="text-sm font-medium">
+                          {run.report_type ?? 'report'}
+                          {run.schedule_period_key ? ` · ${run.schedule_period_key}` : ''}
+                        </p>
                         <p className="text-xs text-muted-foreground">{new Date(run.started_at).toLocaleString()}</p>
+                        {run.error_message && (
+                          <p className="text-xs text-red-600 mt-1">{run.error_message}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {run.output_format && <Badge variant="outline">{run.output_format}</Badge>}
+                        {run.delivery_status && <Badge variant="outline">{run.delivery_status}</Badge>}
                         <Badge variant={run.status === 'completed' ? 'default' : 'destructive'}>{run.status}</Badge>
                         {run.row_count !== null && <span className="text-xs">{run.row_count} rows</span>}
                       </div>
@@ -518,9 +584,91 @@ export default function ReportsPage() {
   );
 }
 
-interface Dataset {
-  value: string;
-  label: string;
+type ScheduleSave = (
+  reportId: string,
+  schedule: { enabled: boolean; frequency?: string | null; time?: string | null; day?: number | null; delivery?: string | null },
+) => Promise<void>;
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function ScheduleEditor({ report, onSave }: { report: ReportDefinition; onSave: ScheduleSave }) {
+  const [freq, setFreq] = useState<string>(report.schedule_enabled && report.schedule_frequency ? report.schedule_frequency : 'off');
+  const [time, setTime] = useState(report.schedule_time ?? '08:00');
+  const [day, setDay] = useState<number>(report.schedule_day ?? 1);
+  const [delivery, setDelivery] = useState(report.schedule_delivery ?? 'in_app');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    await onSave(report.id, {
+      enabled: freq !== 'off',
+      frequency: freq === 'off' ? null : freq,
+      time,
+      day: freq === 'daily' ? null : day,
+      delivery,
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t space-y-2">
+      <Label className="text-xs text-muted-foreground">Schedule</Label>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={freq} onValueChange={setFreq}>
+          <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="off">Off</SelectItem>
+            <SelectItem value="daily">Daily</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+            <SelectItem value="monthly">Monthly</SelectItem>
+          </SelectContent>
+        </Select>
+        {freq !== 'off' && (
+          <>
+            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-28 h-8 text-xs" />
+            {freq === 'weekly' && (
+              <Select value={String(day)} onValueChange={(v) => setDay(Number(v))}>
+                <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {WEEKDAYS.map((d, i) => (
+                    <SelectItem key={d} value={String(i)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {freq === 'monthly' && (
+              <Input
+                type="number"
+                min={1}
+                max={31}
+                value={day}
+                onChange={(e) => setDay(Number(e.target.value))}
+                className="w-20 h-8 text-xs"
+                title="Day of month"
+              />
+            )}
+            <Select value={delivery} onValueChange={setDelivery}>
+              <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_app">In-App</SelectItem>
+                <SelectItem value="email">Email</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        )}
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => void save()} disabled={saving}>
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+          Save Schedule
+        </Button>
+      </div>
+      {report.schedule_enabled && report.schedule_next_run_at && (
+        <p className="text-xs text-muted-foreground">
+          Next run: {new Date(report.schedule_next_run_at).toLocaleString()}
+          {report.schedule_last_status ? ` · Last: ${report.schedule_last_status}` : ''}
+        </p>
+      )}
+    </div>
+  );
 }
 
 interface ReportFilter {

@@ -19,11 +19,12 @@ create table if not exists notice_templates (
 
 alter table notice_templates enable row level security;
 
+drop policy if exists "notice_templates_admin" on notice_templates;
 create policy "notice_templates_admin" on notice_templates for all to authenticated using (
   exists (
     select 1 from user_roles ur
     where ur.user_id = auth.uid()
-    and ur.role in ('super_admin', 'librarian', 'admin')
+    and ur.role in ('super_admin', 'librarian', 'faculty_librarian', 'catalog_admin')
   )
 );
 
