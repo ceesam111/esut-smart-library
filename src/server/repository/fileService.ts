@@ -79,7 +79,7 @@ export async function getFileDownload(fileId: string, userId: string, userRoles:
   if (file.access_level === 'RESTRICTED' && !isAdmin) return { reason: 'forbidden' };
   try {
     const downloadUrl = await getSignedDownloadUrl({ bucket: file.storage_bucket, key: file.storage_key, expiresIn: 300 });
-    return { downloadUrl };
+    return { downloadUrl, itemId: String(file.repository_item_id ?? ''), fileId: String(file.id ?? '') };
   } catch { return { reason: 'storage_error' }; }
 }
 

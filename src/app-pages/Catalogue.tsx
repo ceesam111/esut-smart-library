@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { trackClientEvent } from '@/lib/analytics';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { IR_ITEM_TYPES } from '@/lib/moduleSeparation';
@@ -350,6 +351,22 @@ export default function Catalogue() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn]   = useState(false);
   const pageSize = 24;
+  const lastResultCountRef = useRef(0);
+
+  useEffect(() => {
+    if (mainTab !== 'local' || !search.trim()) return;
+    const timer = setTimeout(() => {
+      void trackClientEvent({
+        event_type: 'catalogue_search',
+        entity_id: `search:${search.slice(0, 180)}`,
+        entity_type: 'search',
+        search_query: search.slice(0, 300),
+        result_count: lastResultCountRef.current,
+        path: '/catalogue',
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [search, mainTab]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user));
@@ -401,6 +418,7 @@ export default function Catalogue() {
     }
     setItems(data ?? []);
     setTotal(count ?? 0);
+    lastResultCountRef.current = count ?? 0;
     setLoading(false);
   }, [search, faculty, formats_sel, yearRange, language, availability, page, isLoggedIn, mainTab]);
 
@@ -611,7 +629,7 @@ export default function Catalogue() {
                 ) : (
                   <>
                     <Resource3DBookGrid className="xl:grid-cols-4">
-                      {items.map(item => <CatalogueCard key={item.id} item={item} />)}
+                      {items.map(item => <CatalogueCard key={item.id} item={item} query={search} />)}
                     </Resource3DBookGrid>
                     {totalPages > 1 && (
                       <div className="flex items-center justify-center gap-2 mt-8">
@@ -636,8 +654,17 @@ export default function Catalogue() {
   );
 }
 
-function CatalogueCard({ item }: { item: any }) {
+function CatalogueCard({ item, query }: { item: any; query?: string }) {
   const title = typeof item.title === 'string' ? item.title : (item.title?.name || item.title?.value || item.title?.text || 'Untitled');
+  const trackClick = () => {
+    void trackClientEvent({
+      event_type: 'catalogue_result_click',
+      entity_id: String(item.id),
+      entity_type: 'catalogue_item',
+      search_query: query?.slice(0, 300),
+      path: '/catalogue',
+    });
+  };
   return (
     <Resource3DBookCard
       id={item.id}
@@ -650,6 +677,7 @@ function CatalogueCard({ item }: { item: any }) {
       subjects={Array.isArray(item.subjects) ? item.subjects : []}
       spineText={item.call_number || item.isbn || item.format || 'Catalogue'}
       href={`/catalogue/${item.id}`}
+      onClick={trackClick}
       status={item.available_copies > 0 ? `${item.available_copies} available` : 'Unavailable'}
       actions={(
         <>

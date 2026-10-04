@@ -9,6 +9,10 @@ import { checkExternalDiscoveryRateLimit } from '@/server/resources/rateLimit';
 import { withHandler } from '@/server/api/withHandler';
 import { ApiError } from '@/server/api/errors';
 import { isMissingSchemaError } from '@/server/supabase/schemaErrors';
+import { trackCatalogueSearch } from '@/server/analytics/catalogueEvents';
+import { trackFederatedSearch } from '@/server/analytics/federatedEvents';
+import { loadPatronContext } from '@/server/analytics/patronContext';
+import { hashIp } from '@/server/analytics/eventCapture';
 
 function groupCandidates(candidates: any[] = []) {
   return {
@@ -95,6 +99,17 @@ export const GET = withHandler({
     if (!queryText) throw new ApiError('BAD_REQUEST', 'Search query is required.', 400);
 
     const ctx = await optionalUser(request);
+    const patron = await loadPatronContext(ctx?.user.id);
+    const rawIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const eventContext = {
+      userId: ctx?.user.id,
+      ipHash: rawIp ? hashIp(rawIp) : undefined,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+      referrer: request.headers.get('referer') ?? undefined,
+      faculty: patron.faculty,
+      department: patron.department,
+      patronRole: patron.patronRole,
+    };
     const tenant = await resolveTenant(ctx?.user.id);
     const local = await searchLocalResources({ tenantId: tenant.tenantId, query: queryText });
 
@@ -108,6 +123,7 @@ export const GET = withHandler({
         external_lookup_triggered: false,
       });
       if (logInsert.error && !isMissingSchemaError(logInsert.error)) throw new ApiError('INTERNAL_ERROR', logInsert.error.message, 500);
+      await trackCatalogueSearch(queryText, local.results.length, eventContext);
       return { data: { query: queryText, localResults: local.results, localQuality: local.quality, externalLookupOffered: true, externalLookupTriggered: false, schemaAvailable: local.schemaAvailable !== false } };
     }
 
@@ -127,6 +143,18 @@ export const GET = withHandler({
     const rawCandidates = discovery.candidates as any[];
     const cachedHoldingCount = await cacheApprovedHoldings(rawCandidates, tenant.tenantId);
     const externalCandidates = rawCandidates.map(decorateCandidate);
+
+    const providerFailures = discovery.errors.filter((message) =>
+      discovery.sourcesQueried.some((source) => message.startsWith(`${source}: `)),
+    );
+    await trackCatalogueSearch(queryText, local.results.length, eventContext);
+    await trackFederatedSearch(
+      queryText,
+      local.results.length + (discovery.externalResultCount ?? 0),
+      ['local', ...discovery.sourcesQueried],
+      providerFailures,
+      eventContext,
+    );
 
     return { data: {
       query: queryText,

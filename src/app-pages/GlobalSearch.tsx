@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { trackClientEvent } from '@/lib/analytics';
 import BackButton from '@/components/BackButton';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Resource3DBookCard, Resource3DBookGrid } from '@/components/resource/Resource3DBookCard';
@@ -83,10 +84,11 @@ function unwrapApi<T = any>(payload: any): T {
   return payload && payload.success === true && 'data' in payload ? payload.data : payload;
 }
 
-function EbookCard({ result, onAddToList, canAdd }: {
+function EbookCard({ result, onAddToList, canAdd, onOpen }: {
   result: SearchResult;
   onAddToList: (r: SearchResult) => void;
   canAdd: boolean;
+  onOpen?: (r: SearchResult) => void;
 }) {
   const tagColor = SOURCE_COLORS[result.sourceTag] ?? 'bg-neutral-100 text-neutral-700';
   const pendingExternal = result.sourceTag.includes('Pending review');
@@ -100,6 +102,7 @@ function EbookCard({ result, onAddToList, canAdd }: {
       coverUrl={result.cover_url}
       status={pendingExternal ? 'Pending library review' : 'External source'}
       confidence={result.sourceTag}
+      onClick={onOpen ? () => onOpen(result) : undefined}
       actions={(
         <>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tagColor}`}>{result.sourceTag}</span>
@@ -125,15 +128,16 @@ function EbookCard({ result, onAddToList, canAdd }: {
   );
 }
 
-function ResultCard({ result, onAddToList, canAdd }: {
+function ResultCard({ result, onAddToList, canAdd, onOpen }: {
   result: SearchResult;
   onAddToList: (r: SearchResult) => void;
   canAdd: boolean;
+  onOpen?: (r: SearchResult) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isEbook = ['Project Gutenberg — Free Ebook', 'Open Library — Free to Read', 'OAPEN — Open Access Book', 'DOAB — Peer-Reviewed Open Access', 'Google Books — Free Preview'].includes(result.sourceTag);
   if (isEbook || result.cover_url) {
-    return <EbookCard result={result} onAddToList={onAddToList} canAdd={canAdd} />;
+    return <EbookCard result={result} onAddToList={onAddToList} canAdd={canAdd} onOpen={onOpen} />;
   }
   const tagColor = SOURCE_COLORS[result.sourceTag] ?? 'bg-neutral-100 text-neutral-700';
   const pendingExternal = result.sourceTag.includes('Pending review');
@@ -146,6 +150,7 @@ function ResultCard({ result, onAddToList, canAdd }: {
       resourceType={result.item_type || (result.sourceTag.includes('Thesis') ? 'thesis' : result.sourceTag.includes('Journal') ? 'journal' : result.sourceTag.includes('Book') ? 'book' : 'article')}
       coverUrl={result.cover_url}
       href={result.sourceTag === 'ESUT Library' && result.url ? result.url : undefined}
+      onClick={onOpen ? () => onOpen(result) : undefined}
       status={pendingExternal ? 'Pending library review' : result.source}
       confidence={result.doi ? `DOI: ${result.doi}` : undefined}
       actions={(
@@ -283,6 +288,18 @@ export default function GlobalSearch() {
   }, [authHeaders, mapApiResults, query]);
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); runSearch(query); };
+
+  const handleOpenResult = useCallback((result: SearchResult) => {
+    const isLocal = result.sourceTag === 'ESUT Library';
+    void trackClientEvent({
+      event_type: isLocal ? 'federated_result_click' : 'provider_result_click',
+      entity_id: String(result.id),
+      entity_type: isLocal ? 'catalogue_item' : 'external_resource',
+      search_query: query.slice(0, 300),
+      provider: result.source?.slice(0, 100),
+      path: '/search/global',
+    });
+  }, [query]);
 
   const handleAddToList = async (result: SearchResult) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -433,7 +450,7 @@ export default function GlobalSearch() {
             ) : (
               <Resource3DBookGrid className="lg:grid-cols-3 xl:grid-cols-4">
                 {displayResults.map(r => (
-                  <ResultCard key={r.id} result={r} onAddToList={handleAddToList} canAdd={!addedIds.has(r.id)} />
+                  <ResultCard key={r.id} result={r} onAddToList={handleAddToList} canAdd={!addedIds.has(r.id)} onOpen={handleOpenResult} />
                 ))}
               </Resource3DBookGrid>
             )}

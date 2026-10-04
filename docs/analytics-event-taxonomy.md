@@ -60,3 +60,12 @@ Each event is classified as:
 - No sensitive patron notes
 - Raw events retained for configurable period
 - Aggregates retained longer
+
+## Batch 12 Closure Update (2026-10-03)
+
+- `federated_search` is captured server-side by `/api/search/resources` when external discovery runs; `provider` column stores the provider mix; `metadata.provider_failures` records per-provider failures
+- `federated_result_click` / `provider_result_click` are captured client-side via the `/api/events/track` beacon (rate-limited, hashed IPs, bot-classified)
+- `catalogue_search` is captured server-side by `/api/search/resources` (local result count); `catalogue_result_click` and `catalogue_view` via the beacon
+- `repository_item_view` is captured on item page view; `repository_file_download` is captured server-side by both download endpoints
+- `checkout` / `checkin` are captured via the beacon from the Circulation admin page (including offline-sync checkins)
+- All beacon events are validated against a whitelist of event types and sanitized (no secrets, no raw IPs)

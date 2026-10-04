@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { trackClientEvent } from '@/lib/analytics';
 import { institutionConfig } from '@config/institution.config';
 import QRCode from 'qrcode';
 import BackButton from '@/components/BackButton';
@@ -119,6 +120,12 @@ export default function CatalogueItem() {
 
       if (data) {
         await supabase.from('catalogue_items').update({ view_count: (data.view_count ?? 0) + 1 }).eq('id', id!);
+        void trackClientEvent({
+          event_type: 'catalogue_view',
+          entity_id: String(data.id),
+          entity_type: 'catalogue_item',
+          path: `/catalogue/${id}`,
+        });
         const { data: copiesData } = await supabase.from('catalogue_copies').select('*').eq('item_id', id!);
         setCopies(copiesData ?? []);
         const url = window.location.href;

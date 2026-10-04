@@ -8,16 +8,23 @@ export async function GET(request: NextRequest) {
     await requireRole(request, GLOBAL_ADMIN_ROLES);
     const { searchParams } = new URL(request.url);
     const days = Math.min(parseInt(searchParams.get('days') ?? '30', 10), 365);
+    const faculty = searchParams.get('faculty');
+    const patronRole = searchParams.get('patron_role');
+    const department = searchParams.get('department');
 
     const supabase = getSupabaseAdminClient();
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: events } = await supabase
+    let eventsQuery = supabase
       .from('analytics_events')
       .select('search_query, result_count, faculty, patron_role, created_at')
       .eq('event_type', 'catalogue_search')
       .gte('created_at', since)
       .limit(10000);
+    if (faculty) eventsQuery = eventsQuery.eq('faculty', faculty);
+    if (patronRole) eventsQuery = eventsQuery.eq('patron_role', patronRole);
+    if (department) eventsQuery = eventsQuery.eq('department', department);
+    const { data: events } = await eventsQuery;
 
     const queries: Record<string, { count: number; zeroResults: number; clicks: number }> = {};
     for (const row of events ?? []) {

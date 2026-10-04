@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/lib/supabase';
+import { trackClientEvent } from '@/lib/analytics';
 import BackButton from '@/components/BackButton';
 import ImageViewer, { isImageFile } from '@/components/repository/ImageViewer';
 
@@ -77,6 +78,12 @@ export default function RepositoryItem() {
       setItem(data);
       if (data) {
         await supabase.from('repository_items').update({ view_count: (data.view_count ?? 0) + 1 }).eq('id', id!);
+        void trackClientEvent({
+          event_type: 'repository_item_view',
+          entity_id: String(data.id),
+          entity_type: 'repository_item',
+          path: `/repository/${id}`,
+        });
       }
 
       const [

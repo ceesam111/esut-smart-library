@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import { format, differenceInDays } from 'date-fns';
 import { logCirculationEvent } from '@/lib/audit';
+import { trackClientEvent } from '@/lib/analytics';
 import { useBarcodeScanner } from '@/features/barcode/useBarcodeScanner';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -218,6 +219,14 @@ export default function Circulation() {
         metadata: { due_date: due, title: selectedItem.title },
       });
 
+      void trackClientEvent({
+        event_type: 'checkout',
+        entity_id: String(loan.id),
+        entity_type: 'loan',
+        path: '/admin/circulation',
+        metadata: { title: selectedItem.title, item_id: selectedItem.id },
+      });
+
       setCoAlert({ type: 'success', msg: `Checked out "${selectedItem.title}" to ${selectedPatron.full_name}. Due: ${due}.` });
       resetCheckout();
     } catch (err: any) {
@@ -314,6 +323,14 @@ export default function Circulation() {
         catalogue_item_id: loan.catalogue_item_id,
         loan_id: loan.id,
         metadata: { fine: fine > 0 ? fine : null, title: loan.catalogue_items?.title },
+      });
+
+      void trackClientEvent({
+        event_type: 'checkin',
+        entity_id: String(loan.id),
+        entity_type: 'loan',
+        path: '/admin/circulation',
+        metadata: { title: loan.catalogue_items?.title, item_id: loan.catalogue_item_id },
       });
 
       // Notify next patron in hold queue
@@ -469,6 +486,15 @@ export default function Circulation() {
             offline_id: tx.offline_id,
             synced_at: new Date().toISOString(),
           });
+          if (loan?.id) {
+            void trackClientEvent({
+              event_type: 'checkout',
+              entity_id: String(loan.id),
+              entity_type: 'loan',
+              path: '/admin/circulation',
+              metadata: { offline_sync: true, item_id: tx.catalogue_item_id },
+            });
+          }
         }
       } catch {
         remaining.push(tx);

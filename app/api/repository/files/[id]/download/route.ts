@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireUser } from '@/server/auth/requireUser';
 import { getUserRoles } from '@/server/auth/requireRole';
 import { getFileDownload } from '@/server/repository/fileService';
+import { trackRepositoryFileDownload } from '@/server/analytics/repositoryEvents';
+import { loadPatronContext } from '@/server/analytics/patronContext';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +25,18 @@ export async function GET(
         storage_error: 500,
       };
       return NextResponse.json({ error: result.reason }, { status: statusMap[result.reason] || 400 });
+    }
+
+    if (result.itemId) {
+      const patron = await loadPatronContext(ctx.user.id);
+      await trackRepositoryFileDownload(result.itemId, result.fileId || id, null, {
+        userId: ctx.user.id,
+        userAgent: request.headers.get('user-agent') ?? undefined,
+        referrer: request.headers.get('referer') ?? undefined,
+        faculty: patron.faculty,
+        department: patron.department,
+        patronRole: patron.patronRole,
+      });
     }
 
     return NextResponse.json({ downloadUrl: result.downloadUrl });

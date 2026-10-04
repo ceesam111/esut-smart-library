@@ -1,4 +1,9 @@
+import { createHash } from 'crypto';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+
+export function hashIp(ip: string): string {
+  return createHash('sha256').update(`esut-analytics:${ip}`).digest('hex').slice(0, 32);
+}
 
 export interface EventCaptureInput {
   event_type: string;
@@ -70,8 +75,13 @@ export async function captureEvent(input: EventCaptureInput): Promise<void> {
     const botFlag = input.bot_flag ?? classifyBot(input.user_agent) ?? 'HUMAN';
     const metadata = sanitizeMetadata(input.metadata);
 
+    metrics.eventsAttempted += 1;
+    if (botFlag === 'BOT') metrics.botEvents += 1;
+    if (botFlag === 'HUMAN') metrics.humanEvents += 1;
+    if (botFlag === 'SYSTEM') metrics.systemEvents += 1;
+
     const supabase = getSupabaseAdminClient();
-    await supabase.from('analytics_events').insert({
+    const { error } = await supabase.from('analytics_events').insert({
       event_type: input.event_type,
       user_id: input.user_id ?? null,
       session_id: input.session_id ?? null,
@@ -92,12 +102,36 @@ export async function captureEvent(input: EventCaptureInput): Promise<void> {
       result_count: input.result_count ?? null,
       session_token: input.session_token ?? null,
     });
+    if (error) {
+      metrics.writeFailures += 1;
+      metrics.lastFailureAt = new Date().toISOString();
+    } else {
+      metrics.eventsPersisted += 1;
+      metrics.lastSuccessAt = new Date().toISOString();
+    }
   } catch {
+    metrics.writeFailures += 1;
+    metrics.lastFailureAt = new Date().toISOString();
     // Analytics must never break the application
   }
 }
 
 const recentPageViews = new Map<string, number>();
+
+const metrics = {
+  eventsAttempted: 0,
+  eventsPersisted: 0,
+  writeFailures: 0,
+  botEvents: 0,
+  systemEvents: 0,
+  humanEvents: 0,
+  lastSuccessAt: null as string | null,
+  lastFailureAt: null as string | null,
+};
+
+export function getAnalyticsMetrics() {
+  return { ...metrics };
+}
 
 export async function capturePageView(input: EventCaptureInput): Promise<void> {
   const key = `${input.session_id ?? 'anon'}:${input.path ?? ''}`;

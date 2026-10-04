@@ -47,7 +47,7 @@ export async function trackRepositorySearch(query: string, resultCount: number, 
 
 export async function trackRepositoryFileDownload(
   itemId: string,
-  fileId: string,
+  fileId: string | null,
   versionId: string | null,
   context: RepositoryEventContext,
 ): Promise<void> {
