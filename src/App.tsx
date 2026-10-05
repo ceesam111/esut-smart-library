@@ -127,6 +127,7 @@ const AdminNewspaperIndex = lazy(() => import('@/pages/admin/NewspaperIndex'));
 const AdminRequests       = lazy(() => import('@/pages/admin/Requests'));
 const AdminTheses         = lazy(() => import('@/pages/admin/Theses'));
 const AdminCirculation    = lazy(() => import('@/pages/admin/Circulation'));
+const AdminOfflineSync    = lazy(() => import('@/pages/admin/OfflineSync'));
 const AdminFines          = lazy(() => import('@/pages/admin/Fines'));
 const AdminCatalogueAuthorities = lazy(() => import('@/pages/admin/CatalogueAuthorities'));
 const AdminMarcImportPreview = lazy(() => import('@/pages/admin/MarcImportPreview'));
@@ -297,6 +298,7 @@ export default function App() {
             <Route path="/admin/requests" element={<AdminRequests />} />
             <Route path="/admin/theses" element={<AdminTheses />} />
             <Route path="/admin/circulation" element={<AdminCirculation />} />
+            <Route path="/admin/offline-sync" element={<AdminOfflineSync />} />
             <Route path="/admin/fines" element={<AdminFines />} />
             <Route path="/admin/catalogue/authorities" element={<AdminCatalogueAuthorities />} />
             <Route path="/admin/catalogue/marc-import" element={<AdminMarcImportPreview />} />

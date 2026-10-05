@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     await requireRole(request, LIBRARY_ADMIN_ROLES);
     const body = await request.json().catch(() => ({}));
     const { action, loanId, holdId, userId, itemTitle, dueDate, channel } = body as {
-      action: 'checkout' | 'checkin' | 'hold_ready' | 'hold_cancelled' | 'due_soon' | 'overdue';
+      action: 'checkout' | 'checkin' | 'renewal' | 'hold_ready' | 'hold_cancelled' | 'due_soon' | 'overdue';
       loanId?: string;
       holdId?: string;
       userId?: string;
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const noticeTypeMap: Record<string, NoticeType> = {
       checkout: 'checkout_receipt',
       checkin: 'checkin_receipt',
+      renewal: 'renewal_confirmation',
       hold_ready: 'hold_ready',
       hold_cancelled: 'hold_cancelled',
       due_soon: 'due_soon',

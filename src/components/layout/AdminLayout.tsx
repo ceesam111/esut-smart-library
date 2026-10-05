@@ -64,6 +64,10 @@ const adminNav: { group: string; items: NavItem[] }[] = [
   { group: 'Consortium', items: [
     { label: 'Consortium Partners', href: '/admin/consortium',           icon: '🤝' },
   ]},
+  { group: 'Circulation', items: [
+    { label: 'Circulation Desk',    href: '/admin/circulation',           icon: '🧾' },
+    { label: 'Offline Sync',        href: '/admin/offline-sync',          icon: '📶' },
+  ]},
   { group: 'System', items: [
     { label: 'Account Management', href: '/admin/accounts',              icon: '🔐', accountManager: true },
     { label: 'Preservation',        href: '/admin/preservation',           icon: '◆' },

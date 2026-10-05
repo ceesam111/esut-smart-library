@@ -1,10 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { institutionConfig } from '@config/institution.config';
 import { format, differenceInDays } from 'date-fns';
 import { logCirculationEvent } from '@/lib/audit';
 import { trackClientEvent } from '@/lib/analytics';
 import { useBarcodeScanner } from '@/features/barcode/useBarcodeScanner';
+import {
+  computeDueDate,
+  durationDaysFor,
+  maxItemsFor,
+  renewalsFor,
+  calculateFine as computeFine,
+  isExamPeriodAt,
+} from '@/lib/circulationRules';
+import { useOfflineCirculation } from '@/lib/offline/useOfflineCirculation';
+import {
+  cacheIsStale,
+  findItemByBarcode,
+  searchItems as cacheSearchItems,
+  searchPatrons as cacheSearchPatrons,
+} from '@/lib/offline/cache';
+import OfflinePanel from '@/components/offline/OfflinePanel';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Patron {
@@ -15,12 +30,14 @@ interface Patron {
   email: string;
   patron_category: string;
   faculty_name: string;
+  status?: string;
+  membership_expires_at?: string | null;
 }
 
 interface CatalogueItem {
   id: string;
   title: string;
-  authors: string;
+  authors: unknown;
   call_number: string;
   available_copies: number;
   total_copies: number;
@@ -33,9 +50,10 @@ interface ActiveLoan {
   catalogue_item_id: string;
   checkout_date: string;
   due_date: string;
+  renewed_count?: number | null;
   status: string;
   catalogue_items: { title: string; call_number: string };
-  patrons: { full_name: string; patron_id: string; user_id?: string | null };
+  patrons: { full_name: string; patron_id: string; user_id?: string | null; patron_category?: string };
 }
 
 interface HoldRow {
@@ -47,42 +65,11 @@ interface HoldRow {
   patrons: { full_name: string; patron_id: string } | null;
 }
 
-interface OfflineTx {
-  offline_id: string;
-  type: 'checkout' | 'checkin';
-  patron_id: string;
-  patron_name: string;
-  item_title: string;
-  catalogue_item_id: string;
-  copy_barcode: string;
-  ts: number;
-}
-
-const LOAN_DAYS: Record<string, number> = {
-  undergraduate:      institutionConfig.loanRules.undergraduate.durationDays,
-  postgraduate:       institutionConfig.loanRules.postgraduate.durationDays,
-  academic_staff:     institutionConfig.loanRules.academic_staff.durationDays,
-  non_academic_staff: institutionConfig.loanRules.non_academic_staff.durationDays,
-};
-const MAX_ITEMS: Record<string, number> = {
-  undergraduate:      institutionConfig.loanRules.undergraduate.maxItems,
-  postgraduate:       institutionConfig.loanRules.postgraduate.maxItems,
-  academic_staff:     institutionConfig.loanRules.academic_staff.maxItems,
-  non_academic_staff: institutionConfig.loanRules.non_academic_staff.maxItems,
-};
-const defaultLoanDays = 14;
-const defaultMaxItems = 4;
-
-const OFFLINE_KEY = 'circ_offline_queue';
-
-function loadOfflineQueue(): OfflineTx[] {
-  try { return JSON.parse(localStorage.getItem(OFFLINE_KEY) ?? '[]'); } catch { return []; }
-}
-function saveOfflineQueue(q: OfflineTx[]) {
-  localStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
-}
+const ITEM_COLS = 'id, title, authors, call_number, available_copies, total_copies, format';
+const PATRON_COLS = 'id, patron_id, user_id, full_name, email, patron_category, faculty_name, status, membership_expires_at';
 
 export default function Circulation() {
+  const off = useOfflineCirculation();
   const [tab, setTab] = useState<'checkout' | 'checkin' | 'holds' | 'offline'>('checkout');
 
   // ── Checkout state
@@ -109,52 +96,78 @@ export default function Circulation() {
   const [holdsAlert, setHoldsAlert]             = useState<{ type: string; msg: string } | null>(null);
   const [holds, setHolds]                       = useState<HoldRow[]>([]);
 
-  // ── Offline
-  const [offlineQueue, setOfflineQueue]   = useState<OfflineTx[]>(loadOfflineQueue);
-  const [syncing, setSyncing]             = useState(false);
-  const [isOnline, setIsOnline]           = useState(navigator.onLine);
   const patronRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const on  = () => setIsOnline(true);
-    const off = () => setIsOnline(false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+    void fetchHolds();
+    void off.migrateLegacyQueue();
   }, []);
 
-  useEffect(() => { void fetchHolds(); }, []);
+  // Preload the offline desk cache while the server is reachable.
+  useEffect(() => {
+    if (off.serverReachable && !off.cache && !off.cacheLoading) void off.refreshCache();
+  }, [off.serverReachable]);
 
-  // ── Patron search
+  const serverReachable = off.serverReachable;
+
+  // ── Patron search (online first, offline cache fallback) ────────────────────
   const searchPatrons = async (q: string) => {
     setPatronQuery(q);
     if (q.length < 2) { setPatronResults([]); return; }
-    const { data } = await supabase
-      .from('patrons')
-      .select('id, patron_id, user_id, full_name, email, patron_category, faculty_name')
-      .or(`full_name.ilike.%${q}%,patron_id.ilike.%${q}%,email.ilike.%${q}%`)
-      .limit(8);
-    setPatronResults(data ?? []);
+    if (!serverReachable) {
+      setPatronResults(cacheSearchPatrons(off.cache, q) as Patron[]);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('patrons')
+        .select(PATRON_COLS)
+        .or(`full_name.ilike.%${q}%,patron_id.ilike.%${q}%,email.ilike.%${q}%`)
+        .limit(8);
+      if (error) throw error;
+      setPatronResults((data ?? []) as Patron[]);
+    } catch {
+      setPatronResults(cacheSearchPatrons(off.cache, q) as Patron[]);
+    }
   };
 
-  // ── Item search
+  // ── Item search: barcode exact-match first, then title/call number, then cache
   const searchItems = async (q: string) => {
     setItemQuery(q);
     if (q.length < 2) { setItemResults([]); return; }
-    const { data } = await supabase
-      .from('catalogue_items')
-      .select('id, title, authors, call_number, available_copies, total_copies, format')
-      .or(`title.ilike.%${q}%,call_number.ilike.%${q}%`)
-      .limit(8);
-    setItemResults(data ?? []);
+    const byBarcode = findItemByBarcode(off.cache, q) as CatalogueItem | null;
+    if (!serverReachable) {
+      setItemResults(byBarcode ? [byBarcode] : (cacheSearchItems(off.cache, q) as CatalogueItem[]));
+      return;
+    }
+    try {
+      const code = q.trim();
+      const { data: copy } = await supabase
+        .from('catalogue_copies')
+        .select('item_id')
+        .eq('barcode', code)
+        .maybeSingle();
+      if (copy) {
+        const { data: item } = await supabase
+          .from('catalogue_items')
+          .select(ITEM_COLS)
+          .eq('id', copy.item_id)
+          .maybeSingle();
+        if (item) { setItemResults([item as CatalogueItem]); return; }
+      }
+      const { data, error } = await supabase
+        .from('catalogue_items')
+        .select(ITEM_COLS)
+        .or(`title.ilike.%${q}%,call_number.ilike.%${q}%`)
+        .limit(8);
+      if (error) throw error;
+      setItemResults((data ?? []) as CatalogueItem[]);
+    } catch {
+      setItemResults(byBarcode ? [byBarcode] : (cacheSearchItems(off.cache, q) as CatalogueItem[]));
+    }
   };
 
-  const dueDate = (patron: Patron): string => {
-    const days = LOAN_DAYS[patron.patron_category] ?? defaultLoanDays;
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toISOString().split('T')[0];
-  };
+  const dueDate = (patron: Patron): string => computeDueDate(new Date(), patron.patron_category);
 
   // ── Checkout
   const fireNotice = (action: string, payload: Record<string, unknown>) => {
@@ -169,35 +182,34 @@ export default function Circulation() {
     if (!selectedPatron || !selectedItem) return;
     setCoLoading(true);
     setCoAlert(null);
-    const due = dueDate(selectedPatron);
 
-    const tx: OfflineTx = {
-      offline_id: crypto.randomUUID(),
-      type: 'checkout',
-      patron_id: selectedPatron.id,
-      patron_name: selectedPatron.full_name,
-      item_title: selectedItem.title,
-      catalogue_item_id: selectedItem.id,
-      copy_barcode: '',
-      ts: Date.now(),
-    };
-
-    if (!isOnline) {
-      const q = [...offlineQueue, tx];
-      setOfflineQueue(q);
-      saveOfflineQueue(q);
-      setCoAlert({ type: 'warning', msg: `Offline — checkout queued for ${selectedPatron.full_name}. Will sync on reconnect.` });
-      resetCheckout();
+    if (!serverReachable) {
+      const res = await off.enqueueCheckout(
+        {
+          ...selectedPatron,
+          user_id: selectedPatron.user_id ?? null,
+          status: selectedPatron.status ?? 'active',
+          membership_expires_at: selectedPatron.membership_expires_at ?? null,
+        },
+        selectedItem,
+      );
+      if (!res.ok) {
+        setCoAlert({ type: 'error', msg: res.reason ?? 'Could not queue checkout.' });
+      } else {
+        setCoAlert({ type: 'warning', msg: `OFFLINE — checkout queued for ${selectedPatron.full_name}. It will sync when the desk reconnects.` });
+        resetCheckout();
+      }
       setCoLoading(false);
       return;
     }
 
+    const due = dueDate(selectedPatron);
     try {
       if ((selectedItem.available_copies ?? 0) <= 0) {
         throw new Error('No copies available. Place a hold instead.');
       }
 
-      const maxAllowed = MAX_ITEMS[selectedPatron.patron_category] ?? defaultMaxItems;
+      const maxAllowed = maxItemsFor(selectedPatron.patron_category);
       const { count: activeLoanCount, error: countErr } = await supabase
         .from('loans')
         .select('id', { count: 'exact', head: true })
@@ -226,7 +238,7 @@ export default function Circulation() {
         patron_id: selectedPatron.id,
         catalogue_item_id: selectedItem.id,
         loan_id: loan.id,
-        offline_id: tx.offline_id,
+        offline_id: crypto.randomUUID(),
       });
 
       await logCirculationEvent({
@@ -256,6 +268,7 @@ export default function Circulation() {
 
       setCoAlert({ type: 'success', msg: `Checked out "${selectedItem.title}" to ${selectedPatron.full_name}. Due: ${due}.` });
       resetCheckout();
+      void off.refreshCache();
     } catch (err) {
       setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Checkout failed.' });
     } finally {
@@ -273,41 +286,84 @@ export default function Circulation() {
     patronRef.current?.focus();
   };
 
-  // ── Check-in
+  // ── Check-in search (online first, offline cache fallback) ─────────────────
   const searchLoans = async (q: string) => {
     setCheckinQuery(q);
     if (q.length < 2) { setCheckinResults([]); return; }
-    const { data } = await supabase
-      .from('loans')
-      .select('id, patron_id, catalogue_item_id, checkout_date, due_date, status, catalogue_items(title, call_number), patrons(full_name, patron_id, user_id)')
-      .eq('status', 'active')
-      .or(`catalogue_items.title.ilike.%${q}%,catalogue_items.call_number.ilike.%${q}%,patrons.full_name.ilike.%${q}%`)
-      .limit(10);
-    setCheckinResults((data ?? []) as unknown as ActiveLoan[]);
+    if (!serverReachable) {
+      setCheckinResults(cacheLoanSearch(q));
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('id, patron_id, catalogue_item_id, checkout_date, due_date, renewed_count, status, catalogue_items(title, call_number), patrons(full_name, patron_id, user_id, patron_category)')
+        .eq('status', 'active')
+        .or(`catalogue_items.title.ilike.%${q}%,catalogue_items.call_number.ilike.%${q}%,patrons.full_name.ilike.%${q}%`)
+        .limit(10);
+      if (error) throw error;
+      setCheckinResults((data ?? []) as unknown as ActiveLoan[]);
+    } catch {
+      setCheckinResults(cacheLoanSearch(q));
+    }
   };
 
-  const isExamPeriod = (): boolean => {
-    const today = new Date();
-    const c = institutionConfig;
-    const ranges = [
-      { start: c.examOneDates.start, end: c.examOneDates.end },
-      { start: c.examTwoDates.start, end: c.examTwoDates.end },
-    ];
-    return ranges.some(({ start, end }) => today >= new Date(start) && today <= new Date(end));
+  const cacheLoanSearch = (q: string): ActiveLoan[] => {
+    const cache = off.cache;
+    if (!cache) return [];
+    const needle = q.trim().toLowerCase();
+    return cache.loans
+      .filter((l) => l.status === 'active' || l.status === 'overdue')
+      .map((l) => {
+        const patron = cache.patrons.find((p) => p.id === l.patron_id);
+        const item = cache.items.find((i) => i.id === l.catalogue_item_id);
+        return {
+          id: l.id,
+          patron_id: l.patron_id,
+          catalogue_item_id: l.catalogue_item_id,
+          checkout_date: l.checkout_date,
+          due_date: l.due_date,
+          renewed_count: l.renewed_count,
+          status: l.status,
+          catalogue_items: { title: item?.title ?? 'Unknown item', call_number: item?.call_number ?? '' },
+          patrons: {
+            full_name: patron?.full_name ?? 'Unknown patron',
+            patron_id: patron?.patron_id ?? '',
+            user_id: patron?.user_id ?? null,
+            patron_category: patron?.patron_category,
+          },
+        } as ActiveLoan;
+      })
+      .filter(
+        (l) =>
+          l.catalogue_items.title.toLowerCase().includes(needle) ||
+          l.patrons.full_name.toLowerCase().includes(needle) ||
+          l.patrons.patron_id.toLowerCase().includes(needle),
+      )
+      .slice(0, 10);
   };
 
-  const calculateFine = (dueDate: string): number => {
-    if (isExamPeriod()) return 0;
-    const days = differenceInDays(new Date(), new Date(dueDate));
-    if (days <= 0) return 0;
-    const rate = institutionConfig.fineRatePerDay ?? 50;
-    return days * rate;
-  };
+  const isExamPeriod = (): boolean => isExamPeriodAt();
+
+  const calculateFine = (dueDateStr: string): number => computeFine(dueDateStr).amount;
 
   const handleCheckin = async (loan: ActiveLoan) => {
     setCiLoading(true);
     setCiAlert(null);
     try {
+      if (!serverReachable) {
+        const res = await off.enqueueCheckin(
+          { id: loan.id, patron_id: loan.patron_id, catalogue_item_id: loan.catalogue_item_id },
+          loan.patrons?.full_name ?? '',
+          loan.catalogue_items?.title ?? '',
+        );
+        if (!res.ok) throw new Error(res.reason ?? 'Could not queue check-in.');
+        setCiAlert({ type: 'warning', msg: `OFFLINE — check-in queued for "${loan.catalogue_items?.title}". It will sync when the desk reconnects.` });
+        setCheckinResults([]);
+        setCheckinQuery('');
+        return;
+      }
+
       const fine = calculateFine(loan.due_date);
       await supabase.from('loans').update({
         return_date: new Date().toISOString(),
@@ -404,6 +460,7 @@ export default function Circulation() {
       });
       setCheckinResults([]);
       setCheckinQuery('');
+      void off.refreshCache();
     } catch (err) {
       setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Check-in failed.' });
     } finally {
@@ -411,8 +468,105 @@ export default function Circulation() {
     }
   };
 
-  // ── Holds
+  // ── Renewal (online direct, offline queued) ────────────────────────────────
+  const handleRenew = async (loan: ActiveLoan) => {
+    setCiLoading(true);
+    setCiAlert(null);
+    try {
+      if (!serverReachable) {
+        const patron = off.cache?.patrons.find((p) => p.id === loan.patron_id) ?? null;
+        const res = await off.enqueueRenew(
+          {
+            id: loan.id,
+            patron_id: loan.patron_id,
+            catalogue_item_id: loan.catalogue_item_id,
+            checkout_date: loan.checkout_date,
+            due_date: loan.due_date,
+            renewed_count: loan.renewed_count ?? 0,
+            status: loan.status,
+          },
+          patron,
+          loan.catalogue_items?.title ?? '',
+        );
+        if (!res.ok) throw new Error(res.reason ?? 'Could not queue renewal.');
+        setCiAlert({ type: 'warning', msg: `OFFLINE — renewal queued for ${loan.patrons?.full_name}. It will sync when the desk reconnects.` });
+        setCheckinResults([]);
+        setCheckinQuery('');
+        return;
+      }
+
+      const { data: patronRow } = await supabase
+        .from('patrons')
+        .select('patron_category, full_name')
+        .eq('id', loan.patron_id)
+        .single();
+      const category = patronRow?.patron_category;
+      const renewed = loan.renewed_count ?? 0;
+      const maxRenewals = renewalsFor(category);
+      if (renewed >= maxRenewals) {
+        throw new Error(`Renewal limit of ${maxRenewals} already reached for ${category ?? 'this patron'}.`);
+      }
+      if (Date.parse(loan.due_date) < Date.now()) {
+        throw new Error('Loan is overdue — overdue loans cannot be renewed.');
+      }
+      const newDue = computeDueDate(new Date(), category);
+      const { error } = await supabase.from('loans').update({
+        due_date: newDue,
+        renewed_count: renewed + 1,
+        updated_at: new Date().toISOString(),
+      }).eq('id', loan.id);
+      if (error) throw error;
+
+      await supabase.from('circulation_transactions').insert({
+        transaction_type: 'renew',
+        patron_id: loan.patron_id,
+        catalogue_item_id: loan.catalogue_item_id,
+        loan_id: loan.id,
+        offline_id: crypto.randomUUID(),
+      });
+
+      await logCirculationEvent({
+        action: 'renewal',
+        patron_id: loan.patron_id,
+        catalogue_item_id: loan.catalogue_item_id,
+        loan_id: loan.id,
+        metadata: { new_due_date: newDue, title: loan.catalogue_items?.title },
+      });
+
+      void trackClientEvent({
+        event_type: 'renewal',
+        entity_id: String(loan.id),
+        entity_type: 'loan',
+        path: '/admin/circulation',
+        metadata: { title: loan.catalogue_items?.title, item_id: loan.catalogue_item_id },
+      });
+
+      if (loan.patrons?.user_id) {
+        fireNotice('renewal', {
+          userId: loan.patrons.user_id,
+          itemTitle: loan.catalogue_items?.title ?? 'Library item',
+          loanId: loan.id,
+          dueDate: newDue,
+        });
+      }
+
+      setCiAlert({ type: 'success', msg: `Renewed "${loan.catalogue_items?.title}" — now due ${newDue}.` });
+      setCheckinResults([]);
+      setCheckinQuery('');
+    } catch (err) {
+      setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Renewal failed.' });
+    } finally {
+      setCiLoading(false);
+    }
+  };
+
+  // ── Holds ───────────────────────────────────────────────────────────────────
   const checkoutFromHold = async (hold: HoldRow) => {
+    if (!serverReachable) {
+      setCoAlert({ type: 'error', msg: 'Hold fulfilment requires a connection — complete it when the desk is back online.' });
+      setTab('holds');
+      return;
+    }
     setCoLoading(true);
     setCoAlert(null);
     try {
@@ -473,6 +627,10 @@ export default function Circulation() {
 
   const placeHold = async () => {
     if (!holdsPatron || !holdsItem) return;
+    if (!serverReachable) {
+      setHoldsAlert({ type: 'error', msg: 'Placing holds requires a connection.' });
+      return;
+    }
     setHoldsAlert(null);
     const { count } = await supabase
       .from('reservations')
@@ -495,59 +653,6 @@ export default function Circulation() {
     setHoldsPatronQuery('');
     setHoldsItemQuery('');
     void fetchHolds();
-  };
-
-  // ── Offline sync
-  const syncOffline = async () => {
-    if (!isOnline || offlineQueue.length === 0) return;
-    setSyncing(true);
-    const remaining: OfflineTx[] = [];
-    for (const tx of offlineQueue) {
-      try {
-        if (tx.type === 'checkout') {
-          const { data: item } = await supabase
-            .from('catalogue_items')
-            .select('available_copies, patron_category')
-            .eq('id', tx.catalogue_item_id)
-            .single();
-          if ((item?.available_copies ?? 0) <= 0) { remaining.push(tx); continue; }
-          const due = new Date();
-          due.setDate(due.getDate() + defaultLoanDays);
-          const { data: loan } = await supabase.from('loans').insert({
-            patron_id: tx.patron_id,
-            catalogue_item_id: tx.catalogue_item_id,
-            checkout_date: new Date(tx.ts).toISOString(),
-            due_date: due.toISOString().split('T')[0],
-            status: 'active',
-          }).select('id').single();
-          await supabase.from('catalogue_items').update({
-            available_copies: (item?.available_copies ?? 1) - 1,
-          }).eq('id', tx.catalogue_item_id);
-          await supabase.from('circulation_transactions').insert({
-            transaction_type: 'checkout',
-            patron_id: tx.patron_id,
-            catalogue_item_id: tx.catalogue_item_id,
-            loan_id: loan?.id,
-            offline_id: tx.offline_id,
-            synced_at: new Date().toISOString(),
-          });
-          if (loan?.id) {
-            void trackClientEvent({
-              event_type: 'checkout',
-              entity_id: String(loan.id),
-              entity_type: 'loan',
-              path: '/admin/circulation',
-              metadata: { offline_sync: true, item_id: tx.catalogue_item_id },
-            });
-          }
-        }
-      } catch {
-        remaining.push(tx);
-      }
-    }
-    setOfflineQueue(remaining);
-    saveOfflineQueue(remaining);
-    setSyncing(false);
   };
 
   // ── Shared patron dropdown helper
@@ -591,7 +696,7 @@ export default function Circulation() {
       <input
         type="text"
         className="input w-full"
-        placeholder="Search item by title or call number…"
+        placeholder="Search item by title, call number or scan barcode…"
         value={query}
         onChange={(e) => onQuery(e.target.value)}
         autoComplete="off"
@@ -619,7 +724,7 @@ export default function Circulation() {
     { id: 'checkout', label: 'Check Out' },
     { id: 'checkin',  label: 'Check In' },
     { id: 'holds',    label: `Holds${holds.length > 0 ? ` (${holds.length})` : ''}` },
-    { id: 'offline',  label: `Offline Queue${offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}` },
+    { id: 'offline',  label: `Offline Queue${off.queue.length > 0 ? ` (${off.queue.length})` : ''}` },
   ] as const;
 
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -633,6 +738,7 @@ export default function Circulation() {
   useEffect(() => {
     if (scanner.lastCode) {
       setItemQuery(scanner.lastCode);
+      void searchItems(scanner.lastCode);
     }
   }, [scanner.lastCode]);
 
@@ -641,18 +747,69 @@ export default function Circulation() {
     type === 'warning' ? 'bg-amber-50 text-amber-800' :
     'bg-red-50 text-red-800';
 
+  const stateBadge =
+    off.state === 'ONLINE' ? 'bg-green-100 text-green-700' :
+    off.state === 'SYNCING' ? 'bg-blue-100 text-blue-700' :
+    off.state === 'DEGRADED' ? 'bg-amber-100 text-amber-700' :
+    'bg-red-100 text-red-700';
+  const stateDot =
+    off.state === 'ONLINE' ? 'bg-green-500' :
+    off.state === 'SYNCING' ? 'bg-blue-500' :
+    off.state === 'DEGRADED' ? 'bg-amber-500' :
+    'bg-red-500';
+
+  const offlineEligible = off.canOperateOffline && !cacheIsStale(off.cache);
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Circulation</h1>
-          <p className="text-gray-600 mt-1">Check out, check in, and manage patron holds.</p>
+          <p className="text-gray-600 mt-1">Check out, check in, renew, and manage patron holds.</p>
         </div>
-        <div className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full ${isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-          {isOnline ? 'Online' : 'Offline'}
+        <div className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full ${stateBadge}`}>
+          <span className={`w-2 h-2 rounded-full ${stateDot}`} />
+          {off.state}
         </div>
       </div>
+
+      {/* Connectivity / queue banner */}
+      {off.state === 'OFFLINE' && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 font-medium">
+          Offline — checkout, check-in and renewal are validated against the local desk cache and queued durably.
+          They will sync (in order, duplicate-safe) when the connection returns.
+          {!off.session && ' No staff session yet — connect once to sign in for offline work.'}
+        </div>
+      )}
+      {off.state === 'DEGRADED' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+          Server unreachable — transactions are being queued locally. {off.lastError ?? ''}
+        </div>
+      )}
+      {off.state === 'ONLINE' && (off.pendingCount > 0 || off.conflictCount > 0) && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 font-medium flex items-center justify-between gap-3">
+          <span>
+            {off.pendingCount > 0 && `${off.pendingCount} queued transaction(s) waiting to sync. `}
+            {off.conflictCount > 0 && `${off.conflictCount} conflict(s) need a librarian decision.`}
+          </span>
+          <button onClick={() => setTab('offline')} className="btn-secondary text-xs py-1 px-2">
+            Open Offline Queue
+          </button>
+        </div>
+      )}
+      {off.state === 'ONLINE' && off.cache && off.staleCache && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium flex items-center justify-between gap-3">
+          <span>Offline cache has expired — refresh before starting offline work.</span>
+          <button onClick={() => void off.refreshCache()} className="btn-secondary text-xs py-1 px-2" disabled={off.cacheLoading}>
+            {off.cacheLoading ? 'Refreshing…' : 'Refresh Cache'}
+          </button>
+        </div>
+      )}
+      {!off.session && off.state !== 'ONLINE' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+          Offline operations require an active staff session. Reconnect once to sign in.
+        </div>
+      )}
 
       {isExamPeriod() && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
@@ -695,7 +852,7 @@ export default function Circulation() {
             {selectedPatron && (
               <div className="p-3 bg-blue-50 rounded-lg text-sm">
                 <strong>{selectedPatron.full_name}</strong> — {selectedPatron.patron_category}
-                <span className="text-gray-500"> · Due in {LOAN_DAYS[selectedPatron.patron_category] ?? defaultLoanDays} days → {dueDate(selectedPatron)}</span>
+                <span className="text-gray-500"> · Due in {durationDaysFor(selectedPatron.patron_category)} days → {dueDate(selectedPatron)}</span>
               </div>
             )}
           </div>
@@ -721,6 +878,12 @@ export default function Circulation() {
                 <span className="text-gray-600"> — {selectedItem.available_copies}/{selectedItem.total_copies} available</span>
               </div>
             )}
+            {!serverReachable && (
+              <div className="p-3 bg-amber-50 rounded-lg text-xs text-amber-800">
+                Offline mode: eligibility is checked against the local cache
+                {offlineEligible ? ' (cache ready).' : ' (cache not ready — reconnect to preload before checking out).'}
+              </div>
+            )}
           </div>
 
           <button
@@ -728,12 +891,12 @@ export default function Circulation() {
             disabled={!selectedPatron || !selectedItem || coLoading}
             className="btn-primary w-full py-3 text-base disabled:opacity-50"
           >
-            {coLoading ? 'Processing…' : 'Check Out'}
+            {coLoading ? 'Processing…' : serverReachable ? 'Check Out' : 'Check Out (Queue Offline)'}
           </button>
         </div>
       )}
 
-      {/* ── Check In ──────────────────────────────────────────── */}
+      {/* ── Check In / Renew ─────────────────────────────────── */}
       {tab === 'checkin' && (
         <div className="max-w-xl space-y-5">
           {ciAlert && (
@@ -746,10 +909,13 @@ export default function Circulation() {
             <input
               type="text"
               className="input w-full"
-              placeholder="Search by patron name or item title…"
+              placeholder="Search by patron name, title, call number or barcode…"
               value={checkinQuery}
               onChange={(e) => void searchLoans(e.target.value)}
             />
+            {!serverReachable && (
+              <p className="text-xs text-amber-700">Offline: results come from the local desk cache.</p>
+            )}
           </div>
 
           {checkinResults.length > 0 && (
@@ -783,13 +949,23 @@ export default function Circulation() {
                           {fine > 0 ? `₦${fine.toLocaleString()}` : isExamPeriod() ? '—' : '₦0'}
                         </td>
                         <td className="p-3">
-                          <button
-                            onClick={() => void handleCheckin(loan)}
-                            disabled={ciLoading}
-                            className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
-                          >
-                            Return
-                          </button>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => void handleCheckin(loan)}
+                              disabled={ciLoading}
+                              className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
+                            >
+                              Return
+                            </button>
+                            <button
+                              onClick={() => void handleRenew(loan)}
+                              disabled={ciLoading}
+                              className="btn-secondary text-xs py-1.5 px-3 disabled:opacity-50"
+                              title="Renew loan"
+                            >
+                              Renew
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -804,6 +980,11 @@ export default function Circulation() {
       {/* ── Holds ─────────────────────────────────────────────── */}
       {tab === 'holds' && (
         <div className="space-y-6">
+          {!serverReachable && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+              Hold placement and fulfilment require a connection. Returns (check-in) remain available offline.
+            </div>
+          )}
           <div className="max-w-xl card space-y-4">
             <h2 className="font-semibold text-lg">Place a Hold</h2>
             {holdsAlert && (
@@ -831,7 +1012,7 @@ export default function Circulation() {
             </div>
             <button
               onClick={() => void placeHold()}
-              disabled={!holdsPatron || !holdsItem}
+              disabled={!holdsPatron || !holdsItem || !serverReachable}
               className="btn-primary w-full disabled:opacity-50"
             >
               Place Hold
@@ -886,68 +1067,7 @@ export default function Circulation() {
       )}
 
       {/* ── Offline Queue ─────────────────────────────────────── */}
-      {tab === 'offline' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600 text-sm">
-              Transactions queued while offline are stored locally and synced when you reconnect.
-            </p>
-            <button
-              onClick={() => void syncOffline()}
-              disabled={!isOnline || offlineQueue.length === 0 || syncing}
-              className="btn-primary disabled:opacity-50"
-            >
-              {syncing ? 'Syncing…' : `Sync Now (${offlineQueue.length})`}
-            </button>
-          </div>
-
-          {offlineQueue.length === 0 ? (
-            <div className="card text-center text-gray-400 py-12">
-              No offline transactions queued.
-            </div>
-          ) : (
-            <div className="card overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b">
-                  <tr>
-                    <th className="text-left p-3 font-semibold">Type</th>
-                    <th className="text-left p-3 font-semibold">Patron</th>
-                    <th className="text-left p-3 font-semibold">Item</th>
-                    <th className="text-left p-3 font-semibold">Time</th>
-                    <th className="p-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {offlineQueue.map((tx) => (
-                    <tr key={tx.offline_id} className="border-b hover:bg-gray-50">
-                      <td className="p-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tx.type === 'checkout' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                          {tx.type}
-                        </span>
-                      </td>
-                      <td className="p-3">{tx.patron_name}</td>
-                      <td className="p-3 font-medium">{tx.item_title}</td>
-                      <td className="p-3 text-gray-500 text-xs">{new Date(tx.ts).toLocaleString()}</td>
-                      <td className="p-3">
-                        <button
-                          onClick={() => {
-                            const q = offlineQueue.filter((x) => x.offline_id !== tx.offline_id);
-                            setOfflineQueue(q);
-                            saveOfflineQueue(q);
-                          }}
-                          className="text-xs text-red-500 hover:underline"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      {tab === 'offline' && <OfflinePanel offline={off} />}
 
       {scannerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -961,7 +1081,7 @@ export default function Circulation() {
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-500">Point camera at barcode. Scan will populate the item search field.</p>
+            <p className="text-xs text-gray-500">Point camera at barcode. Scan populates the item search field (works offline against the cached barcode index).</p>
             <div className="flex gap-2">
               {scanner.status === 'scanning' && (
                 <button onClick={() => void scanner.stop()} className="btn-secondary flex-1">Stop</button>
