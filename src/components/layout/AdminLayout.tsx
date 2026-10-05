@@ -67,6 +67,7 @@ const adminNav: { group: string; items: NavItem[] }[] = [
   { group: 'Circulation', items: [
     { label: 'Circulation Desk',    href: '/admin/circulation',           icon: '🧾' },
     { label: 'Offline Sync',        href: '/admin/offline-sync',          icon: '📶' },
+    { label: 'SIP2 Terminals',      href: '/admin/sip2-terminals',        icon: '📟' },
   ]},
   { group: 'System', items: [
     { label: 'Account Management', href: '/admin/accounts',              icon: '🔐', accountManager: true },
