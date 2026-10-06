@@ -12,32 +12,40 @@ export interface KbartSerial {
   subject?: string;
 }
 
-export function generateKbart(serials: KbartSerial[]): string {
-  const header = [
-    'publication_title',
-    'print_identifier',
-    'online_identifier',
-    'publisher',
-    'start_year',
-    'end_year',
-    'frequency',
-    'url',
-    'subject',
-  ].join('\t');
+export const KBART_COLUMNS = [
+  'publication_title',
+  'print_identifier',
+  'online_identifier',
+  'publisher',
+  'start_year',
+  'end_year',
+  'frequency',
+  'url',
+  'subject',
+] as const;
 
-  const rows = serials.map((s) =>
-    [
-      s.title,
-      s.print_issn || '',
-      s.online_issn || '',
-      s.publisher || '',
-      s.start_year || '',
-      s.end_year || '',
-      s.frequency || '',
-      s.url || '',
-      s.subject || '',
-    ].join('\t')
-  );
+function kbartField(value: string | undefined): string {
+  return (value || '').replace(/[\t\r\n]+/g, ' ').trim();
+}
+
+export function generateKbart(serials: KbartSerial[]): string {
+  const header = [...KBART_COLUMNS].join('\t');
+
+  const rows = serials
+    .filter((s) => kbartField(s.title).length > 0)
+    .map((s) =>
+      [
+        kbartField(s.title),
+        kbartField(s.print_issn),
+        kbartField(s.online_issn),
+        kbartField(s.publisher),
+        kbartField(s.start_year),
+        kbartField(s.end_year),
+        kbartField(s.frequency),
+        kbartField(s.url),
+        kbartField(s.subject),
+      ].join('\t'),
+    );
 
   return [header, ...rows].join('\n');
 }

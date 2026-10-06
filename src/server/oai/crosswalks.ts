@@ -126,8 +126,7 @@ export function toMarcXml(item: Record<string, unknown>): string {
     ? `    <datafield tag="024" ind1="7" ind2=" "><subfield code="a">${xmlEscape(doi)}</subfield><subfield code="2">doi</subfield></datafield>\n`
     : '';
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<collection xmlns="http://www.loc.gov/MARC21/slim">
+  return `<collection xmlns="http://www.loc.gov/MARC21/slim">
   <record>
     <leader>00000nam a2200000 a 4500</leader>
     <controlfield tag="001">${xmlEscape(item.id ?? '')}</controlfield>

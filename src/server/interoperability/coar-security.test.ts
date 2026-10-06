@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   verifyCoarSignature,
   checkCoarRateLimit,
+  checkCoarSourceRateLimit,
+  signCoarPayload,
   isDuplicateNonce,
   validateCoarUrl,
   isCoarConfigured,
@@ -160,6 +162,43 @@ describe('coar-security', () => {
       const b = generateCoarNonce();
       expect(a).not.toBe(b);
       expect(a.length).toBe(32);
+    });
+  });
+
+  describe('signCoarPayload', () => {
+    it('produces a signature accepted by verifyCoarSignature', () => {
+      const payload = '{"@context":"https://www.w3.org/ns/activitystreams"}';
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const sig = signCoarPayload(payload, timestamp);
+      expect(verifyCoarSignature(payload, sig, timestamp)).toBe(true);
+    });
+
+    it('does not accept a signature over a different raw body', () => {
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const sig = signCoarPayload('{"a":1}', timestamp);
+      expect(verifyCoarSignature('{"a":2}', sig, timestamp)).toBe(false);
+    });
+
+    it('throws when the secret is not configured', () => {
+      vi.stubEnv('COAR_NOTIFY_SHARED_SECRET', 'short');
+      expect(() => signCoarPayload('{}', '1')).toThrow(/not configured/);
+    });
+  });
+
+  describe('checkCoarSourceRateLimit', () => {
+    it('allows requests under limit', () => {
+      expect(checkCoarSourceRateLimit('src-allow-1')).toBe(true);
+    });
+
+    it('blocks requests over the source limit', () => {
+      for (let i = 0; i < 60; i++) checkCoarSourceRateLimit('src-block-1');
+      expect(checkCoarSourceRateLimit('src-block-1')).toBe(false);
+    });
+
+    it('tracks sources independently', () => {
+      for (let i = 0; i < 60; i++) checkCoarSourceRateLimit('src-a-1');
+      expect(checkCoarSourceRateLimit('src-a-1')).toBe(false);
+      expect(checkCoarSourceRateLimit('src-b-1')).toBe(true);
     });
   });
 });

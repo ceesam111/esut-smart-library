@@ -169,7 +169,7 @@ function makeContext(overrides?: Partial<OaiRequestContext>): OaiRequestContext 
 function isWellFormed(xml: string): boolean {
   try {
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    return doc.documentElement.nodeName === 'OAI-PMH';
+    return doc.documentElement?.nodeName === 'OAI-PMH';
   } catch {
     return false;
   }
@@ -255,6 +255,7 @@ describe('OAI-PMH verbs', () => {
     expect(result.errorCode).toBeNull();
     expect(result.xml).toContain('<collection xmlns="http://www.loc.gov/MARC21/slim">');
     expect(result.xml).toContain('<datafield tag="245"');
+    expect(result.xml.indexOf('<?xml')).toBe(result.xml.lastIndexOf('<?xml'));
     expect(isWellFormed(result.xml)).toBe(true);
   });
 

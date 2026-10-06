@@ -4,8 +4,10 @@ import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 const COAR_MAX_TIMESTAMP_DRIFT_SEC = 300;
 const COAR_RATE_LIMIT_WINDOW_MS = 60_000;
 const COAR_RATE_LIMIT_MAX = 30;
+const COAR_SOURCE_RATE_LIMIT_MAX = 60;
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const sourceRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const processedNonces = new Set<string>();
 
 function getSharedSecret(): string {
@@ -40,16 +42,30 @@ export function verifyCoarSignature(payload: string, signature: string, timestam
   return timingSafeEqual(sigBuf, expBuf);
 }
 
-export function checkCoarRateLimit(senderId: string): boolean {
+export function signCoarPayload(payload: string, timestamp: string): string {
+  const secret = getSharedSecret();
+  if (secret.length < 32) throw new Error('COAR_NOTIFY_SHARED_SECRET is not configured');
+  return createHmac('sha256', secret).update(`${timestamp}.${payload}`).digest('hex');
+}
+
+function bumpLimit(map: Map<string, { count: number; resetAt: number }>, key: string, max: number): boolean {
   const now = Date.now();
-  const entry = rateLimitMap.get(senderId);
+  const entry = map.get(key);
   if (!entry || entry.resetAt < now) {
-    rateLimitMap.set(senderId, { count: 1, resetAt: now + COAR_RATE_LIMIT_WINDOW_MS });
+    map.set(key, { count: 1, resetAt: now + COAR_RATE_LIMIT_WINDOW_MS });
     return true;
   }
-  if (entry.count >= COAR_RATE_LIMIT_MAX) return false;
+  if (entry.count >= max) return false;
   entry.count++;
   return true;
+}
+
+export function checkCoarRateLimit(senderId: string): boolean {
+  return bumpLimit(rateLimitMap, senderId, COAR_RATE_LIMIT_MAX);
+}
+
+export function checkCoarSourceRateLimit(sourceKey: string): boolean {
+  return bumpLimit(sourceRateLimitMap, sourceKey, COAR_SOURCE_RATE_LIMIT_MAX);
 }
 
 export async function isDuplicateNonce(nonce: string): Promise<boolean> {
