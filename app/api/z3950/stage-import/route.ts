@@ -3,9 +3,11 @@ import { requireRole } from '@/server/auth/requireRole';
 import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
 import { createImportBatch, stageMarcRecord } from '@/server/catalogue/marcImport';
 import type { MarcRecord } from '@/server/catalogue/marcValidation';
+import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdminClient();
     const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
     const body = await request.json();
 
@@ -46,6 +48,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: message === 'Forbidden.' ? 403 : 400 });
   }
 }
-
-import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
-const supabase = getSupabaseAdminClient();
