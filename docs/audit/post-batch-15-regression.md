@@ -48,3 +48,20 @@ Date: 2026-10-06 · Verified HEAD: `a34e54d` (branch `master`) · Method: indepe
 1. **Note 1 (COAR):** the historical "known exception: COAR Notify inbox remains insufficiently authenticated" from batch 1 does **not** match HEAD. The inbox requires `x-coar-signature`/`x-coar-timestamp`/`x-coar-nonce`, verifies HMAC-SHA256 over `timestamp.payload` with `COAR_NOTIFY_SHARED_SECRET` (≥32 chars, else 503), enforces ±300 s drift, timing-safe compare, replay protection, per-actor rate limit, payload/actor/target validation, and idempotent duplicate handling. Remaining gaps are ordering (D1) and logging — addressed in Batch 16.
 2. Statuses used: VERIFIED / REGRESSED / PARTIAL / BLOCKED EXTERNAL / UNVERIFIABLE (per prompt §3).
 3. Data-maturity numbers (4 repository items, 8 analytics events) are adoption measurements, not feature-correctness signals (prompt §8) and do not lower any status above.
+
+## Batch 16 closure (2026-10-06, commit `22eb28e`, pushed)
+
+| Defect | Outcome | Evidence |
+| --- | --- | --- |
+| D11 KBART 500 | **FIXED** | route passes the real `NextRequest`; auth/DB failures mapped to 401/403/500 via `normalizeError`; serializer sanitised (tab/newline escaping, title-less rows dropped); 6 route tests + 9 serializer tests |
+| D1 COAR nonce-before-signature | **FIXED** | signature verified over the **raw body** before nonce claim; 415 content-type gate; per-source rate limit; reason-code rejection logging; outbound `sendCoarNotify` now signs; generic 500 (no error-detail leak); 16-case inbox route tests |
+| D12 18 npm vulns | **REDUCED to 5** | `npm audit fix` (54 pkgs) + `react-router-dom` 6.30.6 → 7.18.4 (open-redirect + deserializeErrors CVEs; only stable core APIs used) + dead-dep removal (seroval/js-yaml/dompurify/arcjet chains resolved); remaining 5 = `braces` dev-only lint chain, **all versions vulnerable, no patched release** — accepted risk (CI uses `--omit=dev`) |
+| D3 dead layers | **REMOVED** | `src/views/**` (63 files), `src/main.tsx`, `index.html`, `vite.config.ts`, `tsconfig.node.json`, `auth-attacher.ts`, `auth-middleware.ts` deleted (zero importers verified); 3 dead deps uninstalled; tsconfig excludes pruned |
+| D2 lint gate red | **OPEN — next batch** | 948 problems / 662 errors unchanged by Batch 16; changed files lint clean (eslint exit 0) |
+
+New findings this batch:
+
+1. **OAI-PMH marcxml well-formedness (fixed in `22eb28e`):** `toMarcXml` embedded an `<?xml …?>` declaration inside `<metadata>`, making every marcxml `ListRecords`/`GetRecord` response not well-formed XML — masked by a lenient phantom `@xmldom/xmldom` dependency that `npm audit fix` pruned (now a declared devDependency, 0.9.12, strict). Declaration removed; test pins exactly one `<?xml`.
+2. **Phantom dependency:** `src/server/oai/service.test.ts` imported `@xmldom/xmldom` without it ever being declared — now in `devDependencies`.
+3. **Next.js 16 convention:** `middleware.ts` is deprecated (renamed `proxy.ts`); still functional at 16.3.6 (build reports `ƒ Proxy (Middleware)`) — rename is an ops cleanup, not a breakage.
+4. Gates after Batch 16: tsc **0** · vitest **696/696 (85 files)** · `next build` **0** · changed-file eslint **0** · npm audit **5 high (dev-only, unfixable)**.
