@@ -107,3 +107,30 @@ Compose passes `SIP2_*` + `SUPABASE_*` from the host environment (`.env`), maps 
 - The health endpoint exposes counters only — no credentials, no patron data.
 - Lock down port 8788 with a firewall or reverse proxy so only monitoring can reach it.
 - Put the SIP2 port on the kiosk/library network segment; use `permitted_ip_cidr` per terminal to pin sources.
+
+
+## Production deployment record - 2026-10-06
+
+**Commits:** `52ab2ba` (AFUED->ESUT rebrand, 60 hits/14 files), `9c9f07e` (lazy admin client in z3950 stage-import - Docker build blocker), `0199fd3` (COPY config/ into sip2+worker images - runtime blocker).
+
+**Images (VPS 153.92.210.52, built from master clone /tmp/esut-build):**
+- `ghcr.io/ceesam111/esut-smart-library:deploy-latest` (rollback: `deploy-prev`)
+- `ghcr.io/ceesam111/esut-smart-library:worker-latest` (rollback: `worker-prev`)
+- `ghcr.io/ceesam111/esut-smart-library:sip2-latest`
+
+**Containers (network coolify, restart unless-stopped):** `esut-app-new` (env-file /tmp/app-new.env, 51 lines, healthy), `esut-worker` (/tmp/worker.env, 49 lines), `esut-sip2` (-p 6000:6000, -p 127.0.0.1:8788:8788, SIP2_* + /tmp/sip2.env).
+
+**Verification evidence (command -> outcome):**
+- `tsc --noEmit` 0; `eslint` 0; `vitest run` 657/657 (83 files).
+- `curl https://virtuallibrary.esut.edu.ng/api/health` -> 200; `/` -> 200; `/api/admin/sip2/terminals` -> 401 JSON (proves new build; old build served 200 HTML).
+- Traefik: container re-assigned the same IP 172.16.1.11, `esut-afued-routing.yaml` unchanged and correct.
+- SIP2 loopback E2E: `sip2-client.py --host 127.0.0.1 login` -> `941AY1` (AY1 success, checksum ok, exit 0); health counters connectionsTotal=3, messagesProcessed=1.
+- DB: indexes `loans_one_active_per_patron_item` + `idx_sip2_terminals_institution` present; `sip2_audit_log` rows `credential_migrated` + `login_success` for terminal DEPLOYVERIFY (sha256-legacy auto-migrated to bcrypt).
+- Worker health via app container fetch `http://esut-worker:8787/health` -> 200 JSON.
+- Prod env scan: no AFUED/`FROM_NAME`; `RESEND_FROM_EMAIL=send@esutlibrary.edu.ng` (unchanged, verified sender).
+
+**Limitations / pending:**
+- External TCP 6000 is blocked by the Hostinger cloud firewall (VPS-side ufw inactive; loopback + own-IP connect OK; 22/443/8000 open). Open inbound TCP 6000 in the Hostinger console, then re-test from outside.
+- Domain is Cloudflare-proxied (188.114.96.x): SIP2 clients must target the origin IP `153.92.210.52:6000` (or add an unproxied DNS name).
+- TLS not enabled (no certificate for the kiosk host); health port 8788 bound to 127.0.0.1 only.
+- Test terminal `DEPLOYVERIFY` (institution ESUT) left active for external verification; remove with: `delete from public.sip2_terminals where login_username='DEPLOYVERIFY';`
