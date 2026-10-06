@@ -100,7 +100,7 @@ CREATE OR REPLACE FUNCTION public.assign_library_number()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NEW.status = 'active' AND (NEW.library_number IS NULL OR NEW.library_number = '') THEN
-    NEW.library_number := 'AFUED-' || to_char(now(),'YYYY') || '-' ||
+    NEW.library_number := 'ESUT-' || to_char(now(),'YYYY') || '-' ||
       lpad(nextval('public.library_number_seq')::text, 5, '0');
     IF NEW.approved_at IS NULL THEN NEW.approved_at := now(); END IF;
   END IF;

@@ -1,7 +1,7 @@
-# ESUT + AFUED Library Platform — DSpace 10 / Koha 26.05 Feature Parity Matrix
+# ESUT + ESUT Library Platform — DSpace 10 / Koha 26.05 Feature Parity Matrix
 
 **Generated:** 2026-09-11  
-**Codebase:** Shared white-label platform (ESUT + AFUED identical forks, config-differentiated)  
+**Codebase:** Shared white-label platform (ESUT + ESUT identical forks, config-differentiated)  
 **Benchmark:** DSpace 10.x (IR) + Koha 26.05.x (ILS)
 
 ---
@@ -19,7 +19,7 @@
 
 ## 1. CORE DOMAIN MODEL
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Institution/branch structure | Koha org hierarchy | ✅ | ✅ | `institution.config.ts`, faculty/branch config | Low | Complete |
 | Bibliographic records | Koha biblio table | ✅ | ✅ | `catalogue_items` table, MARC21 fields | Low | Complete |
@@ -36,7 +36,7 @@
 
 ## 2. CATALOGUING (Koha 4.1)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | MARC21 support | Koha MARC frameworks | ✅ | ✅ | `marc21`, `marc21_fields`, `marc21_leader` columns | Low | Complete |
 | Bibliographic record CRUD | Koha cataloguing | ✅ | ✅ | Admin Catalogue pages, CatalogueNew | Low | Complete |
@@ -58,7 +58,7 @@
 
 ## 3. CIRCULATION (Koha 5.1)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Staff checkout | Koha checkout | ✅ | ✅ | Circulation.tsx checkout tab, copy tracking | Low | Complete |
 | Staff check-in | Koha checkin | ✅ | ✅ | Circulation.tsx check-in tab, fine + hold fulfillment | Low | Complete |
@@ -80,7 +80,7 @@
 
 ## 4. PATRON MANAGEMENT (Koha 6)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Patron directory | Koha members | ✅ | ✅ | Patrons.tsx, search/filter/paginate | Low | Complete |
 | Patron categories | Koha categories | ✅ | ✅ | 8 categories with loan rules | Low | Complete |
@@ -101,7 +101,7 @@
 
 ## 5. OPAC / PUBLIC DISCOVERY (Koha 7)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Simple search | Koha OPAC search | ✅ | ✅ | GlobalSearch page, resource search API | Low | Complete |
 | Advanced search | Koha extended | 🟡 | 🟡 | Fielded search via adapters, no dedicated advanced UI | Medium | P2 |
@@ -120,7 +120,7 @@
 
 ## 6. ACQUISITIONS (Koha 8)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Vendors | Koha vendors | 🟡 | 🟡 | `acquisition_suppliers` table, admin Acquisitions page | Medium | P2 |
 | Budgets/funds | Koha budget | 🟡 | 🟡 | `acquisition_budgets` table exists | Medium | P2 |
@@ -131,7 +131,7 @@
 
 ## 7. SERIALS (Koha 9)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Subscriptions | Koha serial | 🟡 | 🟡 | `serials_subscriptions` table, admin Serials page | Medium | P2 |
 | Issue receiving | Koha serial | 🟡 | 🟡 | `serials_issues` table | Medium | P2 |
@@ -139,7 +139,7 @@
 
 ## 8. INTERLIBRARY LOAN (Koha 11)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | ILL requests | Koha ILL | ✅ | ✅ | `ill_requests` table, ILLRequest page, ILLHistory, admin ILL | Low | Complete |
 | Workflow statuses | Koha ILL | 🟡 | 🟡 | Status field but limited state machine | Medium | P2 |
@@ -147,7 +147,7 @@
 
 ## 9. COURSE RESERVES (Koha 12)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Course reserve items | Koha course reserves | ✅ | ✅ | `course_reserves`, `course_reserve_items` tables | Low | Complete |
 | Reading lists | Koha | ✅ | ✅ | `course_reading_lists`, `course_reading_list_items` | Low | Complete |
@@ -155,7 +155,7 @@
 
 ## 10. DIGITAL REPOSITORY (DSpace 10)
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Communities | DSpace communities | 🟡 | 🟡 | Tables exist, public read, no admin CRUD | Medium | **P1** |
 | Collections | DSpace collections | 🟡 | 🟡 | Tables exist, public read, no admin CRUD | Medium | **P1** |
@@ -178,7 +178,7 @@
 
 ## 11. REPORTING & ANALYTICS
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Operational dashboard | Koha reports | 🟡 | 🟡 | Admin dashboard with aggregate counts | Low | P2 |
 | Circulation reports | Koha reports | 🔴 | 🔴 | Placeholder only — "connect BI tool" | Medium | **P1** |
@@ -188,7 +188,7 @@
 
 ## 12. NOTIFICATIONS
 
-| Capability | Benchmark | ESUT | AFUED | Evidence | Risk | Decision |
+| Capability | Benchmark | ESUT | ESUT | Evidence | Risk | Decision |
 |---|---|---|---|---|---|---|
 | Email templates | Koha/DSpace | ✅ | ✅ | 10+ HTML templates (circulation, ILL, thesis, etc.) | Low | Complete |
 | Automated send | Koha triggers | ⚠️ | ⚠️ | Templates exist but NO automated dispatch | HIGH | **P1** |
@@ -198,7 +198,7 @@
 
 ## 13. SECURITY
 
-| Capability | Benchmark | ASVS 5.0 | ESUT | AFUED | Evidence |
+| Capability | Benchmark | ASVS 5.0 | ESUT | ESUT | Evidence |
 |---|---|---|---|---|---|
 | Authentication | Koha auth | Required | ✅ | ✅ | Supabase Auth, JWT, password reset |
 | Authorization (RBAC) | Koha permissions | Required | ✅ | ✅ | 10 roles, server-side enforcement, RLS |

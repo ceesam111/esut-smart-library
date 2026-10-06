@@ -22,7 +22,7 @@ Audit baseline: `docs/platform-audit.md` (base commit `854d15e`).
   - [ ] `src/App.tsx:234-235` missing student `FeatureRoute` guard (issues-to-fix #7).
   - [ ] `next.config.mjs` ignore flags end-state decision.
   - [x] Fix IR admin deposit broken insert (`admin/IrDeposit.tsx:74-92`) — routed payload to `ir_items` (the correct table) ✅.
-  - [x] Fix sitemap/robots/OAI host split — `public/sitemap.xml` changed `afuedlibrary.org.ng` → `esutlibrary.edu.ng` ✅.
+  - [x] Fix sitemap/robots/OAI host split — `public/sitemap.xml` changed `virtuallibrary.esut.edu.ng` → `esutlibrary.edu.ng` ✅.
 - [x] **New module**: `src/server/rate-limit.ts` (lightweight in-memory limiter) — supports cost-exposed route protection.
 - [x] Gates green: tsc = 64 (0 new), vitest 64/20, `next build` exit 0, `verify-resource-pages.mjs` 18/18.
 

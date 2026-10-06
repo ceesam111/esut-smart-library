@@ -104,7 +104,7 @@ DROP TRIGGER IF EXISTS trg_consortium_databases_updated ON public.consortium_dat
 CREATE TRIGGER trg_consortium_databases_updated BEFORE UPDATE ON public.consortium_databases
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- ── Seed AFUED as founding member ────────────────────────────────────────────
+-- ── Seed ESUT as founding member ────────────────────────────────────────────
 INSERT INTO public.consortium_members (institution_name, short_code, contact_person, email, city, country, status, is_founding_member, notes)
-SELECT 'Alvan Ikoku Federal University of Education', 'AFUED', 'University Librarian', 'librarian@afued.edu.ng', 'Owerri', 'Nigeria', 'active', true, 'Founding member of the AFUED Library Consortium.'
-WHERE NOT EXISTS (SELECT 1 FROM public.consortium_members WHERE short_code = 'AFUED');
+SELECT 'Alvan Ikoku Federal University of Education', 'ESUT', 'University Librarian', 'librarian@esut.edu.ng', 'Owerri', 'Nigeria', 'active', true, 'Founding member of the ESUT Library Consortium.'
+WHERE NOT EXISTS (SELECT 1 FROM public.consortium_members WHERE short_code = 'ESUT');

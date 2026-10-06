@@ -120,13 +120,13 @@ Base commit: `854d15e`. Generated: 2026-09-27. Live target: `virtuallibrary.esut
 | Turnstile disabled pending keys | `src/server/security/turnstile.ts:20-23` |
 | `src/views` dead code | `tsconfig.json:54`; 10 legacy tables queried only from there |
 | 3D/labels overflow, hold checkout, barcode, stats, staging dupes, harvest, AI agent workers, Take-A-Break | issues-to-fix.md #5,13,14,15,16,17,18,19,21 (open) |
-| AFUED/OGBL rebrand (#8) | belongs to AFUED project — skipped here, but see NEW-1 below (ESUT repo leaks AFUED domain) |
+| ESUT/OGBL rebrand (#8) | belongs to ESUT project — skipped here, but see NEW-1 below (ESUT repo leaks ESUT domain) |
 
 ### 12. Additional gaps independently discovered
 
 | # | Gap | Severity | Evidence |
 |---|---|---|---|
-| NEW-1 | **Sitemap advertises another institution's domain**: every `<loc>` uses `https://afuedlibrary.org.ng/` while robots.txt points to `esutlibrary.edu.ng` and OAI BASE_URL uses a 4th host `library.esut.edu.ng` | HIGH | `public/sitemap.xml:5+`, `public/robots.txt`, `supabase/functions/oai-pmh/index.ts:4`, `app/repository-sitemap.xml/route.ts:8` |
+| NEW-1 | **Sitemap advertises another institution's domain**: every `<loc>` uses `https://virtuallibrary.esut.edu.ng/` while robots.txt points to `esutlibrary.edu.ng` and OAI BASE_URL uses a 4th host `library.esut.edu.ng` | HIGH | `public/sitemap.xml:5+`, `public/robots.txt`, `supabase/functions/oai-pmh/index.ts:4`, `app/repository-sitemap.xml/route.ts:8` |
 | NEW-2 | **5 IR tables with zero RLS** | CRITICAL | `20260705120000_catalog_ir_separation.sql:6,33,43,54,64` |
 | NEW-3 | **Production DB credentials committed in tracked files** | HIGH | `check_jobs.js:3`, `check_schema.js:3` (both in `git ls-files`) |
 | NEW-4 | **OAI-PMH has 14 concrete bugs** even if exposed (see Part II §A) | HIGH | `supabase/functions/oai-pmh/index.ts` |
@@ -185,7 +185,7 @@ Rule (next-prompt.md): no wave advances while migrations/build/tests fail.
 | Handle | **PARTIAL** | local mint `moduleSeparation.ts:34`; column `…20260925120000…sql:4`; no handle.net | LOW | Document local-namespace policy; register at handle.net when ready |
 | ORCID | **IMPLEMENTED** | v3.0 API validation `RepositorySubmit.tsx:30-45,96-115`; edge `publication-fetch/index.ts:103-140,289-322`; DB `orcid_id`/`orcid_verified` | — | Keep; move server-side later to avoid browser CORS/PII exposure |
 | Federated discovery | **IMPLEMENTED** | 14 real adapters `adapters.ts:26-442`; `app/api/search/resources/route.ts:79-146`; rate-limited 20/hr | — | Keep; retire orphan edge fns |
-| Robots/sitemap | **BROKEN** | `public/sitemap.xml:5` = `afuedlibrary.org.ng`; robots → `esutlibrary.edu.ng`; `app/repository-sitemap.xml/route.ts:8` = `esutlibrary.edu.ng`; OAI host = `library.esut.edu.ng` | HIGH | Pick canonical base URL (env `NEXT_PUBLIC_SITE_URL`), regenerate sitemap, unify all four |
+| Robots/sitemap | **BROKEN** | `public/sitemap.xml:5` = `virtuallibrary.esut.edu.ng`; robots → `esutlibrary.edu.ng`; `app/repository-sitemap.xml/route.ts:8` = `esutlibrary.edu.ng`; OAI host = `library.esut.edu.ng` | HIGH | Pick canonical base URL (env `NEXT_PUBLIC_SITE_URL`), regenerate sitemap, unify all four |
 
 ### B. Repository & preservation
 
@@ -241,7 +241,7 @@ Rule (next-prompt.md): no wave advances while migrations/build/tests fail.
 ## Part III — Severity rollup
 
 **CRITICAL:** (1) 5 IR tables without RLS; (2) OAI-PMH advertised but non-existent while docs claim "Complete".
-**HIGH:** committed DB credentials; IrDeposit broken inserts; sitemap/robots/OAI host domain split (AFUED leak); dual role system; `researcher_teaching` no DDL; Z39.50 mocked-as-real; open mutating routes; no migration runner; embargo not enforced; no fixity.
+**HIGH:** committed DB credentials; IrDeposit broken inserts; sitemap/robots/OAI host domain split (ESUT leak); dual role system; `researcher_teaching` no DDL; Z39.50 mocked-as-real; open mutating routes; no migration runner; embargo not enforced; no fixity.
 **MEDIUM:** admin analytics mocked; repository versioning broken; FTS unused; AI endpoints unprotected; rate limits single-instance; permissive RLS leftovers; stale types; build ignores errors; agent job whitelist 8/10; no observability; no feature flags.
 **LOW:** orphan edge fns; dead `src/views`; "Coming Soon" pages; Turnstile dead config; missing docs (standards conformance, per-protocol pages).
 

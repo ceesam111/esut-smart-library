@@ -5,7 +5,7 @@ I want you to do a deep check and deep research to fix these production issues o
 5.All resources should be labelled appropriately with their corresponding name e.g a journal should not be lablelled as ebook, and we notice some of the 3D ebooks displayed has their name or description over flowing horizontally from the 3D figure or book
 6. PDF Upload Failed saying Submission Failed, ,bucket not found ...on the project of thesis or resources upload page
 7.The research profile and supervised theses menu belong to lecturer or Researchers. It does not belong to student. Hence must be removed from  student dashboard
-8. Replace every OGBL Related Demo data in the app and databases with AFUED
+8. Replace every OGBL Related Demo data in the app and databases with ESUT
 9. The Repository page header text is not showing or visible or displaying properly
 10.Lyria (AI Reference Librarian ) is not working, saying temporarily unavailable
 11.News Items Under News Index does not have date
@@ -65,7 +65,7 @@ Open items (need user action):
 
 1. ~~**Lexis limited-mode**~~ — resolved in part 2: free-tier `GEMINI_API_KEY`/`GROQ_API_KEY` added to `/root/esut-extra.env`, Lexis now answers via Gemini. Vercel AI Gateway still has no credit (harmless fallback).
 2. ~~Cloudflare Turnstile: no site/secret keys exist yet~~ — resolved in part 2: keys configured, site key served, verify endpoint rejects bad tokens with the real Cloudflare code.
-3. AFUED domain Cloudflare 403 (Under Attack / Bot Fight Mode) must be disabled by the account owner.
+3. ESUT domain Cloudflare 403 (Under Attack / Bot Fight Mode) must be disabled by the account owner.
 4. Remaining items from the numbered list above (ILS loan, search ranking across sources, statistics, harvest, reserved-books workflow, etc.) not touched in this session — PDF bucket (issue 6) and Lyria voice (issue 10) fixed in part 2. ISSUE 22: MyProfile photo limits now fixed (max 150 KB, no 50 KB minimum; using shared `readProfilePhoto` helper).
 5. `npm run lint` still broken locally (pre-existing); project folder name `ESUT SMART LIBRARY` does not match the DWC registry slug `esut-smart-library`.
 

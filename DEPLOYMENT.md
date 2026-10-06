@@ -115,7 +115,7 @@ Update your Supabase project settings:
    - Redirect URLs: Add `https://esutlibrary.edu.ng/**`
 
 2. **Authentication > Email Templates**:
-   - Update all templates to reference "ESUT Library" instead of "AFUED Library"
+   - Update all templates to reference "ESUT Library" instead of "ESUT Library"
 
 ## Worker Service (Optional)
 
@@ -142,5 +142,5 @@ Run Supabase migrations in order:
 - [ ] Test email notifications
 - [ ] Verify file uploads work (if B2 configured)
 - [ ] Check responsive design on mobile
-- [ ] Verify all AFUED branding is removed
+- [ ] Verify all ESUT branding is removed
 - [ ] Test the AI librarian (Lexis)

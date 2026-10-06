@@ -53,5 +53,5 @@
     <rect x="743" y="247" width="74" height="77" rx="10" fill="#123c2b"/>
   </g>
   <path d="M495 266c43-34 86-34 129 0 43-34 86-34 129 0" stroke="#fff7dc" stroke-width="16" fill="none" stroke-linecap="round"/>
-  <text x="600" y="368" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#174f38">AFUED Smart Library</text>
+  <text x="600" y="368" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#174f38">ESUT Smart Library</text>
 </svg>
