@@ -7,7 +7,7 @@ import { institutionConfig } from '@config/institution.config';
 interface Item {
   id: string;
   title: string;
-  authors: any;
+  authors: unknown;
   isbn: string | null;
   publisher: string | null;
   year: number | null;
@@ -34,9 +34,9 @@ const ALL_LIBRARIES = [
   ...institutionConfig.facultyLibraries.map(l => ({ code: l.code, name: l.name })),
 ];
 
-function authorList(authors: any): string {
+function authorList(authors: unknown): string {
   if (!authors) return '';
-  if (Array.isArray(authors)) return authors.map((a: any) => typeof a === 'string' ? a : a?.name).filter(Boolean).join(', ');
+  if (Array.isArray(authors)) return authors.map((a: unknown) => typeof a === 'string' ? a : (a as { name?: string })?.name).filter(Boolean).join(', ');
   return String(authors);
 }
 
@@ -104,7 +104,7 @@ export default function CatalogueAdopt() {
     if (error) { setMsg(`Error: ${error.message}`); return; }
     setMsg('Local holding added — this branch now holds a copy of the shared record.');
     setHolding(h => ({ ...h, location: '', shelf_location: '', barcode: '' }));
-    openRecord({ ...selected, total_copies: (selected.total_copies ?? 0) + 1 });
+    void openRecord({ ...selected, total_copies: (selected.total_copies ?? 0) + 1 });
   };
 
   if (!canCatalogue) {

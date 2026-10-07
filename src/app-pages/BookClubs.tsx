@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
@@ -24,6 +24,21 @@ interface Post {
   body: string;
   created_at: string;
   replies?: Post[];
+}
+
+interface SessionUser {
+  id: string;
+  email?: string;
+}
+
+interface PatronProfile {
+  full_name?: string | null;
+  faculty_code?: string | null;
+}
+
+interface ClubMember {
+  user_id: string;
+  patron_name?: string | null;
 }
 
 function timeAgo(d: string) {
@@ -92,11 +107,11 @@ export default function BookClubs() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [activeClub, setActiveClub] = useState<Club | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<ClubMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingClub, setLoadingClub] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [patron, setPatron] = useState<any>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [patron, setPatron] = useState<PatronProfile | null>(null);
   const [isMember, setIsMember] = useState(false);
   const [joining, setJoining] = useState(false);
   const [newPost, setNewPost] = useState('');
@@ -117,16 +132,10 @@ export default function BookClubs() {
       setClubs(data ?? []);
       setLoading(false);
     };
-    init();
+    void init();
   }, []);
 
-  useEffect(() => {
-    if (!activeClubId) { setActiveClub(null); return; }
-    const club = clubs.find(c => c.id === activeClubId);
-    if (club) openClub(club);
-  }, [activeClubId, clubs]);
-
-  const openClub = async (club: Club) => {
+  const openClub = useCallback(async (club: Club) => {
     setActiveClub(club);
     setLoadingClub(true);
     setSearchParams({ club: club.id });
@@ -152,7 +161,13 @@ export default function BookClubs() {
       setIsMember(mems?.some(m => m.user_id === user.id) ?? false);
     }
     setLoadingClub(false);
-  };
+  }, [setSearchParams, user]);
+
+  useEffect(() => {
+    if (!activeClubId) { setActiveClub(null); return; }
+    const club = clubs.find(c => c.id === activeClubId);
+    if (club && activeClub?.id !== club.id) void openClub(club);
+  }, [activeClubId, clubs, openClub, activeClub]);
 
   const joinClub = async () => {
     if (!user || !activeClub) return;
@@ -223,7 +238,7 @@ export default function BookClubs() {
       });
       setShowCreateModal(false);
       setForm({ name: '', description: '', faculty_code: '' });
-      openClub(data);
+      await openClub(data);
     }
     setCreating(false);
   };

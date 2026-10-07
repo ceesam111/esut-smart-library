@@ -40,7 +40,7 @@ export default function AdminWebometrics() {
   const [savedMsg, setSavedMsg]   = useState('');
   const [loading, setLoading]     = useState(true);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const load = async () => {
     setLoading(true);

@@ -16,7 +16,7 @@ export default function StudyBreakButton({
 
   const go = () => {
     sessionStorage.setItem('studyBreakReturn', location.pathname + location.search);
-    navigate('/wellbeing?tab=games');
+    void navigate('/wellbeing?tab=games');
   };
 
   return (

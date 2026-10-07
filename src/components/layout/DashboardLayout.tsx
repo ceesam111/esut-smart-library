@@ -35,9 +35,8 @@ export default function DashboardLayout() {
 
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      await supabase.auth.signOut();
-      navigate('/login');
+    timerRef.current = setTimeout(() => {
+      void supabase.auth.signOut().then(() => navigate('/login'));
     }, INACTIVITY_MS);
   }, [navigate]);
 
@@ -146,7 +145,7 @@ export default function DashboardLayout() {
               <Link to="/dashboard/settings" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50">Settings</Link>
               <hr className="my-1 border-neutral-100" />
               <button
-                onClick={async () => { await supabase.auth.signOut(); navigate('/login'); }}
+                onClick={async () => { await supabase.auth.signOut(); await navigate('/login'); }}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
               >
                 Sign Out

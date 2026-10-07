@@ -49,7 +49,7 @@ export default function SupervisorTheses() {
   useEffect(() => {
     void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { void navigate('/login'); return; }
       setSupervisorEmail(user.email ?? '');
 
       // Find theses where this user is a supervisor by email

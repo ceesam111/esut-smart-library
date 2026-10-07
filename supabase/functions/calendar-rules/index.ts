@@ -48,8 +48,8 @@ Deno.serve(async (req: Request) => {
     const today = new Date().toISOString().slice(0, 10);
     const rules: string[] = [];
 
-    const between = (s: string | null, e: string | null) =>
-      !!(s && e && today >= s && today <= e);
+    
+      if (!(s && e && today >= s && today <= e)) return false;
     const isToday = (d: string | null) => d === today;
 
     // ── Rule 1: Exam period starts → suspend fines + extend loans ──────────
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
 
       const patronMap = new Map<string, string[]>();
       for (const loan of activeLoans ?? []) {
-        const title = (loan.catalogue_items as any)?.title ?? "Unknown Item";
+        const title = (loan.catalogue_items as { title?: string } | null)?.title ?? "Unknown Item";
         if (!patronMap.has(loan.patron_id)) patronMap.set(loan.patron_id, []);
         patronMap.get(loan.patron_id)!.push(title);
       }

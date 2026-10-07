@@ -165,7 +165,7 @@ export default function LecturerProfile() {
   const [grants, setGrants] = useState<Grant[]>([]);
   const [showPubForm, setShowPubForm] = useState(false);
   const [showGrantForm, setShowGrantForm] = useState(false);
-  const [editPubIdx, setEditPubIdx] = useState<number | null>(null);
+  
   const [pubForm, setPubForm] = useState<Publication>({ title: '', authors: [''], year: '', publication_type: 'journal', journal_or_publisher: '', volume: '', issue: '', pages: '', doi: '' });
   const [grantForm, setGrantForm] = useState<Grant>({ title: '', funding_body: '', amount: '', year: '', role: '' });
 
@@ -203,7 +203,7 @@ export default function LecturerProfile() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { void navigate('/login'); return; }
 
       const { data: patronData } = await supabase
         .from('patrons')
@@ -261,7 +261,7 @@ export default function LecturerProfile() {
       }
       setLoading(false);
     };
-    load();
+    void load();
   }, [navigate]);
 
   // ── Progress calculation ───────────────────────────────────────────────────
@@ -294,7 +294,7 @@ export default function LecturerProfile() {
 
   const saveProfile = useCallback(async (asSubmit = false) => {
     if (!patronId) return;
-    asSubmit ? setSubmitting(true) : setSaving(true);
+    if (asSubmit) { setSubmitting(true); } else { setSaving(true); }
 
     const slug = profileId
       ? undefined

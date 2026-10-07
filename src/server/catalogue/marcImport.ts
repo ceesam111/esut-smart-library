@@ -93,7 +93,7 @@ export async function stageMarcRecord(input: {
     authors,
     isbn,
     issn,
-    validation_result: validation as any,
+    validation_result: validation as unknown,
     duplicate_status: duplicateStatus.status,
     duplicate_candidates: duplicateStatus.candidates as unknown as Record<string, unknown>[],
     status,

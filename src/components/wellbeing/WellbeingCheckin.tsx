@@ -9,6 +9,17 @@ interface Msg {
   content: string;
 }
 
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+};
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
 export default function WellbeingCheckin({ topic }: { topic: string }) {
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -25,7 +36,7 @@ export default function WellbeingCheckin({ topic }: { topic: string }) {
 
   const playRelaxationMusic = () => {
     musicStopRef.current?.();
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     const gain = ctx.createGain();
     gain.gain.value = 0.05;
     gain.connect(ctx.destination);
@@ -43,7 +54,7 @@ export default function WellbeingCheckin({ topic }: { topic: string }) {
     setMusicPlaying(true);
     musicStopRef.current = () => {
       window.clearInterval(interval);
-      ctx.close();
+      void ctx.close();
       setMusicPlaying(false);
     };
   };
@@ -74,8 +85,8 @@ export default function WellbeingCheckin({ topic }: { topic: string }) {
       const reply = (data.reply as string) || "I'm here with you. Tell me a little more.";
       setMessages((m) => [...m, { role: 'assistant', content: reply }]);
       setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
-    } catch (e: any) {
-      setError(e.message ?? 'Something went wrong. Please try again.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -144,11 +155,12 @@ function MicButton({ onTranscript, disabled }: { onTranscript: (text: string) =>
   const supported = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
   const start = useCallback(() => {
     if (!supported || disabled) return;
-    const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    const SR = (window as unknown as { SpeechRecognition?: SpeechRecognitionCtor }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition;
+    if (!SR) return;
     const recognition = new SR();
     recognition.lang = 'en-NG';
     recognition.interimResults = false;
-    recognition.onresult = (event: any) => onTranscript(event.results[0][0].transcript);
+    recognition.onresult = (event) => onTranscript(event.results[0][0].transcript);
     recognition.onend = () => setRecording(false);
     recognition.onerror = () => setRecording(false);
     recognition.start();

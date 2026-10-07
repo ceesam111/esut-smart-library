@@ -12,9 +12,9 @@ interface Database {
   provider: string;
   type: string;
   coverage: string;
-  subjects: any;
+  subjects: unknown;
   access_type: string;
-  faculty_codes: any;
+  faculty_codes: unknown;
   is_active: boolean;
   logo_url: string | null;
   subject_tags: string[] | null;
@@ -65,7 +65,7 @@ export default function Databases() {
   const [subjectTagInput, setSubjectTagInput] = useState('');
 
   useEffect(() => {
-    loadAll();
+    void loadAll();
   }, []);
 
   async function loadAll() {
@@ -131,7 +131,7 @@ export default function Databases() {
     else await supabase.from('databases').insert(payload);
     setSaving(false);
     setView('list');
-    loadAll();
+    void loadAll();
   }
 
   async function remove(id: string) {
@@ -139,7 +139,7 @@ export default function Databases() {
     setDatabases((current) => current.filter((db) => db.id !== id));
     saveLocalArray(LOCAL_DATABASES_KEY, loadLocalArray<Database>(LOCAL_DATABASES_KEY).filter((db) => db.id !== id));
     await supabase.from('databases').delete().eq('id', id);
-    loadAll();
+    void loadAll();
   }
 
   async function updateRequest(id: string, status: string) {

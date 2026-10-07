@@ -202,7 +202,7 @@ export default function Categories() {
       setCounts(map);
       setLoading(false);
     }
-    load();
+    void load();
   }, []);
 
   return (

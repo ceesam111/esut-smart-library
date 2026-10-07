@@ -1,6 +1,6 @@
 import { ZenodoDoiProvider } from './zenodo';
 import { LocalHandleProvider } from './handle';
-import type { DoiProvider, HandleProvider, IdentifierStatus } from './types';
+import type { DoiProvider, HandleProvider } from './types';
 
 export { ZenodoDoiProvider } from './zenodo';
 export { LocalHandleProvider } from './handle';

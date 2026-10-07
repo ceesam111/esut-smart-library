@@ -298,6 +298,18 @@ export const standardEbooksAdapter: ResourceAdapter = {
   },
 };
 
+type EsummaryAuthor = { name?: string };
+
+type EsummaryRecord = {
+  title?: string;
+  authors?: EsummaryAuthor[];
+  fulljournalname?: string;
+  source?: string;
+  pubdate?: string;
+  elocationid?: string;
+  issn?: string;
+};
+
 export const pubMedAdapter: ResourceAdapter = {
   name: 'PubMed',
   sourceType: 'pubmed',
@@ -309,7 +321,7 @@ export const pubMedAdapter: ResourceAdapter = {
     const ids = search.esearchresult?.idlist ?? [];
     if (!ids.length) return [];
     const [summary, abstractsXml] = await Promise.all([
-      fetchJson<{ result?: Record<string, any> }>(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json&tool=${encodeURIComponent(options?.apiKeys?.NCBI_TOOL || 'ESUTSmartLibrary')}&email=${email}${key}`, { signal: options?.signal }),
+      fetchJson<{ result?: Record<string, EsummaryRecord> }>(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json&tool=${encodeURIComponent(options?.apiKeys?.NCBI_TOOL || 'ESUTSmartLibrary')}&email=${email}${key}`, { signal: options?.signal }),
       fetchText(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(',')}&retmode=xml&tool=${encodeURIComponent(options?.apiKeys?.NCBI_TOOL || 'ESUTSmartLibrary')}&email=${email}${key}`, { signal: options?.signal, timeoutMs: 10000 }).catch(() => ''),
     ]);
     const abstractsById = new Map([...abstractsXml.matchAll(/<PubmedArticle>[\s\S]*?<PMID[^>]*>(\d+)<\/PMID>[\s\S]*?<AbstractText[^>]*>([\s\S]*?)<\/AbstractText>[\s\S]*?<\/PubmedArticle>/g)].map((m) => [m[1], m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()]));
@@ -345,7 +357,7 @@ export const pmcAdapter: ResourceAdapter = {
     const ids = search.esearchresult?.idlist ?? [];
     if (!ids.length) return [];
     const [summary, fullXml] = await Promise.all([
-      fetchJson<{ result?: Record<string, any> }>(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pmc&id=${ids.join(',')}&retmode=json&tool=${encodeURIComponent(options?.apiKeys?.NCBI_TOOL || 'ESUTSmartLibrary')}&email=${email}${key}`, { signal: options?.signal }),
+      fetchJson<{ result?: Record<string, EsummaryRecord> }>(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pmc&id=${ids.join(',')}&retmode=json&tool=${encodeURIComponent(options?.apiKeys?.NCBI_TOOL || 'ESUTSmartLibrary')}&email=${email}${key}`, { signal: options?.signal }),
       fetchText(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=${ids.join(',')}&retmode=xml&tool=${encodeURIComponent(options?.apiKeys?.NCBI_TOOL || 'ESUTSmartLibrary')}&email=${email}${key}`, { signal: options?.signal, timeoutMs: 10000 }).catch(() => ''),
     ]);
     return ids.map((id): ResourceCandidate | null => {
@@ -422,10 +434,20 @@ export const unpaywallDoiAdapter: ResourceAdapter = {
   },
 };
 
+type UnpaywallLocation = {
+  url_for_pdf?: string;
+  url?: string;
+  license?: string;
+};
+
+type UnpaywallResponse = {
+  best_oa_location?: UnpaywallLocation;
+};
+
 export async function enrichWithUnpaywall(candidate: ResourceCandidate, email = process.env.UNPAYWALL_EMAIL || 'library@esut.edu.ng') {
   if (!candidate.doi || candidate.download_url || candidate.rights_status === 'open') return candidate;
   try {
-    const data = await fetchJson<Record<string, any>>(`https://api.unpaywall.org/v2/${encodeURIComponent(candidate.doi)}?email=${encodeURIComponent(email)}`);
+    const data = await fetchJson<UnpaywallResponse>(`https://api.unpaywall.org/v2/${encodeURIComponent(candidate.doi)}?email=${encodeURIComponent(email)}`);
     const best = data.best_oa_location;
     if (!best?.url_for_pdf && !best?.url) return candidate;
     return {

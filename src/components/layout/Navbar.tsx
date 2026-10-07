@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import type { User } from '@supabase/supabase-js';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import NotificationBell from '@/components/NotificationBell';
@@ -267,13 +268,18 @@ function Divider() {
 
 // ── Main Navbar ───────────────────────────────────────────────────────────────
 
+interface NavbarPatron {
+  full_name?: string | null;
+  profile_photo_url?: string | null;
+}
+
 export default function Navbar() {
   const [scrolled, setScrolled]       = useState(false);
   const [openMenu, setOpenMenu]       = useState<string | null>(null);
   const [mobileOpen, setMobileOpen]   = useState(false);
   const [mobileSection, setMobileSection] = useState<string | null>(null);
-  const [user, setUser]               = useState<any>(null);
-  const [patron, setPatron]           = useState<any>(null);
+  const [user, setUser]               = useState<User | null>(null);
+  const [patron, setPatron]           = useState<NavbarPatron | null>(null);
   const [role, setRole]               = useState<AppRole | null>(null);
   const [userDropOpen, setUserDropOpen] = useState(false);
   const location = useLocation();
@@ -309,13 +315,13 @@ export default function Navbar() {
       setRole(priority.find((candidate) => roles.includes(candidate)) ?? (hasAccess ? (patronData?.account_role as AppRole | null) : null) ?? null);
     };
 
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
+    void supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u ?? null);
-      if (u) loadAccount(u.id);
+      if (u) void loadAccount(u.id);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_evt, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) loadAccount(session.user.id);
+      if (session?.user) void loadAccount(session.user.id);
       if (!session?.user) {
         setPatron(null);
         setRole(null);
@@ -326,7 +332,7 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate('/login');
+    await navigate('/login');
   };
 
   const dashboardPath = getDashboardPath(role);

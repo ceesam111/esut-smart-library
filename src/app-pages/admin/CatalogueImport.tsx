@@ -72,7 +72,7 @@ export default function CatalogueImport() {
     }
   }, []);
 
-  useEffect(() => { loadBatches(); }, [loadBatches]);
+  useEffect(() => { void loadBatches(); }, [loadBatches]);
 
   const onDrop = useCallback((files: File[]) => {
     const file = files[0];
@@ -158,7 +158,7 @@ export default function CatalogueImport() {
         body: JSON.stringify({ filename, rows: validRows, includeWarnings }),
       });
       setMessage(`${result.stagedRows} rows staged — ${result.cleanMatches} clean matches ready to approve, ${result.needsReview} need review.`);
-      navigate(`/admin/catalogue/import/${result.batch.id}`);
+      void navigate(`/admin/catalogue/import/${result.batch.id}`);
       await loadBatches();
     } catch (error) {
       setMessage((error as Error).message);

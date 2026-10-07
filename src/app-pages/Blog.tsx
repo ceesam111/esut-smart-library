@@ -45,34 +45,37 @@ export default function Blog() {
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
 
-  useEffect(() => { loadCategories(); }, []);
-  useEffect(() => { loadPosts(); }, [page, category]);
+  useEffect(() => {
+    const loadCategories = async () => {
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('category')
+        .eq('status', 'published')
+        .not('category', 'is', null);
+      const unique = [...new Set((data ?? []).map(r => r.category).filter(Boolean))].sort();
+      setCategories(unique);
+    };
+    void loadCategories();
+  }, []);
 
-  async function loadCategories() {
-    const { data } = await supabase
-      .from('blog_posts')
-      .select('category')
-      .eq('status', 'published')
-      .not('category', 'is', null);
-    const unique = [...new Set((data ?? []).map(r => r.category).filter(Boolean))].sort();
-    setCategories(unique);
-  }
+  useEffect(() => {
+    const loadPosts = async () => {
+      setLoading(true);
+      let query = supabase
+        .from('blog_posts')
+        .select('id, slug, title, excerpt, cover_image_url, cover_image, author, published_date, created_at, category, tags', { count: 'exact' })
+        .eq('status', 'published')
+        .order('published_date', { ascending: false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
-  async function loadPosts() {
-    setLoading(true);
-    let query = supabase
-      .from('blog_posts')
-      .select('id, slug, title, excerpt, cover_image_url, cover_image, author, published_date, created_at, category, tags', { count: 'exact' })
-      .eq('status', 'published')
-      .order('published_date', { ascending: false })
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-
-    if (category) query = query.eq('category', category);
-    const { data, count } = await query;
-    setPosts(data ?? []);
-    setTotal(count ?? 0);
-    setLoading(false);
-  }
+      if (category) query = query.eq('category', category);
+      const { data, count } = await query;
+      setPosts(data ?? []);
+      setTotal(count ?? 0);
+      setLoading(false);
+    };
+    void loadPosts();
+  }, [page, category]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const coverOf = (p: BlogPost) => p.cover_image_url || p.cover_image;

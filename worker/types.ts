@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export interface AgentJob {
   id: string;
   tenant_id: string;
@@ -21,7 +23,7 @@ export interface AgentJob {
 }
 
 export interface HandlerContext {
-  supabase: any;
+  supabase: SupabaseClient;
   workerId: string;
   signal: AbortSignal;
 }

@@ -47,10 +47,14 @@ interface BudgetWithSpent extends Budget {
   spent: number;
 }
 
+interface POAggRow {
+  faculty_code: string | null;
+  purchase_order_items: { quantity: number; unit_price: number }[] | null;
+}
+
 type Tab = 'recommendations' | 'suppliers' | 'orders' | 'invoices' | 'budget';
 
 const FISCAL_YEAR = '2025/2026';
-const FORMATS = ['Book', 'E-Book', 'Journal', 'Thesis', 'Report', 'Map', 'Video', 'Audio', 'Dataset'];
 const URGENCY_COLORS: Record<string, string> = {
   low: 'bg-neutral-100 text-neutral-600',
   normal: 'bg-primary-50 text-primary-700',
@@ -179,7 +183,7 @@ function RecommendationsTab() {
     setLoading(false);
   }, [statusFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const review = async (id: string, status: string) => {
     setSaving(true);
@@ -189,7 +193,7 @@ function RecommendationsTab() {
     setSaving(false);
     setSelected(null);
     setReviewNote('');
-    load();
+    await load();
   };
 
   const markReceived = (rec: Recommendation) => {
@@ -352,7 +356,7 @@ function SuppliersTab() {
     setSuppliers(data ?? []);
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const openNew = () => { setEditing(null); setForm(blank); setShowForm(true); };
   const openEdit = (s: Supplier) => {
@@ -373,12 +377,12 @@ function SuppliersTab() {
     }
     setSaving(false);
     setShowForm(false);
-    load();
+    await load();
   };
 
   const toggleActive = async (s: Supplier) => {
     await supabase.from('acquisition_suppliers').update({ is_active: !s.is_active }).eq('id', s.id);
-    load();
+    await load();
   };
 
   return (
@@ -514,7 +518,7 @@ function PurchaseOrdersTab() {
     setLoading(false);
   }, [statusFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const poTotal = (items: POItem[]) =>
     items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
@@ -549,12 +553,12 @@ function PurchaseOrdersTab() {
     setSaving(false);
     setShowCreate(false);
     setForm(blankForm);
-    load();
+    await load();
   };
 
   const updatePOStatus = async (id: string, status: string) => {
     await supabase.from('purchase_orders').update({ status }).eq('id', id);
-    load();
+    await load();
   };
 
   return (
@@ -760,7 +764,7 @@ function InvoicesTab() {
     setOrders(pos ?? []);
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const save = async () => {
     if (!form.invoice_number.trim() || !form.amount) return;
@@ -774,14 +778,14 @@ function InvoicesTab() {
     setSaving(false);
     setShowForm(false);
     setForm(blank);
-    load();
+    await load();
   };
 
   const updateStatus = async (id: string, payment_status: string, payment_date?: string) => {
     await supabase.from('supplier_invoices').update({
       payment_status, payment_date: payment_date ?? new Date().toISOString().slice(0, 10),
     }).eq('id', id);
-    load();
+    await load();
   };
 
   return (
@@ -910,15 +914,15 @@ function BudgetTab() {
       supabase.from('acquisition_budgets').select('*').eq('fiscal_year', year).order('faculty_code'),
       supabase.from('purchase_orders')
         .select('faculty_code, purchase_order_items(quantity, unit_price)')
-        .not('status', 'eq', 'cancelled') as any,
+        .not('status', 'eq', 'cancelled') as unknown as PromiseLike<{ data: POAggRow[] | null }>,
     ]);
 
     // Compute spent per faculty from PO totals
     const spentMap: Record<string, number> = {};
-    (pos ?? []).forEach((po: any) => {
+    (pos ?? []).forEach((po) => {
       const fc = po.faculty_code ?? 'GENERAL';
       const poTotal = (po.purchase_order_items ?? []).reduce(
-        (s: number, i: any) => s + i.quantity * i.unit_price, 0
+        (s, i) => s + i.quantity * i.unit_price, 0
       );
       spentMap[fc] = (spentMap[fc] ?? 0) + poTotal;
     });
@@ -927,7 +931,7 @@ function BudgetTab() {
     setLoading(false);
   }, [year]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const openEdit = (b: Budget) => {
     setEditing(b);
@@ -953,7 +957,7 @@ function BudgetTab() {
     setShowForm(false);
     setEditing(null);
     setForm(blank);
-    load();
+    await load();
   };
 
   const totalBudget = budgets.reduce((s, b) => s + b.total_amount, 0);

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -70,6 +69,20 @@ interface AgentSchedule {
   last_run_at: string | null;
 }
 
+interface AgentMetrics {
+  jobs24h?: number;
+  running?: number;
+  failedOpen?: number;
+  aiUsage24h?: {
+    calls?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    estimatedCost?: number;
+    byAgent?: Record<string, unknown>;
+  };
+  error?: string;
+}
+
 const AGENTS = [
   { name: 'Cardo', area: 'Catalogue Intelligence', jobType: 'catalogue.enrich', description: 'Enriches catalogue staging rows and prepares import records for librarian review.' },
   { name: 'Hari', area: 'Resource Discovery', jobType: 'resources.harvest', description: 'Queues open-access resource discovery and legal-resource ingestion workflows.' },
@@ -107,7 +120,7 @@ export default function Agents() {
   const [settings, setSettings] = useState<AgentSetting[]>([]);
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
   const [schedules, setSchedules] = useState<AgentSchedule[]>([]);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<AgentMetrics | null>(null);
   const [health, setHealth] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
@@ -162,7 +175,7 @@ export default function Agents() {
     }
   }, [canControlQueue]);
 
-  useEffect(() => { if (!authLoading) load(); }, [authLoading, load]);
+  useEffect(() => { if (!authLoading) void load(); }, [authLoading, load]);
 
   const counts = useMemo(() => {
     const byStatus = jobs.reduce<Record<string, number>>((acc, job) => {

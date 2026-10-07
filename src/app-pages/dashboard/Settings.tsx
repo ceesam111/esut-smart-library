@@ -33,7 +33,7 @@ export default function Settings() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { void navigate('/login'); return; }
 
       const { data } = await supabase
         .from('patrons')
@@ -68,7 +68,7 @@ export default function Settings() {
       }
       setLoading(false);
     };
-    load();
+    void load();
   }, [navigate]);
 
   const downloadMyData = async () => {

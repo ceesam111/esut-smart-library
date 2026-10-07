@@ -70,7 +70,7 @@ export default function ResetPassword() {
 
     if (err) { setError(err.message); return; }
     setSuccess(true);
-    setTimeout(() => navigate('/login'), 1500);
+    setTimeout(() => { void navigate('/login'); }, 1500);
   }
 
   return (

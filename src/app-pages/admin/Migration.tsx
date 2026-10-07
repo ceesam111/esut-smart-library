@@ -50,8 +50,8 @@ async function readZipEntries(buffer: ArrayBuffer): Promise<Map<string, string>>
           const ds = new DecompressionStream('deflate-raw');
           const writer = ds.writable.getWriter();
           const reader = ds.readable.getReader();
-          writer.write(raw);
-          writer.close();
+          await writer.write(raw);
+          await writer.close();
           const chunks: Uint8Array[] = [];
           for (;;) {
             const { done, value } = await reader.read();
@@ -237,7 +237,7 @@ export default function AdminMigration() {
   const [logsLoading, setLogsLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (activeTab === 'history') loadLogs(); }, [activeTab]);
+  useEffect(() => { if (activeTab === 'history') void loadLogs(); }, [activeTab]);
 
   const loadLogs = async () => {
     setLogsLoading(true);
@@ -285,8 +285,8 @@ export default function AdminMigration() {
 
       if (parsed.length === 0) throw new Error('No valid records found in the file.');
       setPreview(parsed);
-    } catch (e: any) {
-      setError(e.message ?? 'Parse error.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Parse error.');
     } finally {
       setParsing(false);
     }
@@ -347,11 +347,12 @@ export default function AdminMigration() {
       setSuccess(`Successfully imported ${preview.length} items.`);
       setPreview([]);
       setFile(null);
-    } catch (e: any) {
+    } catch (e) {
+      const message = e instanceof Error ? e.message : undefined;
       if (logId) {
-        await supabase.from('migration_logs').update({ status: 'failed', error_message: e.message }).eq('id', logId);
+        await supabase.from('migration_logs').update({ status: 'failed', error_message: message }).eq('id', logId);
       }
-      setError(e.message ?? 'Import failed.');
+      setError(message ?? 'Import failed.');
     } finally {
       setImporting(false);
     }
@@ -365,7 +366,7 @@ export default function AdminMigration() {
       return;
     }
     await supabase.from('migration_logs').update({ status: 'failed', error_message: 'Rolled back by admin' }).eq('id', log.id);
-    loadLogs();
+    await loadLogs();
   };
 
   const downloadTemplate = () => {
@@ -501,7 +502,7 @@ export default function AdminMigration() {
                   {preview.slice(0, 10).map((row, i) => (
                     <tr key={i} className="border-b hover:bg-neutral-50">
                       {previewCols.map(col => {
-                        const val = (row as any)[col];
+                        const val = row[col as keyof ParsedItem];
                         const display = Array.isArray(val) ? val.join('; ') : String(val ?? '');
                         return (
                           <td key={col} className="p-2 max-w-xs">

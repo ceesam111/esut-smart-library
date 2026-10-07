@@ -21,15 +21,15 @@ function allSeedEmails(code: TenantCode) {
 for (const code of tenantCodesFromArgs()) {
   const tenant = tenants[code];
   const patrons = await optional("patrons", () => requireNoError(supabase.from("patrons").select("id,user_id").like("patron_id", `${code}-DEMO-%`)));
-  const patronIds = patrons?.map((row: any) => row.id) ?? [];
-  const userIds = patrons?.map((row: any) => row.user_id).filter(Boolean) ?? [];
+  const patronIds = patrons?.map((row: { id: string }) => row.id) ?? [];
+  const userIds = patrons?.map((row: { user_id: string | null }) => row.user_id).filter(Boolean) ?? [];
   const items = await optional("catalogue_items", () => requireNoError(supabase.from("catalogue_items").select("id").eq("tenant_id", tenant.id).eq("source_name", "demo_seed")));
-  const itemIds = items?.map((row: any) => row.id) ?? [];
+  const itemIds = items?.map((row: { id: string }) => row.id) ?? [];
 
   if (patronIds.length) {
     await optional("loan_fines", async () => {
       const loans = (await requireNoError(supabase.from("loans").select("id").in("patron_id", patronIds))) ?? [];
-      if (loans.length) await requireNoError(supabase.from("loan_fines").delete().in("loan_id", loans.map((row: any) => row.id)));
+      if (loans.length) await requireNoError(supabase.from("loan_fines").delete().in("loan_id", loans.map((row: { id: string }) => row.id)));
     });
     for (const table of ["notifications", "event_registrations", "reading_lists", "reservations", "loans", "researchers", "theses", "resource_requests"]) {
       await optional(table, () => requireNoError(supabase.from(table).delete().in("patron_id", patronIds)));

@@ -81,7 +81,7 @@ export default function Dashboard() {
     fines: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [recentLoans, setRecentLoans] = useState<any[]>([]);
+  const [recentLoans, setRecentLoans] = useState<Array<{ id: string; title: string; item_title: string; item_authors: string; due_date: string; status: string }>>([]);
   const [calendar, setCalendar] = useState<CalendarRecord | null>(null);
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function Dashboard() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
-          navigate('/login');
+          void navigate('/login');
           return;
         }
 
@@ -156,7 +156,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchDashboardData();
+    void fetchDashboardData();
   }, [navigate]);
 
   if (loading) {

@@ -18,10 +18,10 @@ async function main() {
   const rows = data ?? [];
   console.log(`${dryRun ? 'DRY RUN:' : 'RUN:'} ${rows.length} catalogue rows match IR migration types.`);
   if (dryRun) {
-    console.table(rows.slice(0, 20).map((row: any) => ({ id: row.id, title: row.title, item_type: row.item_type, year: row.year })));
+    console.table(rows.slice(0, 20).map((row: Record<string, unknown>) => ({ id: row.id, title: row.title, item_type: row.item_type, year: row.year })));
     return;
   }
-  const payload = rows.map((row: any) => ({
+  const payload = rows.map((row: Record<string, unknown>) => ({
     legacy_catalog_id: row.id,
     title: row.title,
     creators: Array.isArray(row.authors) ? row.authors : [row.authors].filter(Boolean),

@@ -99,7 +99,7 @@ export default function Lecturers() {
 
       setLoading(false);
     };
-    load();
+    void load();
   }, []);
 
   const filtered = profiles

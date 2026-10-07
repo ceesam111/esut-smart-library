@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { trackClientEvent } from '@/lib/analytics';
 import { institutionConfig } from '@config/institution.config';
@@ -10,6 +11,81 @@ import BookCover from '@/components/BookCover';
 type CitationStyle = 'APA' | 'Harvard' | 'MLA' | 'Chicago';
 type ActiveTab = 'details' | 'reviews' | 'citations' | 'discussion';
 type CatalogueAction = 'reserve' | 'borrow' | 'return';
+
+interface CatalogueItemData {
+  id: string;
+  title: string;
+  authors: string[] | string | null;
+  year: string | number | null;
+  publisher: string | null;
+  place_of_publication: string | null;
+  edition: string | null;
+  subjects: string[] | null;
+  call_number: string | null;
+  format: string | null;
+  language: string | null;
+  series: string | null;
+  abstract: string | null;
+  physical_description: string | null;
+  notes: string | null;
+  isbn: string | null;
+  cover_image: string | null;
+  faculty_code: string | null;
+  available_copies: number;
+  total_copies: number;
+  download_count: number;
+  view_count: number;
+}
+
+interface CatalogueCopyData {
+  id: string;
+  shelf_location: string | null;
+  shelf_code: string | null;
+  faculty_code: string | null;
+  branch: string | null;
+  status: string;
+}
+
+interface DiscussionData {
+  id: string;
+  patron_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+interface ReviewData {
+  id: string;
+  user_id: string | null;
+  rating: number;
+  body: string | null;
+  patron_name: string | null;
+  created_at: string;
+}
+
+interface PatronData {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  department: string | null;
+  library_number: string | null;
+  patron_id: string | null;
+  faculty_code: string | null;
+  profile_photo_url: string | null;
+  patron_category: string | null;
+}
+
+interface ReadingListData {
+  id: string;
+  name: string;
+}
+
+interface ActiveLoanData {
+  id: string;
+  due_date: string | null;
+  issued_at: string | null;
+  checkout_date: string | null;
+  status: string;
+}
 
 const DEFAULT_CIRCULATION_RULES = {
   reservation_expiry_days: 7,
@@ -32,7 +108,7 @@ function formatDate(date: Date | string | null | undefined) {
   return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function buildCitation(item: any, style: CitationStyle): string {
+function buildCitation(item: CatalogueItemData, style: CitationStyle): string {
   const authors: string[] = Array.isArray(item.authors) ? item.authors : [item.authors ?? 'Unknown'];
   const year = item.year ?? 'n.d.';
   const title = item.title ?? 'Untitled';
@@ -75,12 +151,12 @@ function Stars({ rating, size = 'md', onClick }: { rating: number; size?: 'sm' |
 export default function CatalogueItem() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<any>(null);
-  const [copies, setCopies] = useState<any[]>([]);
-  const [discussions, setDiscussions] = useState<any[]>([]);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [item, setItem] = useState<CatalogueItemData | null>(null);
+  const [copies, setCopies] = useState<CatalogueCopyData[]>([]);
+  const [discussions, setDiscussions] = useState<DiscussionData[]>([]);
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [avgRating, setAvgRating] = useState(0);
-  const [myReview, setMyReview] = useState<any>(null);
+  const [myReview, setMyReview] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<ActiveTab>('details');
   const [citationStyle, setCitationStyle] = useState<CitationStyle>('APA');
@@ -89,22 +165,21 @@ export default function CatalogueItem() {
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [patron, setPatron] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [patron, setPatron] = useState<PatronData | null>(null);
   // review form
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewBody, setReviewBody] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   // reading list
-  const [readingLists, setReadingLists] = useState<any[]>([]);
+  const [readingLists, setReadingLists] = useState<ReadingListData[]>([]);
   const [addingToList, setAddingToList] = useState(false);
   const [showListMenu, setShowListMenu] = useState(false);
   const [reservationMsg, setReservationMsg] = useState('');
   const [actionModal, setActionModal] = useState<CatalogueAction | null>(null);
   const [submittingAction, setSubmittingAction] = useState(false);
   const [circulationRules, setCirculationRules] = useState(DEFAULT_CIRCULATION_RULES);
-  const [activeLoan, setActiveLoan] = useState<any>(null);
-  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [activeLoan, setActiveLoan] = useState<ActiveLoanData | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -112,7 +187,7 @@ export default function CatalogueItem() {
       if (!data) {
         const { data: migrated } = await supabase.from('repository_items').select('id, handle').or(`legacy_catalog_id.eq.${id},id.eq.${id}`).maybeSingle();
         if (migrated) {
-          navigate(`/repository/${encodeURIComponent(migrated.handle ?? migrated.id)}`, { replace: true });
+          await navigate(`/repository/${encodeURIComponent(migrated.handle ?? migrated.id)}`, { replace: true });
           return;
         }
       }
@@ -150,7 +225,7 @@ export default function CatalogueItem() {
         .order('created_at', { ascending: false });
       setReviews(revs ?? []);
       if (revs && revs.length > 0) {
-        setAvgRating(Math.round((revs.reduce((s: number, r: any) => s + r.rating, 0) / revs.length) * 10) / 10);
+        setAvgRating(Math.round((revs.reduce((s: number, r: ReviewData) => s + r.rating, 0) / revs.length) * 10) / 10);
       }
 
       const { data: { user: u } } = await supabase.auth.getUser();
@@ -158,7 +233,7 @@ export default function CatalogueItem() {
       if (u) {
         const { data: p } = await supabase.from('patrons').select('id, full_name, phone, department, library_number, patron_id, faculty_code, profile_photo_url, patron_category').eq('user_id', u.id).maybeSingle();
         setPatron(p);
-        const existing = revs?.find((r: any) => r.user_id === u.id);
+        const existing = revs?.find((r: ReviewData) => r.user_id === u.id);
         if (existing) { setMyReview(existing); setReviewRating(existing.rating); setReviewBody(existing.body ?? ''); }
         const { data: lists } = await supabase.from('reading_lists').select('id, name').eq('patron_id', p?.id ?? '');
         setReadingLists(lists ?? []);
@@ -181,8 +256,8 @@ export default function CatalogueItem() {
 
       setLoading(false);
     };
-    init();
-  }, [id]);
+    void init();
+  }, [id, navigate]);
 
   const openAction = (action: CatalogueAction) => {
     if (!user) { window.location.href = '/login'; return; }
@@ -206,14 +281,9 @@ export default function CatalogueItem() {
     setReservationMsg(`${label} submitted. A librarian will confirm it. Expiry/collection deadline: ${expires}.`);
   };
 
-  const handleILL = () => {
-    if (!user) { window.location.href = '/login'; return; }
-    window.location.href = `/dashboard/ill?title=${encodeURIComponent(item?.title ?? '')}`;
-  };
-
   const handleCopyDownload = async () => {
-    await supabase.from('catalogue_items').update({ download_count: (item.download_count ?? 0) + 1 }).eq('id', id!);
-    setItem((prev: any) => ({ ...prev, download_count: (prev.download_count ?? 0) + 1 }));
+    await supabase.from('catalogue_items').update({ download_count: (item?.download_count ?? 0) + 1 }).eq('id', id!);
+    setItem((prev) => (prev ? { ...prev, download_count: (prev.download_count ?? 0) + 1 } : prev));
   };
 
   const submitComment = async () => {
@@ -240,7 +310,7 @@ export default function CatalogueItem() {
       item_type: 'catalogue', item_id: id,
       rating: reviewRating, body: reviewBody.trim() || null,
     };
-    let saved: any;
+    let saved: ReviewData;
     if (myReview) {
       const { data } = await supabase.from('reviews').update({ rating: reviewRating, body: reviewBody.trim() || null }).eq('id', myReview.id).select().single();
       saved = data;
@@ -260,12 +330,13 @@ export default function CatalogueItem() {
     if (saved) {
       setMyReview(saved);
       const all = myReview ? reviews.map(r => r.id === myReview.id ? saved : r) : [saved, ...reviews];
-      setAvgRating(Math.round((all.reduce((s: number, r: any) => s + r.rating, 0) / all.length) * 10) / 10);
+      setAvgRating(Math.round((all.reduce((s: number, r: ReviewData) => s + r.rating, 0) / all.length) * 10) / 10);
     }
     setSubmittingReview(false);
   };
 
   const addToReadingList = async (listId: string, listName: string) => {
+    if (!user) return;
     setAddingToList(true);
     await supabase.from('reading_list_items').upsert({
       reading_list_id: listId, catalogue_item_id: id,
@@ -283,7 +354,7 @@ export default function CatalogueItem() {
   };
 
   const copyCitation = () => {
-    navigator.clipboard.writeText(buildCitation(item, citationStyle));
+    void navigator.clipboard.writeText(buildCitation(item!, citationStyle));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -472,7 +543,7 @@ export default function CatalogueItem() {
                     </button>
                     {showListMenu && (
                       <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover border border-neutral-100 z-10 overflow-hidden">
-                        {readingLists.map((l: any) => (
+                        {readingLists.map((l) => (
                           <button key={l.id} onClick={() => addToReadingList(l.id, l.name)}
                             className="w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 text-neutral-700">
                             {l.name}
@@ -677,7 +748,7 @@ export default function CatalogueItem() {
                       ['ISBN', item.isbn], ['Call Number', item.call_number], ['Publisher', item.publisher],
                       ['Place', item.place_of_publication], ['Year', item.year], ['Edition', item.edition],
                       ['Series', item.series], ['Language', item.language],
-                      ['Faculty', item.faculty_code ? institutionConfig.faculties.find((f: any) => f.code === item.faculty_code)?.name ?? item.faculty_code : null],
+                      ['Faculty', item.faculty_code ? institutionConfig.faculties.find((f) => f.code === item.faculty_code)?.name ?? item.faculty_code : null],
                       ['Physical Desc.', item.physical_description], ['Notes', item.notes],
                     ].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
                       <div key={k as string} className="flex gap-4">
@@ -722,7 +793,7 @@ export default function CatalogueItem() {
                       <p className="text-neutral-400 text-sm text-center py-4">No reviews yet. Be the first to review this item.</p>
                     ) : (
                       <div className="space-y-4">
-                        {reviews.map((r: any) => (
+                        {reviews.map((r) => (
                           <div key={r.id} className="flex gap-3">
                             <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-bold shrink-0">
                               {r.patron_name?.charAt(0)?.toUpperCase() ?? '?'}

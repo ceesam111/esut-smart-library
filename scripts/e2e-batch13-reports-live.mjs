@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { join } from 'path';

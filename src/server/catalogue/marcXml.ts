@@ -1,4 +1,4 @@
-import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+
 
 export function itemToMARCXML(item: Record<string, unknown>): string {
   const leader = '00000nam a2200000 a 4500';
@@ -13,7 +13,7 @@ export function itemToMARCXML(item: Record<string, unknown>): string {
   dataFields.push(`<datafield tag="245" ind1="1" ind2="0"><subfield code="a">${escapeXml(title)}</subfield></datafield>`);
 
   const authors = Array.isArray(item.authors) ? item.authors : [];
-  authors.forEach((author, i) => {
+  authors.forEach((author) => {
     dataFields.push(`<datafield tag="100" ind1="1" ind2=""><subfield code="a">${escapeXml(String(author))}</subfield></datafield>`);
   });
 

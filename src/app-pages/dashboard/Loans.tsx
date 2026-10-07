@@ -28,7 +28,7 @@ export default function Loans() {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [patronId, setPatronId] = useState<string | null>(null);
+  const [, setPatronId] = useState<string | null>(null);
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const [fineRate, setFineRate] = useState(DEFAULT_FINE_RATE);
   const [patronCategory, setPatronCategory] = useState<string>('undergraduate');
@@ -38,7 +38,7 @@ export default function Loans() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
-          navigate('/login');
+          void navigate('/login');
           return;
         }
 
@@ -68,7 +68,7 @@ export default function Loans() {
         const fines = finesResult.data ?? [];
         setLoans(((loansResult.data || []) as unknown as Loan[]).map((loan) => ({
           ...loan,
-          fines: fines.filter((fine: any) => fine.reference_id === loan.id),
+          fines: fines.filter((fine: { reference_id: string }) => fine.reference_id === loan.id),
         })));
       } catch (error) {
         console.error('Error fetching loans:', error);
@@ -77,7 +77,7 @@ export default function Loans() {
       }
     };
 
-    fetchPatronAndLoans();
+    void fetchPatronAndLoans();
   }, [navigate]);
 
   const loanRule = institutionConfig.loanRules[patronCategory as keyof typeof institutionConfig.loanRules] ?? institutionConfig.loanRules.undergraduate;

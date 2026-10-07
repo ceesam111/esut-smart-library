@@ -6,7 +6,7 @@ import { isPrivilegedSelfRegistrationRole, policyRequiresBranchApproval } from '
 
 export const dynamic = 'force-dynamic';
 
-async function grantPatronRole(supabase: ReturnType<typeof getSupabaseAdminClient>, patron: any) {
+async function grantPatronRole(supabase: ReturnType<typeof getSupabaseAdminClient>, patron: { user_id: string; account_role: string | null; preferred_branch?: string | null; tenant_id?: string | null }) {
   const role = patron.account_role as string | null;
   if (!role || isPrivilegedSelfRegistrationRole(role)) return;
 

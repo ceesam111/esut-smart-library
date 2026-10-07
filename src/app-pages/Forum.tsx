@@ -87,8 +87,8 @@ export default function Forum() {
   usePageTitle('Community Forum');
 
   const [view, setView]         = useState<View>({ type: 'home' });
-  const [user, setUser]         = useState<any>(null);
-  const [patron, setPatron]     = useState<any>(null);
+  const [user, setUser]         = useState<{ id: string; email: string } | null>(null);
+  const [patron, setPatron]     = useState<{ full_name: string; patron_category: string } | null>(null);
   const [isStaff, setIsStaff]   = useState(false);
   const [loading, setLoading]   = useState(true);
 
@@ -122,9 +122,9 @@ export default function Forum() {
   // ── Auth & Initial Load ────────────────────────────────────────────────────
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
+    void supabase.auth.getUser().then(async ({ data }) => {
       const u = data.user;
-      setUser(u ?? null);
+      setUser(u ? { id: u.id, email: u.email ?? '' } : null);
       if (u) {
         const [patronRes, libRes] = await Promise.all([
           supabase.from('patrons').select('full_name, patron_category').eq('user_id', u.id).maybeSingle(),
@@ -134,7 +134,7 @@ export default function Forum() {
         setIsStaff(!!libRes.data);
       }
     });
-    loadCategories();
+    void loadCategories();
   }, []);
 
   // ── Category Home ──────────────────────────────────────────────────────────
@@ -204,6 +204,7 @@ export default function Forum() {
   async function submitThread() {
     if (view.type !== 'category') return;
     if (!newTitle.trim() || !newBody.trim()) return;
+    if (!user) return;
     setPosting(true);
     const authorName = patron?.full_name || user?.email?.split('@')[0] || 'Anonymous';
     const { data } = await supabase.from('forum_threads').insert({
@@ -231,6 +232,7 @@ export default function Forum() {
   async function submitReply() {
     if (view.type !== 'thread') return;
     if (!replyBody.trim()) return;
+    if (!user) return;
     setReplying(true);
     const authorName = patron?.full_name || user?.email?.split('@')[0] || 'Anonymous';
     const { data: post } = await supabase.from('forum_posts').insert({

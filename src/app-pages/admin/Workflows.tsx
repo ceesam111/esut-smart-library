@@ -65,7 +65,7 @@ export default function AdminWorkflows() {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        navigate('/login');
+        void navigate('/login');
         return;
       }
       const headers = { Authorization: `Bearer ${data.session.access_token}` };

@@ -21,18 +21,30 @@ interface DoabBook {
   record_url: string;
 }
 
+interface DoabMetadataEntry {
+  key?: string;
+  value?: unknown;
+}
+
+interface DoabRecord {
+  metadata?: DoabMetadataEntry[];
+  name?: string;
+  handle?: string;
+  uuid?: string;
+}
+
 const MIN_YEAR = 2020;
 // directory.doab.org currently serves an expired TLS certificate, so we use the
 // legacy DSpace 6 REST API host (directory.doabooks.org) which mirrors DOAB.
 const FILTER_BASE = "https://directory.doabooks.org/rest/filtered-items";
 
-function getAllFor(metadata: any[]) {
+function getAllFor(metadata: DoabMetadataEntry[]) {
   return (key: string) =>
     metadata.filter((m) => m?.key === key && m?.value).map((m) => m.value as string);
 }
 
-function normaliseOne(obj: any): DoabBook | null {
-  const metadata: any[] = obj?.metadata ?? [];
+function normaliseOne(obj: DoabRecord): DoabBook | null {
+  const metadata = obj?.metadata ?? [];
   const getAll = getAllFor(metadata);
   const get = (key: string) => getAll(key)[0] ?? null;
 
@@ -93,7 +105,7 @@ function normaliseOne(obj: any): DoabBook | null {
   };
 }
 
-async function fetchPage(offset: number, limit: number): Promise<any[]> {
+async function fetchPage(offset: number, limit: number): Promise<DoabRecord[]> {
   const params = new URLSearchParams();
   params.append("query_field[]", "dc.date.issued");
   params.append("query_op[]", "matches");
@@ -144,13 +156,13 @@ Deno.serve(async (req: Request) => {
     // 2. Refresh from DOAB.
     const limit = 20;
     const maxPages = 4;
-    const raw: any[] = [];
+    const raw: DoabRecord[] = [];
     let errors = 0;
     for (let p = 0; p < maxPages; p++) {
-      let items: any[] = [];
+      let items: DoabRecord[] = [];
       try {
         items = await fetchPage(p * limit, limit);
-      } catch (_e) {
+      } catch {
         if (++errors >= 3) break;
         continue;
       }

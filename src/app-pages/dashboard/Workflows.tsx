@@ -46,7 +46,7 @@ export default function MyWorkflows() {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        navigate('/login');
+        void navigate('/login');
         return;
       }
       const res = await fetch('/api/workflows', {

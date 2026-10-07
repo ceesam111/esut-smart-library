@@ -8,7 +8,7 @@ const VALID_INDEXES: IndexKey[] = ['keyword', 'title', 'author', 'subject', 'isb
 
 export async function POST(request: NextRequest) {
   try {
-    const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
+    await requireRole(request, LIBRARY_ADMIN_ROLES);
     const body = await request.json();
 
     if (!body.targetId || !body.query || !body.index) {

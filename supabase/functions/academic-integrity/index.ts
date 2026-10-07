@@ -26,7 +26,7 @@ function json(body: unknown, status = 200) {
 }
 
 /** Extract a JSON object from an AI text response that may be wrapped in code fences. */
-function extractJson(text: string): any {
+function extractJson(text: string): unknown {
   if (!text) return null;
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fenced ? fenced[1] : text;
@@ -40,7 +40,7 @@ function extractJson(text: string): any {
   }
 }
 
-async function callAI(system: string, user: string, maxTokens = 1200): Promise<any> {
+async function callAI(system: string, user: string, maxTokens = 1200): Promise<Record<string, unknown> | null> {
   if (!AI_GATEWAY_API_KEY) throw new Error("AI service not configured");
   const res = await fetch(AI_GATEWAY, {
     method: "POST",
@@ -98,7 +98,7 @@ async function analyseCitations(text: string) {
   const result = await callAI(system, user, 1800);
   const citations = Array.isArray(result?.citations) ? result.citations : [];
   let outdated = 0;
-  const enriched = citations.map((c: any) => {
+  const enriched = citations.map((c: Record<string, unknown>) => {
     const year = c?.year && Number.isFinite(Number(c.year)) ? Number(c.year) : null;
     const isOutdated = year !== null && year < OUTDATED_BEFORE;
     if (isOutdated) outdated += 1;

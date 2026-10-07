@@ -21,10 +21,10 @@ const WORKFLOW_STAGES = [
 export default function Thesis() {
   const [stats, setStats] = useState({ total: 0, byType: [] as { type: string; count: number }[] });
   const [loading, setLoading] = useState(true);
-  const [recent, setRecent] = useState<any[]>([]);
+  const [recent, setRecent] = useState<Array<{ id: string; title: string; submission_type: string; reference_no: string | null; programme: string | null; created_at: string }>>([]);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const [{ data: theses }, { data: recentData }] = await Promise.all([
         supabase.from('theses').select('submission_type').eq('status', 'published'),
         supabase.from('theses').select('id, title, submission_type, reference_no, programme, created_at')
@@ -32,7 +32,7 @@ export default function Thesis() {
       ]);
 
       const typeMap: Record<string, number> = {};
-      (theses ?? []).forEach((t: any) => {
+      (theses ?? []).forEach((t: { submission_type: string | null }) => {
         const k = t.submission_type ?? 'Other';
         typeMap[k] = (typeMap[k] ?? 0) + 1;
       });

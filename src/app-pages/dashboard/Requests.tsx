@@ -71,7 +71,7 @@ export default function PatronRequests() {
   const [searchParams] = useSearchParams();
   const prefillTitle = searchParams.get('title') ?? '';
 
-  const [patron, setPatron] = useState<any>(null);
+  const [patron, setPatron] = useState<{ id: string; full_name: string; email: string; department: string | null; faculty_name: string | null } | null>(null);
   const [requests, setRequests] = useState<ResourceRequest[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,11 +91,11 @@ export default function PatronRequests() {
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { void navigate('/login'); return; }
       const { data: p } = await supabase.from('patrons')
         .select('id, full_name, email, faculty_code, department').eq('user_id', user.id).maybeSingle();
       if (!p) { setLoading(false); return; }
-      setPatron(p);
+      setPatron({ ...p, faculty_name: null });
       const { data: reqs } = await supabase.from('resource_requests')
         .select('*').eq('patron_id', p.id).order('created_at', { ascending: false });
       setRequests(reqs ?? []);
@@ -107,7 +107,7 @@ export default function PatronRequests() {
       setReservations((holds ?? []) as unknown as Reservation[]);
       setLoading(false);
     };
-    init();
+    void init();
   }, [navigate]);
 
   const handleSubmit = async () => {

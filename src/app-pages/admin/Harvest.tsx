@@ -33,16 +33,47 @@ interface SourceDefinition {
   missingApiKey?: boolean;
 }
 
-function unwrapApi<T = any>(payload: any): T {
-  return payload && payload.success === true && 'data' in payload ? payload.data : payload;
+interface HarvestLog {
+  id: string;
+  search_query: string;
+  local_result_quality: string | null;
+  external_result_count: number | null;
+  staged_count: number | null;
+}
+
+interface HarvestRun {
+  id: string;
+  status: string;
+  search_query: string | null;
+  job_name: string | null;
+  total_found: number | null;
+  staged_count: number | null;
+  skipped_duplicates: number | null;
+}
+
+interface HarvestPayload {
+  candidates?: Candidate[];
+  logs?: HarvestLog[];
+  runs?: HarvestRun[];
+  sourceControls?: SourceDefinition[];
+  sourceRegistry?: SourceDefinition[];
+  duplicateCount?: number;
+}
+
+function unwrapApi(payload: unknown): HarvestPayload {
+  const envelope = payload as { success?: boolean; data?: unknown } | null | undefined;
+  if (envelope && envelope.success === true && 'data' in envelope) {
+    return envelope.data as HarvestPayload;
+  }
+  return payload as HarvestPayload;
 }
 
 export default function Harvest() {
   const [query, setQuery] = useState('education open textbook');
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [runs, setRuns] = useState<any[]>([]);
+  const [logs, setLogs] = useState<HarvestLog[]>([]);
+  const [runs, setRuns] = useState<HarvestRun[]>([]);
   const [sourceRegistry, setSourceRegistry] = useState<SourceDefinition[]>([]);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -77,7 +108,24 @@ export default function Harvest() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data: controls } = await supabase.from('source_controls').select('*');
+        setSourceRegistry(controls ?? []);
+        setSelectedSources((prev) => {
+          if (prev.size || !controls?.length) return prev;
+          return new Set(controls.filter((source: SourceDefinition) => source.enabled !== false && !source.missingApiKey).map((source: SourceDefinition) => source.sourceType));
+        });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Could not load harvest data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
 
   async function runHarvest(event: React.FormEvent) {
     event.preventDefault();
@@ -167,7 +215,7 @@ export default function Harvest() {
                 checked={selectedSources.has(source.sourceType)}
                 disabled={source.missingApiKey}
                 onChange={(event) => {
-                  saveSource(source, { enabled: event.target.checked });
+                  void saveSource(source, { enabled: event.target.checked });
                   setSelectedSources((current) => {
                   const next = new Set(current);
                   if (event.target.checked) next.add(source.sourceType); else next.delete(source.sourceType);

@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const authors = Array.isArray(item.authors) ? item.authors : [];
-    const creators = authors.map((a: any) => ({
+    const creators = authors.map((a: unknown) => ({
       name: typeof a === "string" ? a : (a.name ?? "Unknown"),
       ...(a.orcid ? { orcid: a.orcid } : {}),
     }));

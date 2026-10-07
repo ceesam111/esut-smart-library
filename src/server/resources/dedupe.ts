@@ -67,7 +67,7 @@ export async function findDuplicateResource(tenantId: string, candidate: Resourc
     ]);
     
     // If title exactly matches and either author or year matches (or both missing)
-    const isStrongMatch = (row: any) => {
+    const isStrongMatch = (row: { title: string; year: number | null; authors: string[] | null }) => {
       if (normalizeTitle(row.title) !== normalized) return false;
       const sameYear = row.year === candidate.year || !row.year || !candidate.year;
       const author = firstAuthor(candidate.authors);

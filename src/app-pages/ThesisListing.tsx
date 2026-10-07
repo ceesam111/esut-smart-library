@@ -40,29 +40,28 @@ export default function ThesisListing() {
   const PAGE_SIZE = 25;
 
   useEffect(() => {
-    load();
-  }, [page, search, degreeFilter, sort]);
+    const load = async () => {
+      setLoading(true);
+      let query = supabase
+        .from('theses')
+        .select('id, title, authors, supervisor, faculty, department, degree_level, graduation_year, abstract, keywords, status, created_at', { count: 'exact' })
+        .eq('status', 'approved')
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
-  async function load() {
-    setLoading(true);
-    let query = supabase
-      .from('theses')
-      .select('id, title, authors, supervisor, faculty, department, degree_level, graduation_year, abstract, keywords, status, created_at', { count: 'exact' })
-      .eq('status', 'approved')
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (search) query = query.ilike('title', `%${search}%`);
+      if (degreeFilter !== 'All Levels') query = query.eq('degree_level', degreeFilter);
 
-    if (search) query = query.ilike('title', `%${search}%`);
-    if (degreeFilter !== 'All Levels') query = query.eq('degree_level', degreeFilter);
-
-    if (sort === 'year_desc') query = query.order('graduation_year', { ascending: false }).order('created_at', { ascending: false });
-    else if (sort === 'year_asc') query = query.order('graduation_year', { ascending: true });
-    else if (sort === 'title_asc') query = query.order('title', { ascending: true });
+      if (sort === 'year_desc') query = query.order('graduation_year', { ascending: false }).order('created_at', { ascending: false });
+      else if (sort === 'year_asc') query = query.order('graduation_year', { ascending: true });
+      else if (sort === 'title_asc') query = query.order('title', { ascending: true });
 
     const { data, count } = await query;
     setItems(data ?? []);
     setTotal(count ?? 0);
-    setLoading(false);
-  }
+      setLoading(false);
+    };
+    void load();
+  }, [page, search, degreeFilter, sort]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();

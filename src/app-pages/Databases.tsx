@@ -13,12 +13,29 @@ interface Database {
   provider: string;
   type: string;
   coverage: string;
-  subjects: any;
+  subjects: unknown;
   access_type: string;
   is_active: boolean;
   logo_url: string | null;
   subject_tags: string[] | null;
   content_type: string | null;
+}
+
+interface ConsortiumMember {
+  id: string;
+  email_domain?: string | null;
+  institution_name?: string | null;
+  short_code?: string | null;
+}
+
+interface ConsortiumDb {
+  id: string;
+  member_id: string | null;
+  name: string;
+  provider: string | null;
+  description: string | null;
+  access_url: string | null;
+  subjects: string[] | null;
 }
 
 interface OAJournal {
@@ -93,11 +110,11 @@ export default function Databases() {
   const [reqDone, setReqDone]         = useState(false);
   const [oaJournals, setOaJournals]   = useState<OAJournal[]>([]);
   const [oaLoading, setOaLoading]     = useState(true);
-  const [consortiumDbs, setConsortiumDbs]         = useState<any[]>([]);
-  const [consortiumMembers, setConsortiumMembers] = useState<any[]>([]);
+  const [consortiumDbs, setConsortiumDbs]         = useState<ConsortiumDb[]>([]);
+  const [consortiumMembers, setConsortiumMembers] = useState<ConsortiumMember[]>([]);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data } = await supabase
         .from('databases')
         .select('id, name, description, url, provider, type, coverage, subjects, access_type, is_active, logo_url, subject_tags, content_type')
@@ -111,7 +128,7 @@ export default function Databases() {
     })();
 
     // Fetch DOAJ journals for education/Africa
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch('https://doaj.org/api/journals?q=education+africa&pageSize=6&sort=last_updated:desc');
         if (res.ok) {
@@ -123,7 +140,7 @@ export default function Databases() {
     })();
 
     // Fetch consortium members (safe public columns via security-definer fn) + their contributed databases
-    (async () => {
+    void (async () => {
       const [{ data: members }, { data: cdbs }] = await Promise.all([
         supabase.rpc('list_consortium_members_public'),
         supabase.from('consortium_databases').select('id, member_id, name, provider, description, access_url, subjects, access_type').eq('is_active', true).order('name'),
@@ -147,7 +164,7 @@ export default function Databases() {
     );
   });
 
-  const logConsortiumAccess = async (db: any) => {
+  const logConsortiumAccess = async (db: ConsortiumDb) => {
     if (!user) return;
     await supabase.from('consortium_access_logs').insert({
       database_id: db.id,
@@ -195,17 +212,17 @@ export default function Databases() {
   }[type] ?? { label: type, cls: 'bg-neutral-100 text-neutral-600 border border-neutral-200' });
 
   const journalISSN = (j: OAJournal): string => {
-    const id = (j.bibjson?.identifier ?? []).find((i: any) => i.type === 'pissn' || i.type === 'eissn');
+    const id = (j.bibjson?.identifier ?? []).find((i) => i.type === 'pissn' || i.type === 'eissn');
     return id?.id ?? '';
   };
   const journalSubjects = (j: OAJournal): string => {
-    return (j.bibjson?.subject ?? []).map((s: any) => s.term).slice(0, 3).join(' · ');
+    return (j.bibjson?.subject ?? []).map((s) => s.term).slice(0, 3).join(' · ');
   };
   const journalLang = (j: OAJournal): string => {
     return (j.bibjson?.language ?? []).slice(0, 2).join(', ');
   };
   const journalUrl = (j: OAJournal): string => {
-    const link = (j.links ?? []).find((l: any) => l.type === 'homepage');
+    const link = (j.links ?? []).find((l) => l.type === 'homepage');
     return link?.url ?? 'https://doaj.org';
   };
 

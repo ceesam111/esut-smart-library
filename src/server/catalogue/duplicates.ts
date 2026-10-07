@@ -7,7 +7,7 @@ export interface DuplicateGroup {
   items: { id: string; title: string; isbn: string | null; created_at: string; status: string }[];
 }
 
-export async function findPotentialDuplicates(threshold = 0.85): Promise<DuplicateGroup[]> {
+export async function findPotentialDuplicates(_threshold = 0.85): Promise<DuplicateGroup[]> {
   const supabase = getSupabaseAdminClient();
   const { data: items, error } = await supabase
     .from('catalogue_items')

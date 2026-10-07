@@ -18,7 +18,7 @@ const MATRIC_REGEX = /^ESUT\/\d{4}\/\d{5}$/;
 export default function PatronsImport() {
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'progress' | 'complete'>('upload');
   const [csvData, setCsvData] = useState<ParsedRow[]>([]);
-  const [csvColumns, setCsvColumns] = useState<string[]>([]);
+  
   const [mapping, setMapping] = useState<{ csvColumn: string; dbColumn: string }[]>([]);
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -75,7 +75,6 @@ export default function PatronsImport() {
         };
 
         const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
-        setCsvColumns(headers);
 
         const rows: ParsedRow[] = [];
         for (let i = 1; i < lines.length; i++) {
@@ -138,15 +137,6 @@ export default function PatronsImport() {
       errors: [],
     };
 
-    // Generate a random password for new users
-    const generatePassword = () => {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-      let password = '';
-      for (let i = 0; i < 12; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return password;
-    };
 
     for (let i = 0; i < csvData.length; i++) {
       const row = csvData[i];
@@ -227,17 +217,16 @@ export default function PatronsImport() {
           continue;
         }
 
-        // Send welcome email if enabled
+        // Send welcome email if enabled: dispatch is not yet wired to an
+        // edge function, so this remains an intentional no-op (no PII logging).
         if (sendWelcomeEmails) {
-          // In production, this would call an edge function to send the email
-          // For now, we'll just log it
-          console.log(`Welcome email would be sent to: ${email}`);
+          // pending: call send-email edge function
         }
 
         result.success++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         result.failed++;
-        result.errors.push({ row: rowNum, email: getMappedValue(row, 'email') || 'unknown', error: error.message });
+        result.errors.push({ row: rowNum, email: getMappedValue(row, 'email') || 'unknown', error: error instanceof Error ? error.message : String(error) });
       }
 
       setImportProgress(Math.round(((i + 1) / csvData.length) * 100));
@@ -265,7 +254,6 @@ export default function PatronsImport() {
 
   const resetImport = () => {
     setCsvData([]);
-    setCsvColumns([]);
     setMapping([]);
     setImportProgress(0);
     setImportResult(null);

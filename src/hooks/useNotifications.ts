@@ -25,7 +25,7 @@ export function useNotifications() {
     if ('Notification' in window) {
       setPermission(Notification.permission as NotifPermission);
     }
-    loadNotifications();
+    void loadNotifications();
   }, []);
 
   async function loadNotifications() {

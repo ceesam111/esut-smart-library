@@ -4,10 +4,10 @@ import BackButton from '@/components/BackButton';
 import LibraryResourceCard from '@/components/LibraryResourceCard';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { SUBSCRIBED_DATABASES } from '@/config/subscribedDatabases.data';
-import type { LibraryResource } from '@/config/libraryResources.config';
 import {
   LIBRARIAN_WHATSAPP_URL,
   OPAC_URL,
+  type LibraryResource,
 } from '@/config/libraryResources.config';
 
 export default function SubscribedDatabases() {

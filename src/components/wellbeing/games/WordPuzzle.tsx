@@ -30,7 +30,7 @@ function scramble(word: string) {
 export default function WordPuzzle() {
   const [index, setIndex] = useState(() => Math.floor(Math.random() * WORDS.length));
   const current = WORDS[index];
-  const scrambled = useMemo(() => scramble(current.word), [index]);
+  const scrambled = useMemo(() => scramble(current.word), [current.word]);
   const [guess, setGuess] = useState('');
   const [status, setStatus] = useState<'idle' | 'correct' | 'wrong'>('idle');
   const [solved, setSolved] = useState(0);

@@ -7,10 +7,12 @@ import { Resource3DBookCard, Resource3DBookCardSkeleton, Resource3DBookGrid } fr
 
 interface Community { id: string; name: string; slug: string; faculty_code: string | null; parent_id: string | null; }
 interface Collection { id: string; community_id: string; name: string; slug: string; }
+type AuthorEntry = string | { name?: string | null };
+
 interface RepoItem {
   id: string;
   title: string;
-  authors: any[];
+  authors: AuthorEntry[];
   subjects: string[];
   keywords: string[];
   abstract: string | null;
@@ -53,7 +55,7 @@ export default function Repository() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [facets, setFacets] = useState<SearchFacets | null>(null);
-  const [sort, setSort] = useState('newest');
+  const [sort] = useState('newest');
 
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export default function Repository() {
       setCommunities(comms ?? []);
       setCollections(colls ?? []);
     };
-    load();
+    void load();
   }, []);
 
   const fetchItems = useCallback(async (pg: number) => {
@@ -115,10 +117,10 @@ export default function Repository() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterLang, filterAccess, communities, collections, search, sort]);
+  }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterAccess, communities, collections, search, sort]);
 
   useEffect(() => { setPage(0); }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterLang, filterAccess]);
-  useEffect(() => { fetchItems(page); }, [fetchItems, page]);
+  useEffect(() => { void fetchItems(page); }, [fetchItems, page]);
 
   const roots = communities.filter(c => !c.parent_id);
   const subOf = (parentId: string) => communities.filter(c => c.parent_id === parentId);
@@ -126,7 +128,7 @@ export default function Repository() {
 
   const toggle = (id: string) => setExpanded(prev => {
     const s = new Set(prev);
-    s.has(id) ? s.delete(id) : s.add(id);
+    if (s.has(id)) { s.delete(id); } else { s.add(id); }
     return s;
   });
 
@@ -135,9 +137,9 @@ export default function Repository() {
   const facetCount = (bucket: FacetBucket[] | undefined, value: string) =>
     bucket?.find(entry => entry.value === value)?.count ?? 0;
 
-  const authorDisplay = (authors: any[]) =>
+  const authorDisplay = (authors: AuthorEntry[]) =>
     (Array.isArray(authors) ? authors : [])
-      .map((a: any) => (typeof a === 'string' ? a : (a.name ?? ''))).slice(0, 2).join(', ')
+      .map((a: AuthorEntry) => (typeof a === 'string' ? a : (a.name ?? ''))).slice(0, 2).join(', ')
       + (authors.length > 2 ? ' et al.' : '');
 
   const clearFilters = () => {

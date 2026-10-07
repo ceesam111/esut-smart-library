@@ -82,7 +82,7 @@ export default function DirectoryDatabases({ directory }: Props) {
     setLoading(false);
   }, [directory]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

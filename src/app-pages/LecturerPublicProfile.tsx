@@ -68,18 +68,6 @@ interface Grant {
 type Tab = 'biography' | 'publications' | 'grants' | 'teaching';
 type PubFilter = 'all' | 'journal' | 'book' | 'chapter' | 'conference';
 
-function Initials({ name, size = 'lg' }: { name: string; size?: 'lg' | 'sm' }) {
-  const parts = name.trim().split(' ');
-  const initials = parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0].slice(0, 2);
-  const cls = size === 'lg'
-    ? 'w-64 h-64 text-5xl'
-    : 'w-20 h-20 text-2xl';
-  return (
-    <div className={`rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold ${cls}`}>
-      {initials.toUpperCase()}
-    </div>
-  );
-}
 
 export default function LecturerPublicProfile() {
   const { slug } = useParams<{ slug: string }>();
@@ -112,8 +100,45 @@ export default function LecturerPublicProfile() {
       setGrants((grantRes.data ?? []) as Grant[]);
       setLoading(false);
     };
-    load();
+    void load();
   }, [slug]);
+
+  const fullName = profile
+    ? [profile.salutation, profile.first_name, profile.middle_name, profile.surname].filter(Boolean).join(' ')
+    : '';
+
+  useEffect(() => {
+    if (!profile) return;
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: fullName,
+      jobTitle: profile.academic_rank ?? undefined,
+      worksFor: {
+        '@type': 'Organization',
+        name: profile.institution ?? 'Enugu State University of Science and Technology',
+      },
+      affiliation: profile.department ?? undefined,
+      email: profile.visibility === 'public' && profile.institutional_email ? profile.institutional_email : undefined,
+      sameAs: [
+        profile.orcid_id ? `https://orcid.org/${profile.orcid_id}` : null,
+        profile.google_scholar_id ? `https://scholar.google.com/citations?user=${profile.google_scholar_id}` : null,
+        profile.researchgate_url,
+        profile.academia_url,
+      ].filter(Boolean),
+      knowsAbout: profile.specialisations.length ? profile.specialisations : undefined,
+    };
+    document.title = `${fullName} — ${profile.department ?? 'ESUT'} — ESUT Library`;
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'person-jsonld';
+    script.text = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
+    return () => {
+      document.title = 'ESUT Library';
+      document.getElementById('person-jsonld')?.remove();
+    };
+  }, [profile, fullName]);
 
   if (loading) {
     return (
@@ -133,45 +158,7 @@ export default function LecturerPublicProfile() {
     );
   }
 
-  const fullName = [profile.salutation, profile.first_name, profile.middle_name, profile.surname]
-    .filter(Boolean).join(' ');
   const shortName = `${profile.first_name} ${profile.surname}`;
-  const sameAs = [
-    profile.orcid_id ? `https://orcid.org/${profile.orcid_id}` : null,
-    profile.google_scholar_id ? `https://scholar.google.com/citations?user=${profile.google_scholar_id}` : null,
-    profile.researchgate_url,
-    profile.academia_url,
-  ].filter(Boolean);
-
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Person',
-    name: fullName,
-    jobTitle: profile.academic_rank ?? undefined,
-    worksFor: {
-      '@type': 'Organization',
-      name: profile.institution ?? 'Enugu State University of Science and Technology',
-    },
-    affiliation: profile.department ?? undefined,
-    email: profile.visibility === 'public' && profile.institutional_email ? profile.institutional_email : undefined,
-    sameAs: sameAs.length ? sameAs : undefined,
-    knowsAbout: profile.specialisations.length ? profile.specialisations : undefined,
-  };
-
-  // Inject JSON-LD and page title for SEO
-  useEffect(() => {
-    document.title = `${fullName} — ${profile.department ?? 'ESUT'} — ESUT Library`;
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.id = 'person-jsonld';
-    script.text = JSON.stringify(jsonLd);
-    document.head.appendChild(script);
-    return () => {
-      document.title = 'ESUT Library';
-      document.getElementById('person-jsonld')?.remove();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.id]);
 
   const filteredPubs = publications
     .filter((p) => pubFilter === 'all' || p.publication_type === pubFilter)

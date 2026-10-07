@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { format, differenceInDays } from 'date-fns';
 import { logCirculationEvent } from '@/lib/audit';
@@ -101,12 +101,12 @@ export default function Circulation() {
   useEffect(() => {
     void fetchHolds();
     void off.migrateLegacyQueue();
-  }, []);
+  }, [off]);
 
   // Preload the offline desk cache while the server is reachable.
   useEffect(() => {
     if (off.serverReachable && !off.cache && !off.cacheLoading) void off.refreshCache();
-  }, [off.serverReachable]);
+  }, [off.serverReachable, off]);
 
   const serverReachable = off.serverReachable;
 
@@ -132,7 +132,7 @@ export default function Circulation() {
   };
 
   // ── Item search: barcode exact-match first, then title/call number, then cache
-  const searchItems = async (q: string) => {
+  const searchItems = useCallback(async (q: string) => {
     setItemQuery(q);
     if (q.length < 2) { setItemResults([]); return; }
     const byBarcode = findItemByBarcode(off.cache, q) as CatalogueItem | null;
@@ -165,7 +165,7 @@ export default function Circulation() {
     } catch {
       setItemResults(byBarcode ? [byBarcode] : (cacheSearchItems(off.cache, q) as CatalogueItem[]));
     }
-  };
+  }, [serverReachable, off.cache]);
 
   const dueDate = (patron: Patron): string => computeDueDate(new Date(), patron.patron_category);
 
@@ -740,7 +740,7 @@ export default function Circulation() {
       setItemQuery(scanner.lastCode);
       void searchItems(scanner.lastCode);
     }
-  }, [scanner.lastCode]);
+  }, [scanner.lastCode, searchItems]);
 
   const alertCls = (type: string) =>
     type === 'success' ? 'bg-green-50 text-green-800' :

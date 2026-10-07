@@ -136,7 +136,7 @@ export default function NewspaperArticles() {
         setLoading(false);
       }
     };
-    run();
+    void run();
     return () => {
       cancelled = true;
     };

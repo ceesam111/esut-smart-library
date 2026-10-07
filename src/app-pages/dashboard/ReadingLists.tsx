@@ -38,7 +38,7 @@ export default function ReadingLists() {
   useEffect(() => {
     const init = async () => {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) { navigate('/login'); return; }
+      if (!userData.user) { void navigate('/login'); return; }
 
       const { data: p } = await supabase.from('patrons').select('id').eq('user_id', userData.user.id).maybeSingle();
       if (!p) { setLoading(false); return; }
@@ -46,7 +46,7 @@ export default function ReadingLists() {
       await loadLists(p.id);
       setLoading(false);
     };
-    init();
+    void init();
   }, [navigate]);
 
   const loadLists = async (pid: string) => {
@@ -216,11 +216,11 @@ export default function ReadingLists() {
                   <div className="flex items-start justify-between mb-3 gap-2">
                     <h3 className="font-semibold text-neutral-800 group-hover:text-primary-700 transition-colors leading-tight">{list.name}</h3>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <button onClick={e => { e.stopPropagation(); togglePublic(list.id, list.is_public); }}
+                      <button onClick={e => { e.stopPropagation(); void togglePublic(list.id, list.is_public); }}
                         className={`badge cursor-pointer text-xs transition-colors ${list.is_public ? 'badge-success' : 'badge-secondary'}`}>
                         {list.is_public ? 'Public' : 'Private'}
                       </button>
-                      <button onClick={e => { e.stopPropagation(); deleteList(list.id); }}
+                      <button onClick={e => { e.stopPropagation(); void deleteList(list.id); }}
                         disabled={deletingId === list.id}
                         className="p-1 rounded text-neutral-400 hover:text-error-500 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

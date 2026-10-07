@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isOperationAllowed } from '@/server/sip2/auth';
-import { validateCoarUrl, verifyCoarSignature, checkCoarRateLimit, isDuplicateNonce } from '@/server/interoperability/coar-security';
+import { validateCoarUrl } from '@/server/interoperability/coar-security';
 
 describe('storage-security', () => {
   beforeEach(() => {

@@ -53,7 +53,7 @@ export default function ContentEngine() {
   const [addingSubject, setAddingSubject] = useState(false);
   const [tab, setTab]               = useState<'subjects' | 'log' | 'sources'>('subjects');
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   async function load() {
     const [{ data: cfgData }, { data: logData }, { count }] = await Promise.all([

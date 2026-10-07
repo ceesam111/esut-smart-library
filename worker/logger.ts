@@ -1,6 +1,7 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AgentJob } from './types';
 
-export async function createAgentRun(supabase: any, job: AgentJob) {
+export async function createAgentRun(supabase: SupabaseClient, job: AgentJob) {
   const { data, error } = await supabase.from('agent_runs').insert({
     tenant_id: job.tenant_id,
     agent_name: job.agent_name,
@@ -14,11 +15,11 @@ export async function createAgentRun(supabase: any, job: AgentJob) {
   return data.id as string;
 }
 
-export async function finishAgentRun(supabase: any, runId: string, status: 'completed' | 'failed', output: unknown, error?: string | null) {
+export async function finishAgentRun(supabase: SupabaseClient, runId: string, status: 'completed' | 'failed', output: unknown, error?: string | null) {
   await supabase.from('agent_runs').update({ status, output: output ?? {}, error: error ?? null, finished_at: new Date().toISOString() }).eq('id', runId);
 }
 
-export async function writeWorkerAudit(supabase: any, job: AgentJob, action: string, metadata: Record<string, unknown>) {
+export async function writeWorkerAudit(supabase: SupabaseClient, job: AgentJob, action: string, metadata: Record<string, unknown>) {
   await supabase.from('audit_logs').insert({
     tenant_id: job.tenant_id,
     actor_user_id: job.created_by,

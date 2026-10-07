@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 
@@ -64,6 +64,7 @@ export default function Patrons() {
   const [patrons, setPatrons] = useState<Patron[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [filterFaculty, setFilterFaculty] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -77,22 +78,7 @@ export default function Patrons() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const pageSize = 25;
 
-  useEffect(() => {
-    fetchPatrons();
-  }, [currentPage, filterFaculty, filterCategory, filterStatus, dateFrom, dateTo]);
-
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchPatrons();
-      }
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [searchTerm]);
-
-  const fetchPatrons = async () => {
+  const fetchPatrons = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -100,9 +86,9 @@ export default function Patrons() {
         .select('*', { count: 'exact' });
 
       // Search filter
-      if (searchTerm) {
+      if (appliedSearch) {
         query = query.or(
-          `full_name.ilike.%${searchTerm}%,patron_id.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,matric_number.ilike.%${searchTerm}%,staff_id.ilike.%${searchTerm}%`
+          `full_name.ilike.%${appliedSearch}%,patron_id.ilike.%${appliedSearch}%,email.ilike.%${appliedSearch}%,matric_number.ilike.%${appliedSearch}%,staff_id.ilike.%${appliedSearch}%`
         );
       }
 
@@ -145,7 +131,19 @@ export default function Patrons() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, filterFaculty, filterCategory, filterStatus, dateFrom, dateTo, currentPage, pageSize]);
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      setAppliedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    void fetchPatrons();
+  }, [currentPage, filterFaculty, filterCategory, filterStatus, dateFrom, dateTo, fetchPatrons]);
 
   const viewPatronDetails = async (patron: Patron) => {
     setSelectedPatron(patron as PatronDetail);
@@ -170,7 +168,15 @@ export default function Patrons() {
         .limit(20);
 
       if (loans) {
-        const formattedLoans: LoanRecord[] = loans.map((loan: any) => ({
+        type LoanRow = {
+          id: string;
+          checkout_date: string;
+          due_date: string;
+          return_date: string | null;
+          status: string;
+          catalogue_items?: { title: string } | null;
+        };
+        const formattedLoans: LoanRecord[] = (loans as unknown as LoanRow[]).map((loan) => ({
           id: loan.id,
           item_title: loan.catalogue_items?.title || 'Unknown Item',
           checkout_date: loan.checkout_date,
@@ -191,7 +197,7 @@ export default function Patrons() {
 
       if (fines && fines.length > 0) {
         setLoanHistory(prev => prev.map(loan => {
-          const fine = fines.find((f: any) => f.loan_id === loan.id);
+          const fine = fines.find((f: { loan_id: string; amount: number }) => f.loan_id === loan.id);
           return { ...loan, fine_amount: fine?.amount || null };
         }));
       }
@@ -489,7 +495,7 @@ export default function Patrons() {
                   const pages: (number | string)[] = [];
                   const showPages = 5;
                   let start = Math.max(1, currentPage - 2);
-                  let end = Math.min(totalPages, start + showPages - 1);
+                  const end = Math.min(totalPages, start + showPages - 1);
                   if (end - start + 1 < showPages) {
                     start = Math.max(1, end - showPages + 1);
                   }
@@ -688,9 +694,9 @@ export default function Patrons() {
                 onClick={() => {
                   if (!selectedPatron) return;
                   if (selectedPatron.status === 'suspended') {
-                    updatePatronStatus(selectedPatron, 'active');
+                    void updatePatronStatus(selectedPatron, 'active');
                   } else {
-                    updatePatronStatus(selectedPatron, 'suspended');
+                    void updatePatronStatus(selectedPatron, 'suspended');
                   }
                 }}
               >

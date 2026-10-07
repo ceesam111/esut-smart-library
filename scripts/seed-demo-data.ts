@@ -17,6 +17,43 @@ import {
 const dryRun = process.argv.includes("--dry-run");
 const supabase = createAdminClient({ dryRun });
 
+interface IdRow {
+  id: string;
+}
+
+interface DepartmentRow {
+  id: string;
+  code: string;
+  name: string;
+}
+
+interface PatronRow {
+  id: string;
+  patron_id: string;
+  user_id: string;
+  email: string;
+  full_name: string;
+  patron_category: string;
+}
+
+interface SeededItemRow {
+  id: string;
+  title: string;
+  total_copies: number;
+  call_number: string;
+  faculty_code: string;
+  shelf_code: string;
+}
+
+interface LoanRow {
+  id: string;
+  status: string;
+}
+
+interface EventRow {
+  id: string;
+}
+
 const catalogueTitles = [
   ["Introduction to Library Automation", "Library Science"],
   ["Research Methods for Nigerian Tertiary Institutions", "Research Methods"],
@@ -79,14 +116,14 @@ async function deleteSeedRows(code: TenantCode, tenantId: string) {
   if (!supabase) return;
   const patronPrefix = `${code}-DEMO-`;
   const patrons = await optional("seed patrons lookup", () => requireNoError(supabase.from("patrons").select("id").like("patron_id", `${patronPrefix}%`)));
-  const patronIds = patrons?.map((row: any) => row.id) ?? [];
+  const patronIds = patrons?.map((row: IdRow) => row.id) ?? [];
   const catalogue = await optional("seed catalogue lookup", () => requireNoError(supabase.from("catalogue_items").select("id").eq("tenant_id", tenantId).eq("source_name", SEED_TAG)));
-  const catalogueIds = catalogue?.map((row: any) => row.id) ?? [];
+  const catalogueIds = catalogue?.map((row: IdRow) => row.id) ?? [];
 
   if (patronIds.length) {
     await optional("loan_fines", async () => {
       const loans = (await requireNoError(supabase.from("loans").select("id").in("patron_id", patronIds))) ?? [];
-      if (loans.length) await requireNoError(supabase.from("loan_fines").delete().in("loan_id", loans.map((row: any) => row.id)));
+      if (loans.length) await requireNoError(supabase.from("loan_fines").delete().in("loan_id", loans.map((row: IdRow) => row.id)));
     });
     for (const table of ["notifications", "event_registrations", "reading_lists", "reservations", "loans", "researchers", "theses", "resource_requests"]) {
       await optional(table, () => requireNoError(supabase.from(table).delete().in("patron_id", patronIds)));
@@ -129,7 +166,7 @@ async function seedTenant(code: TenantCode) {
   await optional("departments", () => requireNoError(supabase.from("departments").upsert(departments.map(([name, short]) => ({ name, code: `${code}-${short}`, faculty_code: tenant.faculty, hod_name: `${code} Demo HOD ${short}` })), { onConflict: "code" })));
   const departmentRows = await optional("departments", () => requireNoError(supabase.from("departments").select("id,code,name").like("code", `${code}-%`)));
   if (departmentRows?.length) {
-    await optional("programmes", () => requireNoError(supabase.from("programmes").upsert(departmentRows.slice(0, 8).map((department: any) => ({ name: `${department.name} Programme`, code: `${department.code}-BSC`, department_id: department.id, degree_type: "undergraduate", duration_years: 4 })), { onConflict: "code" })));
+    await optional("programmes", () => requireNoError(supabase.from("programmes").upsert(departmentRows.slice(0, 8).map((department: DepartmentRow) => ({ name: `${department.name} Programme`, code: `${department.code}-BSC`, department_id: department.id, degree_type: "undergraduate", duration_years: 4 })), { onConflict: "code" })));
   }
 
   await optional("user_roles", () => requireNoError(supabase.from("user_roles").upsert(users.map((user) => ({ user_id: userIds.get(user.key), role: user.role, tenant_id: tenant.id, faculty_code: tenant.faculty, branch_code: code, librarian_section: user.role.includes("librarian") ? "Digital Services" : null })), { onConflict: "user_id,role" })));
@@ -145,10 +182,10 @@ async function seedTenant(code: TenantCode) {
   await optional("librarians", () => requireNoError(supabase.from("librarians").upsert(users.filter((user) => user.role === "librarian" || user.role === "faculty_librarian" || user.role === "super_admin").map((user) => ({ user_id: userIds.get(user.key), role: user.role === "faculty_librarian" ? "faculty_librarian" : user.role === "super_admin" ? "university_librarian" : "assistant_librarian", faculty_code: user.role === "super_admin" ? null : tenant.faculty, full_name: user.name, email: user.email, is_active: true })), { onConflict: "user_id" })));
 
   const patronRows = (await requireNoError(supabase.from("patrons").select("id,patron_id,user_id,email,full_name,patron_category").like("patron_id", `${code}-DEMO-%`))) ?? [];
-  const studentPatrons = patronRows.filter((row: any) => row.patron_category === "student");
+  const studentPatrons = patronRows.filter((row: PatronRow) => row.patron_category === "student");
 
   console.log(`${code}: seeding shelves and catalogue`);
-  await optional("library_shelves", () => requireNoError(supabase.from("library_shelves").upsert(departments.slice(0, 8).map(([name, short], index) => ({ shelf_code: `SHF-${code}-MAIN-F${(index % 3) + 1}-B${index + 1}-S1`, library_code: code, library_name: tenant.libraryName, library_slug: code.toLowerCase(), floor_room: `F${(index % 3) + 1}`, bay: `B${index + 1}`, shelf_number: "S1", description: `${name} demo shelf`, subject_range: name, capacity: 80, status: "active" })), { onConflict: "shelf_code" })));
+  await optional("library_shelves", () => requireNoError(supabase.from("library_shelves").upsert(departments.slice(0, 8).map(([name, _short], index) => ({ shelf_code: `SHF-${code}-MAIN-F${(index % 3) + 1}-B${index + 1}-S1`, library_code: code, library_name: tenant.libraryName, library_slug: code.toLowerCase(), floor_room: `F${(index % 3) + 1}`, bay: `B${index + 1}`, shelf_number: "S1", description: `${name} demo shelf`, subject_range: name, capacity: 80, status: "active" })), { onConflict: "shelf_code" })));
 
   const catalogueRows = catalogueTitles.map(([title, subject], index) => ({
     tenant_id: tenant.id, title: `${code}: ${title}`, authors: [`${subject} Demo Author`, `${code} Library Team`], isbn: `978${code === "ESUT" ? "111" : code === "OGLB" ? "222" : "333"}${String(index + 1).padStart(7, "0")}`,
@@ -162,13 +199,13 @@ async function seedTenant(code: TenantCode) {
   await requireNoError(supabase.from("catalogue_items").insert(catalogueRows));
   const seededItems = (await requireNoError(supabase.from("catalogue_items").select("id,title,total_copies,call_number,faculty_code,shelf_code").eq("tenant_id", tenant.id).eq("source_name", SEED_TAG))) ?? [];
 
-  await optional("catalogue_copies", () => requireNoError(supabase.from("catalogue_copies").insert(seededItems.flatMap((item: any, itemIndex: number) => Array.from({ length: Math.min(5, item.total_copies ?? 1) }, (_, copyIndex) => ({ tenant_id: tenant.id, item_id: item.id, barcode: `COPY-${code}-${String(itemIndex + 1).padStart(4, "0")}-${copyIndex + 1}`, call_number: item.call_number, branch: tenant.libraryName, faculty_code: item.faculty_code, location: item.shelf_code, shelf_location: item.shelf_code, status: copyIndex === 0 && itemIndex % 7 === 0 ? "checked_out" : copyIndex === 1 && itemIndex % 9 === 0 ? "on_reserve" : "available" }))))));
+  await optional("catalogue_copies", () => requireNoError(supabase.from("catalogue_copies").insert(seededItems.flatMap((item: SeededItemRow, itemIndex: number) => Array.from({ length: Math.min(5, item.total_copies ?? 1) }, (_, copyIndex) => ({ tenant_id: tenant.id, item_id: item.id, barcode: `COPY-${code}-${String(itemIndex + 1).padStart(4, "0")}-${copyIndex + 1}`, call_number: item.call_number, branch: tenant.libraryName, faculty_code: item.faculty_code, location: item.shelf_code, shelf_location: item.shelf_code, status: copyIndex === 0 && itemIndex % 7 === 0 ? "checked_out" : copyIndex === 1 && itemIndex % 9 === 0 ? "on_reserve" : "available" }))))));
 
   console.log(`${code}: seeding circulation, repository, staging, harvest, events, and dashboards`);
-  const loanScenarios = studentPatrons.slice(0, 6).map((patron: any, index: number) => ({ patron_id: patron.id, catalogue_item_id: seededItems[index].id, checkout_date: monthsAgo(index % 3), due_date: new Date(Date.now() + (index === 1 ? -5 : index === 2 ? 2 : 14) * 86400000).toISOString(), return_date: index === 4 ? new Date().toISOString() : null, status: index === 1 ? "overdue" : index === 4 ? "returned" : "active", renewed_count: index % 2, created_at: monthsAgo(index % 4) }));
+  const loanScenarios = studentPatrons.slice(0, 6).map((patron: PatronRow, index: number) => ({ patron_id: patron.id, catalogue_item_id: seededItems[index].id, checkout_date: monthsAgo(index % 3), due_date: new Date(Date.now() + (index === 1 ? -5 : index === 2 ? 2 : 14) * 86400000).toISOString(), return_date: index === 4 ? new Date().toISOString() : null, status: index === 1 ? "overdue" : index === 4 ? "returned" : "active", renewed_count: index % 2, created_at: monthsAgo(index % 4) }));
   const loans = await optional("loans", () => requireNoError(supabase.from("loans").insert(loanScenarios).select("id,status")));
-  if (loans?.length) await optional("loan_fines", () => requireNoError(supabase.from("loan_fines").insert(loans.filter((loan: any) => loan.status === "overdue").map((loan: any) => ({ loan_id: loan.id, amount: 750, reason: `${SEED_TAG}: overdue demo fine`, status: "unpaid" })))));
-  await optional("reservations", () => requireNoError(supabase.from("reservations").insert(studentPatrons.slice(6, 9).map((patron: any, index: number) => ({ patron_id: patron.id, catalogue_item_id: seededItems[index + 8].id, expiry_date: new Date(Date.now() + (index + 2) * 86400000).toISOString(), status: index === 2 ? "fulfilled" : "pending", priority: index + 1 })))));
+  if (loans?.length) await optional("loan_fines", () => requireNoError(supabase.from("loan_fines").insert(loans.filter((loan: LoanRow) => loan.status === "overdue").map((loan: LoanRow) => ({ loan_id: loan.id, amount: 750, reason: `${SEED_TAG}: overdue demo fine`, status: "unpaid" })))));
+  await optional("reservations", () => requireNoError(supabase.from("reservations").insert(studentPatrons.slice(6, 9).map((patron: PatronRow, index: number) => ({ patron_id: patron.id, catalogue_item_id: seededItems[index + 8].id, expiry_date: new Date(Date.now() + (index + 2) * 86400000).toISOString(), status: index === 2 ? "fulfilled" : "pending", priority: index + 1 })))));
 
   const community = await optional("repository_communities", () => requireNoError(supabase.from("repository_communities").upsert({ name: `${code} Demo Research Community`, slug: `${code.toLowerCase()}-demo-research`, description: SEED_TAG, faculty_code: tenant.faculty, sort_order: 1 }, { onConflict: "slug" }).select("id").single()));
   const collection = community?.id ? await optional("repository_collections", () => requireNoError(supabase.from("repository_collections").insert({ community_id: community.id, name: `${code} Demo Theses and Projects`, slug: `${code.toLowerCase()}-demo-theses-projects`, description: SEED_TAG }).select("id").single())) : null;
@@ -215,12 +252,12 @@ async function seedTenant(code: TenantCode) {
 
   await optional("events", () => requireNoError(supabase.from("events").insert(["Library Orientation", "Citation Management Training", "Digital Library Workshop", "Book Exhibition", "Accreditation Resource Review"].map((title, index) => ({ title: `${code} Demo: ${title}`, description: `${SEED_TAG}: ${title} for partner demo and QA.`, event_type: index === 3 ? "seminar" : "training", venue: `${tenant.libraryName} Training Room`, start_at: new Date(Date.now() + (index + 3) * 86400000).toISOString(), end_at: new Date(Date.now() + (index + 3) * 86400000 + 7200000).toISOString(), is_virtual: index === 2, virtual_url: index === 2 ? "https://example.edu.ng/demo-event" : null, max_attendees: 40 + index * 10, status: "upcoming", category: "Workshop", location: tenant.location, registration_required: true, registrations_count: index + 3, department: departments[index][0], created_by: userIds.get("librarian1") })))));
   const events = await optional("events", () => requireNoError(supabase.from("events").select("id").like("title", `${code} Demo:%`).limit(3)));
-  if (events?.length && studentPatrons.length) await optional("event_registrations", () => requireNoError(supabase.from("event_registrations").insert(events.flatMap((event: any, index: number) => studentPatrons.slice(index, index + 3).map((patron: any) => ({ event_id: event.id, patron_id: patron.id, attended: index === 0 }))))));
+  if (events?.length && studentPatrons.length) await optional("event_registrations", () => requireNoError(supabase.from("event_registrations").insert(events.flatMap((event: EventRow, index: number) => studentPatrons.slice(index, index + 3).map((patron: PatronRow) => ({ event_id: event.id, patron_id: patron.id, attended: index === 0 }))))));
 
   await optional("blog_posts", () => requireNoError(supabase.from("blog_posts").insert(["New Open Access Resources Added This Month", "How to Use the Smart Library Catalogue", "Guide to Submitting Your Final Year Project", "Library Orientation Schedule", "Using Lexis, Your AI Reference Librarian"].map((title, index) => ({ title: `${code} Demo: ${title}`, slug: `${code.toLowerCase()}-demo-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`, excerpt: `${SEED_TAG}: ${title}`, content: `Demo article for ${tenant.name}.`, author_name: `${code} Demo Librarian`, category: index === 4 ? "AI Librarian" : "Library News", tags: ["demo", "smart-library"], status: "published", published_at: monthsAgo(index), view_count: 20 + index * 7, department: "Library Services", body: [{ type: "paragraph", text: `${SEED_TAG}: seeded content` }], comments_enabled: false })))));
   await optional("announcements", () => requireNoError(supabase.from("announcements").insert(["Extended Reading Hours", "New Catalogue Records Available", "Repository Submission Window Open"].map((title, index) => ({ title: `${code} Demo: ${title}`, content: `${SEED_TAG}: ${title}`, priority: index + 1, category: "demo", is_active: true, expires_at: new Date(Date.now() + (index + 14) * 86400000).toISOString() })))));
 
-  await optional("notifications", () => requireNoError(supabase.from("notifications").insert(studentPatrons.slice(0, 6).map((patron: any, index: number) => ({ patron_id: patron.id, title: [`Due soon reminder`, `Overdue notice`, `Approval needed`, `New resource available`, `Event reminder`, `Account approved`][index], message: `${SEED_TAG}: demo notification for ${patron.full_name}.`, type: index === 1 ? "warning" : "info", is_read: index % 2 === 0, action_url: index < 2 ? "/dashboard/loans" : "/catalogue" })))));
+  await optional("notifications", () => requireNoError(supabase.from("notifications").insert(studentPatrons.slice(0, 6).map((patron: PatronRow, index: number) => ({ patron_id: patron.id, title: [`Due soon reminder`, `Overdue notice`, `Approval needed`, `New resource available`, `Event reminder`, `Account approved`][index], message: `${SEED_TAG}: demo notification for ${patron.full_name}.`, type: index === 1 ? "warning" : "info", is_read: index % 2 === 0, action_url: index < 2 ? "/dashboard/loans" : "/catalogue" })))));
 
   await optional("approval_queue", () => requireNoError(supabase.from("approval_queue").insert(["catalogue_csv", "barcode_record", "thesis_upload", "newsletter_draft", "harvested_resource", "patron_import"].map((contentType, index) => ({ tenant_id: tenant.id, content_type: contentType, action_type: index === 2 ? "publish" : "review", risk_tier: index === 4 ? "human" : "auto", status: index === 4 ? "rejected" : index === 3 ? "approved" : "pending", title: `${code} Demo Approval: ${contentType.replace(/_/g, " ")}`, summary: `${SEED_TAG}: approval workflow demo`, payload: { seeded: true, seed_tag: SEED_TAG, tenant: code }, submitted_by: userIds.get("librarian1"), approved_by: index === 3 ? userIds.get("admin") : null, rejected_by: index === 4 ? userIds.get("admin") : null, decided_at: index >= 3 ? new Date().toISOString() : null })))));
 

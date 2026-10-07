@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface ILLTicket {
@@ -23,15 +23,7 @@ export default function ILL() {
   const [filterFaculty, setFilterFaculty] = useState('');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  useEffect(() => {
-    fetchTickets();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [tickets, filterStatus, filterFaculty]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('ill_requests')
@@ -45,23 +37,28 @@ export default function ILL() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFilters = () => {
-    let filtered = tickets;
+  useEffect(() => { void fetchTickets(); }, [fetchTickets]);
 
-    if (filterStatus) {
-      filtered = filtered.filter((ticket) => ticket.status === filterStatus);
-    }
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = tickets;
 
-    if (filterFaculty) {
-      filtered = filtered.filter((ticket) => (ticket.from_faculty || ticket.patrons?.faculty_name) === filterFaculty);
-    }
+      if (filterStatus) {
+        filtered = filtered.filter((ticket) => ticket.status === filterStatus);
+      }
 
-    setFilteredTickets(filtered);
-  };
+      if (filterFaculty) {
+        filtered = filtered.filter((ticket) => (ticket.from_faculty || ticket.patrons?.faculty_name) === filterFaculty);
+      }
 
-  const updateStatus = async (id: string, newStatus: string, email: string) => {
+      setFilteredTickets(filtered);
+    };
+    applyFilters();
+  }, [tickets, filterStatus, filterFaculty]);
+
+  const updateStatus = async (id: string, newStatus: string, _email: string) => {
     try {
       const { error } = await supabase
         .from('ill_requests')
@@ -73,7 +70,7 @@ export default function ILL() {
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
 
-      fetchTickets();
+      void fetchTickets();
     } catch (error) {
       console.error('Error updating ticket:', error);
     }

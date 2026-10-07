@@ -28,7 +28,7 @@ export const safeObjectKeySchema = z
   .trim()
   .min(1)
   .max(1024)
-  .regex(/^[a-zA-Z0-9!_.*'()\/-]+$/, 'Object key contains unsupported characters.');
+  .regex(/^[a-zA-Z0-9!_.*'()/-]+$/, 'Object key contains unsupported characters.');
 
 export function stripPatronPii(value: string) {
   return value

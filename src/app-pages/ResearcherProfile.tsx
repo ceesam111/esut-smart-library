@@ -49,49 +49,48 @@ export default function ResearcherProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchResearcher();
+    const fetchResearcher = async () => {
+      try {
+        const { data: profileData, error } = await supabase
+          .from('researcher_profiles')
+          .select('*')
+          .eq('slug', slug)
+          .eq('status', 'approved')
+          .single();
+
+        if (error) throw error;
+
+        const { data: pubData } = await supabase
+          .from('researcher_publications')
+          .select('*')
+          .eq('researcher_id', profileData.id)
+          .order('year', { ascending: false });
+
+        const { data: grantData } = await supabase
+          .from('researcher_grants')
+          .select('*')
+          .eq('researcher_id', profileData.id)
+          .order('year_start', { ascending: false });
+
+        const { data: teachData } = await supabase
+          .from('researcher_teaching')
+          .select('*')
+          .eq('researcher_id', profileData.id);
+
+        setResearcher({
+          ...profileData,
+          publications: pubData || [],
+          grants: grantData || [],
+          teaching: teachData || [],
+        });
+      } catch (err) {
+        console.error('Error fetching researcher:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchResearcher();
   }, [slug]);
-
-  const fetchResearcher = async () => {
-    try {
-      const { data: profileData, error } = await supabase
-        .from('researcher_profiles')
-        .select('*')
-        .eq('slug', slug)
-        .eq('status', 'approved')
-        .single();
-
-      if (error) throw error;
-
-      const { data: pubData } = await supabase
-        .from('researcher_publications')
-        .select('*')
-        .eq('researcher_id', profileData.id)
-        .order('year', { ascending: false });
-
-      const { data: grantData } = await supabase
-        .from('researcher_grants')
-        .select('*')
-        .eq('researcher_id', profileData.id)
-        .order('year_start', { ascending: false });
-
-      const { data: teachData } = await supabase
-        .from('researcher_teaching')
-        .select('*')
-        .eq('researcher_id', profileData.id);
-
-      setResearcher({
-        ...profileData,
-        publications: pubData || [],
-        grants: grantData || [],
-        teaching: teachData || [],
-      });
-    } catch (err) {
-      console.error('Error fetching researcher:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return <div className="page"><div className="text-center py-8">Loading profile...</div></div>;

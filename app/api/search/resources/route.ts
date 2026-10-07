@@ -14,7 +14,29 @@ import { trackFederatedSearch } from '@/server/analytics/federatedEvents';
 import { loadPatronContext } from '@/server/analytics/patronContext';
 import { hashIp } from '@/server/analytics/eventCapture';
 
-function groupCandidates(candidates: any[] = []) {
+interface SearchCandidate {
+  id?: string;
+  status?: string;
+  title?: string | null;
+  authors?: string[];
+  subjects?: string[];
+  publisher?: string | null;
+  year?: number | null;
+  published_year?: number | null;
+  publication_date?: string | null;
+  source_name?: string | null;
+  item_type?: string | null;
+  abstract?: string | null;
+  description?: string | null;
+  source_url?: string | null;
+  download_url?: string | null;
+  isbn?: string | null;
+  issn?: string | null;
+  rights_status: string;
+  promoted_catalogue_item_id?: string | null;
+}
+
+function groupCandidates(candidates: SearchCandidate[] = []) {
   return {
     openAccessArticles: candidates.filter((item) => item.item_type === 'article' && item.rights_status === 'open'),
     ebooks: candidates.filter((item) => /book|ebook/i.test(String(item.item_type ?? ''))),
@@ -25,7 +47,7 @@ function groupCandidates(candidates: any[] = []) {
   };
 }
 
-function decorateCandidate(candidate: any) {
+function decorateCandidate(candidate: SearchCandidate) {
   const legalDownload = ['open', 'public_domain'].includes(candidate.rights_status) && !!candidate.download_url;
   const approved = candidate.status === 'approved' || candidate.status === 'auto_added' || Boolean(candidate.promoted_catalogue_item_id);
   return {
@@ -41,7 +63,7 @@ function decorateCandidate(candidate: any) {
   };
 }
 
-function candidateToCatalogueRow(candidate: any, tenantId: string) {
+function candidateToCatalogueRow(candidate: SearchCandidate, tenantId: string) {
   const title = String(candidate.title ?? '').trim();
   if (!title) return null;
   const authors = Array.isArray(candidate.authors) ? candidate.authors : String(candidate.authors ?? '').split(/[;,]/).map((a) => a.trim()).filter(Boolean);
@@ -68,7 +90,7 @@ function candidateToCatalogueRow(candidate: any, tenantId: string) {
   };
 }
 
-async function cacheApprovedHoldings(candidates: any[], tenantId: string) {
+async function cacheApprovedHoldings(candidates: SearchCandidate[], tenantId: string) {
   const rows = candidates
     .filter((candidate) => candidate.status === 'approved' || candidate.status === 'auto_added' || candidate.promoted_catalogue_item_id)
     .map((candidate) => candidateToCatalogueRow(candidate, tenantId))
@@ -140,7 +162,7 @@ export const GET = withHandler({
       limitPerSource: 4,
     });
 
-    const rawCandidates = discovery.candidates as any[];
+    const rawCandidates = discovery.candidates as SearchCandidate[];
     const cachedHoldingCount = await cacheApprovedHoldings(rawCandidates, tenant.tenantId);
     const externalCandidates = rawCandidates.map(decorateCandidate);
 

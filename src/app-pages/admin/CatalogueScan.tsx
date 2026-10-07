@@ -89,7 +89,7 @@ export default function CatalogueScan() {
     try {
       if (!('BarcodeDetector' in window)) throw new Error('Image barcode scan requires a browser with BarcodeDetector support. Use Chrome/Edge or enter the code manually.');
       const bitmap = await createImageBitmap(file);
-      const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'] });
+      const detector = new (window as unknown as { BarcodeDetector: new (options: { formats: string[] }) => { detect: (bitmap: ImageBitmap) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'] });
       const hits = await detector.detect(bitmap);
       bitmap.close?.();
       const code = hits?.[0]?.rawValue;
@@ -169,5 +169,5 @@ export default function CatalogueScan() {
 
 function ManualFields({ form, setForm, compact = false }: { form: typeof emptyForm; setForm: Dispatch<SetStateAction<typeof emptyForm>>; compact?: boolean }) {
   const fields = compact ? ['copies', 'shelf_location'] : Object.keys(emptyForm);
-  return <div className="grid sm:grid-cols-2 gap-3">{fields.map((field) => field === 'item_type' ? <select key={field} value={form.item_type} onChange={(e) => setForm((f) => ({ ...f, item_type: e.target.value }))} className="input"><option value="book">book</option><option value="journal">journal</option><option value="ebook">ebook</option><option value="database">database</option></select> : <input key={field} value={(form as any)[field]} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} placeholder={field} className="input" />)}</div>;
+  return <div className="grid sm:grid-cols-2 gap-3">{fields.map((field) => field === 'item_type' ? <select key={field} value={form.item_type} onChange={(e) => setForm((f) => ({ ...f, item_type: e.target.value }))} className="input"><option value="book">book</option><option value="journal">journal</option><option value="ebook">ebook</option><option value="database">database</option></select> : <input key={field} value={form[field as keyof typeof emptyForm]} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} placeholder={field} className="input" />)}</div>;
 }

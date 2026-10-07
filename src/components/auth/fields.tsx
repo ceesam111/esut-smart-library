@@ -36,7 +36,7 @@ export function TextInput({
         if (type === 'date' && 'showPicker' in HTMLInputElement.prototype) {
           try {
             (e.target as HTMLInputElement).showPicker();
-          } catch (err) {
+          } catch {
             // Ignore error if picker is already showing or not supported
           }
         }

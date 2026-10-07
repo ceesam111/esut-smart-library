@@ -22,15 +22,91 @@ function recencyBadge(year: number | null): string {
   return "Historical";
 }
 
-async function harvestOpenAlex(subject: string): Promise<any[]> {
+type HarvestItem = {
+  title: string;
+  authors: string;
+  year: number | null;
+  abstract: string;
+  doi: string | null;
+  source_url: string | null;
+  source: string;
+  item_type?: string;
+};
+
+type HarvestLogEntry = {
+  subject: string;
+  source: string;
+  items_found: number;
+  items_added: number;
+  items_skipped: number;
+  status: string;
+  error_message: string | null;
+};
+
+type SupabaseLike = ReturnType<typeof createClient>;
+
+type OpenAlexWork = {
+  title?: string;
+  publication_year?: number;
+  doi?: string;
+  abstract?: string;
+  authorships?: { author?: { display_name?: string } }[];
+  primary_location?: { landing_page_url?: string; pdf_url?: string };
+};
+
+type DoajArticle = {
+  bibjson?: {
+    title?: string;
+    year?: string;
+    abstract?: string;
+    author?: { name?: string }[];
+    identifier?: { type?: string; id?: string }[];
+    link?: { type?: string; url?: string }[];
+  };
+};
+
+type CoreWork = {
+  title?: string;
+  yearPublished?: number;
+  abstract?: string;
+  doi?: string;
+  downloadUrl?: string;
+  sourceFulltextUrls?: string[];
+  authors?: { name?: string }[];
+};
+
+type GutenbergBook = {
+  title?: string;
+  copyright_year?: number;
+  authors?: { name?: string }[];
+  subjects?: string[];
+  formats?: Record<string, string>;
+};
+
+type OpenLibraryDoc = {
+  title?: string;
+  key?: string;
+  author_name?: string[];
+  first_publish_year?: number;
+  subject?: string[];
+};
+
+type OapenRecord = {
+  name?: string;
+  metadata?: { key: string; value: string }[];
+};
+
+type OapenResponse = OapenRecord[] | { results?: OapenRecord[] };
+
+async function harvestOpenAlex(subject: string): Promise<HarvestItem[]> {
   try {
     const url = `https://api.openalex.org/works?search=${encodeURIComponent(subject)}&filter=publication_year:%3E2020,open_access.is_oa:true&sort=publication_year:desc&per-page=10&mailto=${MAILTO}`;
     const res = await fetch(url);
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results ?? []).map((w: any) => ({
+    const data = (await res.json()) as { results?: OpenAlexWork[] };
+    return (data.results ?? []).map((w) => ({
       title: w.title ?? "",
-      authors: (w.authorships ?? []).slice(0, 5).map((a: any) => a.author?.display_name ?? "").join("; "),
+      authors: (w.authorships ?? []).slice(0, 5).map((a) => a.author?.display_name ?? "").join("; "),
       year: w.publication_year ?? null,
       abstract: w.abstract ?? "",
       doi: w.doi ? w.doi.replace("https://doi.org/", "") : null,
@@ -40,34 +116,34 @@ async function harvestOpenAlex(subject: string): Promise<any[]> {
   } catch { return []; }
 }
 
-async function harvestDOAJ(subject: string): Promise<any[]> {
+async function harvestDOAJ(subject: string): Promise<HarvestItem[]> {
   try {
     const url = `https://doaj.org/api/search/articles/${encodeURIComponent(subject)}?pageSize=5&sort=publishedAt:desc`;
     const res = await fetch(url);
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results ?? []).map((a: any) => ({
+    const data = (await res.json()) as { results?: DoajArticle[] };
+    return (data.results ?? []).map((a) => ({
       title: a.bibjson?.title ?? "",
-      authors: (a.bibjson?.author ?? []).slice(0, 5).map((au: any) => au.name ?? "").join("; "),
+      authors: (a.bibjson?.author ?? []).slice(0, 5).map((au) => au.name ?? "").join("; "),
       year: a.bibjson?.year ? parseInt(a.bibjson.year) : null,
       abstract: a.bibjson?.abstract ?? "",
-      doi: a.bibjson?.identifier?.find((i: any) => i.type === "doi")?.id ?? null,
-      source_url: a.bibjson?.link?.find((l: any) => l.type === "fulltext")?.url ?? null,
+      doi: a.bibjson?.identifier?.find((i) => i.type === "doi")?.id ?? null,
+      source_url: a.bibjson?.link?.find((l) => l.type === "fulltext")?.url ?? null,
       source: "DOAJ",
     }));
   } catch { return []; }
 }
 
-async function harvestCORE(subject: string): Promise<any[]> {
+async function harvestCORE(subject: string): Promise<HarvestItem[]> {
   if (!CORE_API_KEY) return [];
   try {
     const url = `https://api.core.ac.uk/v3/search/works?q=${encodeURIComponent(subject + " education")}&limit=5&sort=_score`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${CORE_API_KEY}` } });
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results ?? []).map((w: any) => ({
+    const data = (await res.json()) as { results?: CoreWork[] };
+    return (data.results ?? []).map((w) => ({
       title: w.title ?? "",
-      authors: (w.authors ?? []).slice(0, 5).map((a: any) => a.name ?? "").join("; "),
+      authors: (w.authors ?? []).slice(0, 5).map((a) => a.name ?? "").join("; "),
       year: w.yearPublished ?? null,
       abstract: w.abstract ?? "",
       doi: w.doi ?? null,
@@ -77,16 +153,16 @@ async function harvestCORE(subject: string): Promise<any[]> {
   } catch { return []; }
 }
 
-async function harvestGutenberg(subject: string): Promise<any[]> {
+async function harvestGutenberg(subject: string): Promise<HarvestItem[]> {
   try {
     const res = await fetch(
       `https://gutendex.com/books/?search=${encodeURIComponent(subject)}&languages=en,yo&mime_type=text/html`
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results ?? []).slice(0, 5).map((b: any) => ({
+    const data = (await res.json()) as { results?: GutenbergBook[] };
+    return (data.results ?? []).slice(0, 5).map((b) => ({
       title: b.title ?? "",
-      authors: (b.authors ?? []).map((a: any) => a.name).join("; "),
+      authors: (b.authors ?? []).map((a) => a.name).join("; "),
       year: b.copyright_year ?? null,
       abstract: (b.subjects ?? []).slice(0, 6).join(", "),
       doi: null,
@@ -97,14 +173,14 @@ async function harvestGutenberg(subject: string): Promise<any[]> {
   } catch { return []; }
 }
 
-async function harvestOpenLibrary(subject: string): Promise<any[]> {
+async function harvestOpenLibrary(subject: string): Promise<HarvestItem[]> {
   try {
     const res = await fetch(
       `https://openlibrary.org/search.json?q=${encodeURIComponent(subject)}&has_fulltext=true&fields=key,title,author_name,first_publish_year,subject,cover_i&limit=5`
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.docs ?? []).slice(0, 5).map((b: any) => ({
+    const data = (await res.json()) as { docs?: OpenLibraryDoc[] };
+    return (data.docs ?? []).slice(0, 5).map((b) => ({
       title: b.title ?? "",
       authors: (b.author_name ?? []).slice(0, 3).join("; "),
       year: b.first_publish_year ?? null,
@@ -117,17 +193,17 @@ async function harvestOpenLibrary(subject: string): Promise<any[]> {
   } catch { return []; }
 }
 
-async function harvestOAPEN(subject: string): Promise<any[]> {
+async function harvestOAPEN(subject: string): Promise<HarvestItem[]> {
   try {
     const res = await fetch(
       `https://library.oapen.org/rest/search?query=${encodeURIComponent(subject)}&expand=metadata&offset=0&limit=5`,
       { headers: { Accept: "application/json" } }
     );
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as OapenResponse;
     const items = Array.isArray(data) ? data : (data.results ?? []);
-    return items.slice(0, 5).map((b: any) => {
-      const meta = (b.metadata ?? []).reduce((acc: any, m: any) => { acc[m.key] = m.value; return acc; }, {});
+    return items.slice(0, 5).map((b) => {
+      const meta = (b.metadata ?? []).reduce<Record<string, string>>((acc, m) => { acc[m.key] = m.value; return acc; }, {});
       const doi = meta["dc.identifier.doi"] ?? meta["dc.identifier"] ?? null;
       return {
         title: meta["dc.title"] ?? b.name ?? "",
@@ -143,17 +219,17 @@ async function harvestOAPEN(subject: string): Promise<any[]> {
   } catch { return []; }
 }
 
-async function harvestDOAB(subject: string): Promise<any[]> {
+async function harvestDOAB(subject: string): Promise<HarvestItem[]> {
   try {
     const res = await fetch(
       `https://directory.doabooks.org/rest/search?query=${encodeURIComponent(subject)}&expand=metadata&limit=5`,
       { headers: { Accept: "application/json" } }
     );
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as OapenResponse;
     const items = Array.isArray(data) ? data : (data.results ?? []);
-    return items.slice(0, 5).map((b: any) => {
-      const meta = (b.metadata ?? []).reduce((acc: any, m: any) => { acc[m.key] = m.value; return acc; }, {});
+    return items.slice(0, 5).map((b) => {
+      const meta = (b.metadata ?? []).reduce<Record<string, string>>((acc, m) => { acc[m.key] = m.value; return acc; }, {});
       const doi = meta["dc.identifier.doi"] ?? null;
       return {
         title: meta["dc.title"] ?? b.name ?? "",
@@ -169,9 +245,9 @@ async function harvestDOAB(subject: string): Promise<any[]> {
   } catch { return []; }
 }
 
-async function upsertItem(supabase: any, item: any, subject: string, logEntry: any) {
+async function upsertItem(supabase: SupabaseLike, item: HarvestItem, subject: string, logEntry: HarvestLogEntry) {
   // Deduplicate by DOI first, then by title
-  let existing: any = null;
+  let existing: { id?: string } | null = null;
 
   if (item.doi) {
     const { data } = await supabase
@@ -240,10 +316,10 @@ Deno.serve(async (req: Request) => {
       .select("subject, enabled")
       .eq("enabled", true);
 
-    const subjects = (configs ?? []).map((c: any) => c.subject);
+    const subjects = ((configs ?? []) as { subject: string }[]).map((c) => c.subject);
     if (!subjects.length) return json({ ok: true, message: "No subjects enabled" });
 
-    const summary: any[] = [];
+    const summary: HarvestLogEntry[] = [];
 
     for (const subject of subjects) {
       // Run all harvest sources in parallel per subject
@@ -265,7 +341,7 @@ Deno.serve(async (req: Request) => {
         ["Open Library", openLibraryItems],
         ["OAPEN", oapenItems],
         ["DOAB", doabItems],
-      ] as [string, any[]][]) {
+      ] as [string, HarvestItem[]][]) {
         const logEntry = {
           subject,
           source,
@@ -281,7 +357,7 @@ Deno.serve(async (req: Request) => {
             if (!item.title?.trim()) { logEntry.items_skipped++; continue; }
             await upsertItem(supabase, item, subject, logEntry);
           }
-        } catch (err: any) {
+        } catch (err) {
           logEntry.status = "error";
           logEntry.error_message = String(err);
         }

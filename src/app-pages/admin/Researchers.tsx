@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface ResearcherProfile {
@@ -23,15 +23,7 @@ export default function Researchers() {
   const [returnNotes, setReturnNotes] = useState('');
   const [showReturnForm, setShowReturnForm] = useState(false);
 
-  useEffect(() => {
-    fetchResearchers();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [researchers, filterStatus]);
-
-  const fetchResearchers = async () => {
+  const fetchResearchers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('researcher_profiles')
@@ -45,17 +37,22 @@ export default function Researchers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFilters = () => {
-    let filtered = researchers;
+  useEffect(() => { void fetchResearchers(); }, [fetchResearchers]);
 
-    if (filterStatus) {
-      filtered = filtered.filter((r) => r.status === filterStatus);
-    }
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = researchers;
 
-    setFilteredResearchers(filtered);
-  };
+      if (filterStatus) {
+        filtered = filtered.filter((r) => r.status === filterStatus);
+      }
+
+      setFilteredResearchers(filtered);
+    };
+    applyFilters();
+  }, [researchers, filterStatus]);
 
   const viewResearcher = (researcher: ResearcherProfile) => {
     setSelectedResearcher(researcher);
@@ -76,7 +73,7 @@ export default function Researchers() {
       if (error) throw error;
 
       setSlideOpen(false);
-      fetchResearchers();
+      void fetchResearchers();
     } catch (error) {
       console.error('Error approving researcher:', error);
     }
@@ -94,7 +91,7 @@ export default function Researchers() {
       if (error) throw error;
 
       setSlideOpen(false);
-      fetchResearchers();
+      void fetchResearchers();
     } catch (error) {
       console.error('Error returning researcher profile:', error);
     }

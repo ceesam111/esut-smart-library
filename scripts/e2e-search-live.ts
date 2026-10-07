@@ -11,7 +11,6 @@
  *
  * Run: node_modules\.bin\tsx.cmd scripts\e2e-search-live.ts
  */
-/* eslint-disable no-console -- CLI diagnostic tool: its printed report is the deliverable. */
 import { loadDotEnv } from './demo-seed-lib';
 import { randomUUID } from 'node:crypto';
 import { jsPDF } from 'jspdf';

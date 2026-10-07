@@ -91,7 +91,7 @@ export default function Approvals() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (!authLoading && can('approvals')) fetchPending(); }, [authLoading, can, fetchPending]);
+  useEffect(() => { if (!authLoading && can('approvals')) void fetchPending(); }, [authLoading, can, fetchPending]);
 
   const fetchQueue = useCallback(async () => {
     setQueueLoading(true);
@@ -119,8 +119,8 @@ export default function Approvals() {
 
   useEffect(() => {
     if (authLoading || !can('approvals')) return;
-    if (tab === 'queue') fetchQueue();
-    if (tab === 'audit' && isSuperAdmin) fetchAudit();
+    if (tab === 'queue') void fetchQueue();
+    if (tab === 'audit' && isSuperAdmin) void fetchAudit();
   }, [authLoading, can, fetchAudit, fetchQueue, isSuperAdmin, tab]);
 
   async function approve(p: PendingPatron) {

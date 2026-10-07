@@ -26,7 +26,6 @@ type UnconfirmedRow = { id: string; email: string; created_at: string; provider:
 
 function Badge({ role }: { role: string }) {
   const isSuper = role === 'super_admin';
-  const isAccountManager = isSuper || role === 'librarian';
   return (
     <span
       className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
@@ -84,7 +83,7 @@ export default function AdminAccounts() {
   }, [isSuper]);
 
   useEffect(() => {
-    if (isAccountManager) loadAll();
+    if (isAccountManager) void loadAll();
   }, [isAccountManager, loadAll]);
 
   async function run(key: string, fn: () => Promise<unknown>, okText: string) {
@@ -299,7 +298,7 @@ export default function AdminAccounts() {
                               defaultValue=""
                               onChange={(e) => {
                                 const r = e.target.value as AssignableRole;
-                                if (r) run(`ar-${a.user_id}`, () => assignRole({ data: { userId: a.user_id, role: r, email: a.email ?? undefined } }), 'Role granted');
+                                if (r) void run(`ar-${a.user_id}`, () => assignRole({ data: { userId: a.user_id, role: r, email: a.email ?? undefined } }), 'Role granted');
                                 e.currentTarget.value = '';
                               }}
                               className="text-xs border border-neutral-300 rounded px-2 py-1"
@@ -312,9 +311,9 @@ export default function AdminAccounts() {
                             {isSuper && <button
                               onClick={() => {
                                 if (hasSuper) {
-                                  run(`super-${a.user_id}`, () => revokeRole({ data: { userId: a.user_id, role: 'super_admin', email: a.email ?? undefined } }), 'Super admin revoked');
+                                  void run(`super-${a.user_id}`, () => revokeRole({ data: { userId: a.user_id, role: 'super_admin', email: a.email ?? undefined } }), 'Super admin revoked');
                                 } else {
-                                  run(`super-${a.user_id}`, () => assignRole({ data: { userId: a.user_id, role: 'super_admin', email: a.email ?? undefined } }), 'Super admin granted');
+                                  void run(`super-${a.user_id}`, () => assignRole({ data: { userId: a.user_id, role: 'super_admin', email: a.email ?? undefined } }), 'Super admin granted');
                                 }
                               }}
                               className="text-xs px-2 py-1 rounded border border-neutral-300 hover:bg-neutral-50"
@@ -332,7 +331,7 @@ export default function AdminAccounts() {
                               onClick={() => {
                                 const verb = a.banned ? 'restore access for' : 'revoke access for';
                                 if (confirm(`Are you sure you want to ${verb} ${a.email}?`)) {
-                                  run(`acc-${a.user_id}`, () => setAccess({ data: { userId: a.user_id, revoke: !a.banned, email: a.email ?? undefined } }), a.banned ? 'Access restored' : 'Access revoked');
+                                  void run(`acc-${a.user_id}`, () => setAccess({ data: { userId: a.user_id, revoke: !a.banned, email: a.email ?? undefined } }), a.banned ? 'Access restored' : 'Access revoked');
                                 }
                               }}
                               disabled={targetLocked}

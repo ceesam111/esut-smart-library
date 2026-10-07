@@ -43,7 +43,7 @@ interface AggMetrics {
 }
 
 interface RankRow { initiative_key: string; rank_text: string | null; rank_year: number | null; }
-interface ActionRow { action_id: number; status: string; }
+
 
 // ── Static data ──────────────────────────────────────────────────────────────
 
@@ -216,10 +216,7 @@ export default function WebometricsPage() {
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
-    load();
-  }, []);
-
-  const load = async () => {
+    const load = async () => {
     setLoading(true);
 
     const [
@@ -308,6 +305,8 @@ export default function WebometricsPage() {
 
     setLoading(false);
   };
+    void load();
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50">

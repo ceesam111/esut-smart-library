@@ -37,7 +37,7 @@ export default function CmsMenu() {
   const dragOver = useRef<string | null>(null);
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   async function load() {
@@ -90,12 +90,12 @@ export default function CmsMenu() {
     }
     setSaving(false);
     setShowForm(false);
-    load();
+    void load();
   }
 
   async function remove(id: string) {
     await supabase.from('cms_menu').delete().or(`id.eq.${id},parent_id.eq.${id}`);
-    load();
+    void load();
   }
 
   async function reorder(dragId: string, dropId: string) {
@@ -114,7 +114,7 @@ export default function CmsMenu() {
 
     const updates = without.map((item, idx) => ({ id: item.id, position: idx }));
     await Promise.all(updates.map(u => supabase.from('cms_menu').update({ position: u.position }).eq('id', u.id)));
-    load();
+    void load();
   }
 
   function MenuItemRow({ item, depth = 0 }: { item: MenuItem; depth?: number }) {
@@ -125,7 +125,7 @@ export default function CmsMenu() {
         onDragStart={() => setDragSrc(item.id)}
         onDragOver={e => { e.preventDefault(); dragOver.current = item.id; }}
         onDrop={() => {
-          if (dragSrc && dragSrc !== item.id) reorder(dragSrc, item.id);
+          if (dragSrc && dragSrc !== item.id) void reorder(dragSrc, item.id);
           setDragSrc(null);
         }}
       >

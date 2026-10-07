@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
-interface StagingRow {
+export interface StagingRow {
   id: string; isbn: string | null; title: string | null; authors: string[]; publisher: string | null; year: number | null;
   edition?: string | null; language?: string | null; category?: string | null; subjects?: string[]; copies?: number;
   shelf_location?: string | null; item_type?: string; source_url?: string | null; cover_url?: string | null; notes?: string | null;
@@ -25,16 +25,16 @@ export default function CatalogueImportBatch() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const json = await authFetch(`/api/admin/catalogue/import/${batchId}${filter ? `?confidence=${filter}` : ''}`);
       setRows(json.rows ?? []);
     } catch (error) { setMessage((error as Error).message); }
     finally { setLoading(false); }
-  }
+  }, [batchId, filter]);
 
-  useEffect(() => { load(); }, [batchId, filter]);
+  useEffect(() => { void load(); }, [load]);
 
   async function approve(id: string) {
     await authFetch(`/api/admin/catalogue/staging/${id}/approve`, { method: 'POST', body: '{}' });

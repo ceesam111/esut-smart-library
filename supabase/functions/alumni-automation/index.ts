@@ -50,12 +50,12 @@ Deno.serve(async (req: Request) => {
     if (fetchErr) return json({ error: fetchErr.message }, 500);
 
     const toConvert = (graduating ?? []).filter(
-      (p: any) => !p.session_enrolled || p.session_enrolled !== currentSession,
+      (p: { session_enrolled?: string }) => !p.session_enrolled || p.session_enrolled !== currentSession,
     );
 
     if (toConvert.length === 0) return json({ ok: true, converted: 0, message: "No patrons to convert" });
 
-    const ids = toConvert.map((p: any) => p.id);
+    const ids = toConvert.map((p: { id: string }) => p.id);
 
     const { error: updateErr } = await supabase
       .from("patrons")

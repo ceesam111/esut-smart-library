@@ -37,6 +37,20 @@ interface ListItem {
 
 const HIGH_DEMAND_THRESHOLD = 20;
 
+interface ReadingListRow {
+  id: string;
+  course_title: string;
+  course_code: string;
+  department: string;
+  semester: string;
+  session: string;
+  is_active: boolean;
+  view_count: number;
+  lecturer_id: string;
+  created_at: string;
+  course_reading_list_items?: { count?: number }[] | null;
+}
+
 export default function AdminCourseReserves() {
   const [lists, setLists] = useState<ReadingList[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +61,7 @@ export default function AdminCourseReserves() {
   const [shortLoanMap, setShortLoanMap] = useState<Record<string, boolean>>({});
   const [toggling, setToggling] = useState('');
 
-  useEffect(() => { fetchLists(); }, []);
+  useEffect(() => { void fetchLists(); }, []);
 
   const fetchLists = async () => {
     setLoading(true);
@@ -59,13 +73,13 @@ export default function AdminCourseReserves() {
     if (!rawLists) { setLoading(false); return; }
 
     // Fetch lecturer names in parallel
-    const lecturerIds = [...new Set(rawLists.map((l: any) => l.lecturer_id).filter(Boolean))];
+    const lecturerIds = [...new Set(rawLists.map((l: ReadingListRow) => l.lecturer_id).filter(Boolean))];
     const { data: patrons } = await supabase
       .from('patrons')
       .select('user_id, full_name')
       .in('user_id', lecturerIds);
     const nameMap: Record<string, string> = {};
-    (patrons ?? []).forEach((p: any) => { nameMap[p.user_id] = p.full_name; });
+    (patrons ?? []).forEach((p: { user_id: string; full_name: string }) => { nameMap[p.user_id] = p.full_name; });
 
     // For high-demand: count items with click_count >= threshold
     const { data: highDemandCounts } = await supabase
@@ -74,11 +88,11 @@ export default function AdminCourseReserves() {
       .gte('click_count', HIGH_DEMAND_THRESHOLD);
 
     const hdMap: Record<string, number> = {};
-    (highDemandCounts ?? []).forEach((r: any) => {
+    (highDemandCounts ?? []).forEach((r: { list_id: string }) => {
       hdMap[r.list_id] = (hdMap[r.list_id] ?? 0) + 1;
     });
 
-    const formatted = rawLists.map((l: any) => ({
+    const formatted = rawLists.map((l: ReadingListRow) => ({
       ...l,
       item_count: l.course_reading_list_items?.[0]?.count ?? 0,
       lecturer_name: nameMap[l.lecturer_id] ?? 'Unknown',
@@ -102,7 +116,7 @@ export default function AdminCourseReserves() {
     const itemData = data ?? [];
     setItems(itemData);
     const slm: Record<string, boolean> = {};
-    itemData.forEach((i: any) => { slm[i.id] = i.is_short_loan ?? false; });
+    itemData.forEach((i: { id: string; is_short_loan?: boolean }) => { slm[i.id] = i.is_short_loan ?? false; });
     setShortLoanMap(slm);
     setItemsLoading(false);
   };
@@ -235,7 +249,7 @@ export default function AdminCourseReserves() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <button className="btn-outline text-xs py-1 px-2" onClick={e => { e.stopPropagation(); openList(list); }}>
+                      <button className="btn-outline text-xs py-1 px-2" onClick={e => { e.stopPropagation(); void openList(list); }}>
                         Manage
                       </button>
                     </td>

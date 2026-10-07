@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { parseCQL, cqlToSupabaseFilter, isSupportedIndex, isSupportedRelation } from '@/server/interoperability/cqlParser';
 import { toDublinCore, toMARCXML, serializeRecord, type SRURecord } from '@/server/interoperability/sru/serializers';
 import { errorResponse, SRU_DIAGNOSTICS } from '@/server/interoperability/sru/diagnostics';

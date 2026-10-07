@@ -32,6 +32,179 @@ interface SearchResult {
   pdf_url: string | null;
 }
 
+// Minimal structural view of the Supabase client used by searchLocal.
+interface LocalSearchClient {
+  from<T>(table: string): {
+    select(columns: string): {
+      or(filter: string): {
+        limit(count: number): Promise<{ data: T[] | null }>;
+      };
+    };
+  };
+}
+
+interface CatalogueRow {
+  id: string | number;
+  title: string | null;
+  authors: string | null;
+  publication_year: number | null;
+  abstract: string | null;
+  source_url: string | null;
+}
+
+interface RepositoryRow {
+  id: string | number;
+  title: string | null;
+  author_names: string | string[] | null;
+  year: number | null;
+  abstract: string | null;
+  doi: string | null;
+  file_url: string | null;
+}
+
+interface NamedAuthor {
+  name?: string;
+}
+
+interface OpenAlexAuthorship {
+  author?: { display_name?: string };
+}
+
+interface OpenAlexWork {
+  id?: string;
+  title?: string;
+  authorships?: OpenAlexAuthorship[];
+  publication_year?: number;
+  abstract?: string;
+  doi?: string | null;
+  primary_location?: { landing_page_url?: string | null; pdf_url?: string | null };
+}
+
+interface CrossrefAuthor {
+  given?: string;
+  family?: string;
+}
+
+interface CrossrefItem {
+  DOI?: string;
+  title?: string | string[];
+  author?: CrossrefAuthor[];
+  published?: { "date-parts"?: number[][] };
+  abstract?: string;
+  URL?: string;
+}
+
+interface SemanticScholarPaper {
+  paperId?: string;
+  title?: string;
+  authors?: NamedAuthor[];
+  year?: number | null;
+  abstract?: string | null;
+  tldr?: { text?: string };
+  externalIds?: { DOI?: string };
+  openAccessPdf?: { url?: string };
+}
+
+interface CoreWork {
+  id?: string | number;
+  title?: string;
+  authors?: NamedAuthor[];
+  yearPublished?: number;
+  abstract?: string;
+  doi?: string | null;
+  downloadUrl?: string | null;
+  sourceFulltextUrls?: string[];
+}
+
+interface InternetArchiveDoc {
+  identifier?: string;
+  title?: string | string[];
+  creator?: string | string[];
+  year?: string;
+}
+
+interface GutenbergBook {
+  id?: number;
+  title?: string;
+  authors?: NamedAuthor[];
+  birth_year?: string | null;
+  subjects?: string[];
+  formats?: Record<string, string | undefined>;
+}
+
+interface OpenLibraryDoc {
+  key?: string;
+  title?: string;
+  author_name?: string[];
+  first_publish_year?: number;
+  subject?: string[];
+  cover_i?: number;
+}
+
+interface MetadataEntry {
+  key: string;
+  value: string;
+}
+
+interface OapenItem {
+  uuid?: string;
+  id?: string;
+  name?: string;
+  handle?: string;
+  metadata?: MetadataEntry[];
+}
+
+interface GoogleBooksItem {
+  id?: string;
+  volumeInfo?: {
+    title?: string;
+    authors?: string[];
+    publishedDate?: string;
+    description?: string;
+    canonicalVolumeLink?: string;
+    imageLinks?: { thumbnail?: string };
+  };
+  accessInfo?: {
+    viewability?: string;
+    webReaderLink?: string;
+    pdf?: { downloadLink?: string };
+  };
+}
+
+interface BaseRecord {
+  dcdoi?: string;
+  dcidentifier?: string[];
+  dctitle?: string;
+  dccreator?: string[];
+  dcyear?: string;
+  dcdescription?: string;
+  dclink?: string[];
+}
+
+interface DoajIdentifier {
+  type?: string;
+  id?: string;
+}
+
+interface DoajLink {
+  type?: string;
+  url?: string;
+}
+
+interface DoajBibJson {
+  title?: string;
+  year?: string;
+  abstract?: string;
+  identifier?: DoajIdentifier[];
+  link?: DoajLink[];
+  author?: NamedAuthor[];
+}
+
+interface DoajArticle {
+  id?: string;
+  bibjson?: DoajBibJson;
+}
+
 async function fetchUnpaywall(doi: string): Promise<string | null> {
   try {
     const res = await fetch(`https://api.unpaywall.org/v2/${encodeURIComponent(doi)}?email=${MAILTO}`);
@@ -41,21 +214,21 @@ async function fetchUnpaywall(doi: string): Promise<string | null> {
   } catch { return null; }
 }
 
-async function searchLocal(query: string, supabase: any): Promise<SearchResult[]> {
+async function searchLocal(query: string, supabase: LocalSearchClient): Promise<SearchResult[]> {
   const [catRes, repRes] = await Promise.all([
     supabase
-      .from("catalogue_items")
+      .from<CatalogueRow>("catalogue_items")
       .select("id, title, authors, publication_year, abstract, isbn, source_url")
       .or(`title.ilike.%${query}%,authors.ilike.%${query}%,abstract.ilike.%${query}%`)
       .limit(5),
     supabase
-      .from("repository_items")
+      .from<RepositoryRow>("repository_items")
       .select("id, title, author_names, year, abstract, doi, file_url")
       .or(`title.ilike.%${query}%,author_names.ilike.%${query}%,abstract.ilike.%${query}%`)
       .limit(5),
   ]);
 
-  const cat: SearchResult[] = (catRes.data ?? []).map((r: any) => ({
+  const cat: SearchResult[] = (catRes.data ?? []).map((r) => ({
     id: `cat-${r.id}`,
     title: r.title ?? "",
     authors: r.authors ?? "",
@@ -68,7 +241,7 @@ async function searchLocal(query: string, supabase: any): Promise<SearchResult[]
     pdf_url: null,
   }));
 
-  const rep: SearchResult[] = (repRes.data ?? []).map((r: any) => ({
+  const rep: SearchResult[] = (repRes.data ?? []).map((r) => ({
     id: `rep-${r.id}`,
     title: r.title ?? "",
     authors: Array.isArray(r.author_names) ? r.author_names.join(", ") : (r.author_names ?? ""),
@@ -90,10 +263,10 @@ async function searchOpenAlex(query: string): Promise<SearchResult[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).map((w: any) => ({
+    return (data.results ?? []).map((w: OpenAlexWork) => ({
       id: `oa-${w.id}`,
       title: w.title ?? "",
-      authors: (w.authorships ?? []).slice(0, 3).map((a: any) => a.author?.display_name ?? "").join(", "),
+      authors: (w.authorships ?? []).slice(0, 3).map((a: OpenAlexAuthorship) => a.author?.display_name ?? "").join(", "),
       year: w.publication_year ?? null,
       abstract: w.abstract ?? "",
       doi: w.doi ? w.doi.replace("https://doi.org/", "") : null,
@@ -111,10 +284,10 @@ async function searchCrossref(query: string): Promise<SearchResult[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.message?.items ?? []).map((w: any) => ({
+    return (data.message?.items ?? []).map((w: CrossrefItem) => ({
       id: `cr-${w.DOI}`,
       title: Array.isArray(w.title) ? w.title[0] : (w.title ?? ""),
-      authors: (w.author ?? []).slice(0, 3).map((a: any) => `${a.given ?? ""} ${a.family ?? ""}`.trim()).join(", "),
+      authors: (w.author ?? []).slice(0, 3).map((a: CrossrefAuthor) => `${a.given ?? ""} ${a.family ?? ""}`.trim()).join(", "),
       year: w.published?.["date-parts"]?.[0]?.[0] ?? null,
       abstract: w.abstract ? w.abstract.replace(/<[^>]+>/g, "") : "",
       doi: w.DOI ?? null,
@@ -134,10 +307,10 @@ async function searchSemanticScholar(query: string): Promise<SearchResult[]> {
     const res = await fetch(url, { headers });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data ?? []).map((p: any) => ({
+    return (data.data ?? []).map((p: SemanticScholarPaper) => ({
       id: `ss-${p.paperId}`,
       title: p.title ?? "",
-      authors: (p.authors ?? []).slice(0, 3).map((a: any) => a.name ?? "").join(", "),
+      authors: (p.authors ?? []).slice(0, 3).map((a: NamedAuthor) => a.name ?? "").join(", "),
       year: p.year ?? null,
       abstract: p.abstract ?? p.tldr?.text ?? "",
       doi: p.externalIds?.DOI ?? null,
@@ -156,10 +329,10 @@ async function searchCORE(query: string): Promise<SearchResult[]> {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${CORE_API_KEY}` } });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).map((w: any) => ({
+    return (data.results ?? []).map((w: CoreWork) => ({
       id: `core-${w.id}`,
       title: w.title ?? "",
-      authors: (w.authors ?? []).slice(0, 3).map((a: any) => a.name ?? "").join(", "),
+      authors: (w.authors ?? []).slice(0, 3).map((a: NamedAuthor) => a.name ?? "").join(", "),
       year: w.yearPublished ?? null,
       abstract: w.abstract ?? "",
       doi: w.doi ?? null,
@@ -189,7 +362,7 @@ async function searchPubMed(query: string): Promise<SearchResult[]> {
     return ids.map((id: string) => {
       const art = fetchData.result?.[id];
       if (!art) return null;
-      const authors = (art.authors ?? []).slice(0, 3).map((a: any) => a.name ?? "").join(", ");
+      const authors = (art.authors ?? []).slice(0, 3).map((a: NamedAuthor) => a.name ?? "").join(", ");
       return {
         id: `pm-${id}`,
         title: art.title ?? "",
@@ -212,7 +385,7 @@ async function searchInternetArchive(query: string): Promise<SearchResult[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.response?.docs ?? []).map((d: any) => ({
+    return (data.response?.docs ?? []).map((d: InternetArchiveDoc) => ({
       id: `ia-${d.identifier}`,
       title: Array.isArray(d.title) ? d.title[0] : (d.title ?? ""),
       authors: Array.isArray(d.creator) ? d.creator.slice(0, 3).join(", ") : (d.creator ?? ""),
@@ -237,7 +410,6 @@ async function searchAJOL(query: string): Promise<SearchResult[]> {
     // Parse article entries from AJOL HTML response
     const results: SearchResult[] = [];
     const titleRe = /<a[^>]+class="[^"]*article[^"]*"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
-    const authorRe = /<span[^>]+class="[^"]*authors[^"]*"[^>]*>([^<]+)<\/span>/gi;
 
     let m: RegExpExecArray | null;
     let idx = 0;
@@ -270,13 +442,13 @@ async function searchGutenberg(query: string): Promise<SearchResult[]> {
     const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(query)}&languages=en,yo`);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).slice(0, 5).map((b: any) => {
+    return (data.results ?? []).slice(0, 5).map((b: GutenbergBook) => {
       const pdfUrl = b.formats?.["application/pdf"] ?? b.formats?.["text/html"] ?? null;
       const epubUrl = b.formats?.["application/epub+zip"] ?? null;
       return {
         id: `gutenberg-${b.id}`,
         title: b.title ?? "Unknown",
-        authors: (b.authors ?? []).map((a: any) => a.name).join("; "),
+        authors: (b.authors ?? []).map((a: NamedAuthor) => a.name).join("; "),
         year: b.birth_year ? null : null,
         abstract: (b.subjects ?? []).slice(0, 5).join(", "),
         doi: null,
@@ -299,7 +471,7 @@ async function searchOpenLibrary(query: string): Promise<SearchResult[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.docs ?? []).slice(0, 5).map((b: any) => ({
+    return (data.docs ?? []).slice(0, 5).map((b: OpenLibraryDoc) => ({
       id: `openlibrary-${b.key?.replace("/works/", "")}`,
       title: b.title ?? "Unknown",
       authors: (b.author_name ?? []).slice(0, 3).join("; "),
@@ -326,8 +498,8 @@ async function searchOAPEN(query: string): Promise<SearchResult[]> {
     if (!res.ok) return [];
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.results ?? []);
-    return items.slice(0, 5).map((b: any) => {
-      const meta = (b.metadata ?? []).reduce((acc: any, m: any) => { acc[m.key] = m.value; return acc; }, {});
+    return items.slice(0, 5).map((b: OapenItem) => {
+      const meta = (b.metadata ?? []).reduce<Record<string, string>>((acc, m) => { acc[m.key] = m.value; return acc; }, {});
       const doi = meta["dc.identifier.doi"] ?? meta["dc.identifier"] ?? null;
       return {
         id: `oapen-${b.uuid ?? b.id}`,
@@ -357,8 +529,8 @@ async function searchDOAB(query: string): Promise<SearchResult[]> {
     if (!res.ok) return [];
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.results ?? []);
-    return items.slice(0, 5).map((b: any) => {
-      const meta = (b.metadata ?? []).reduce((acc: any, m: any) => { acc[m.key] = m.value; return acc; }, {});
+    return items.slice(0, 5).map((b: OapenItem) => {
+      const meta = (b.metadata ?? []).reduce<Record<string, string>>((acc, m) => { acc[m.key] = m.value; return acc; }, {});
       const doi = meta["dc.identifier.doi"] ?? null;
       return {
         id: `doab-${b.uuid ?? b.id}`,
@@ -386,9 +558,9 @@ async function searchGoogleBooksFree(query: string): Promise<SearchResult[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.items ?? []).filter((b: any) =>
+    return (data.items ?? []).filter((b: GoogleBooksItem) =>
       b.accessInfo?.viewability === "ALL_PAGES" || b.accessInfo?.viewability === "PARTIAL"
-    ).slice(0, 5).map((b: any) => ({
+    ).slice(0, 5).map((b: GoogleBooksItem) => ({
       id: `gbooks-${b.id}`,
       title: b.volumeInfo?.title ?? "Unknown",
       authors: (b.volumeInfo?.authors ?? []).join("; "),
@@ -414,7 +586,7 @@ async function searchBASE(query: string): Promise<SearchResult[]> {
     if (!res.ok) return [];
     const data = await res.json();
     const records = data.response?.docs ?? [];
-    return records.slice(0, 5).map((r: any) => ({
+    return records.slice(0, 5).map((r: BaseRecord) => ({
       id: `base-${r.dcdoi ?? r.dcidentifier?.[0] ?? Math.random().toString(36).slice(2)}`,
       title: r.dctitle ?? "Unknown",
       authors: (r.dccreator ?? []).slice(0, 3).join("; "),
@@ -439,14 +611,14 @@ async function searchDOAJArticles(query: string): Promise<SearchResult[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).slice(0, 5).map((a: any) => {
-      const bib = a.bibjson ?? {};
-      const doi = (bib.identifier ?? []).find((i: any) => i.type === "doi")?.id ?? null;
-      const fulltext = (bib.link ?? []).find((l: any) => l.type === "fulltext")?.url ?? null;
+    return (data.results ?? []).slice(0, 5).map((a: DoajArticle) => {
+      const bib: DoajBibJson = a.bibjson ?? {};
+      const doi = (bib.identifier ?? []).find((i: DoajIdentifier) => i.type === "doi")?.id ?? null;
+      const fulltext = (bib.link ?? []).find((l: DoajLink) => l.type === "fulltext")?.url ?? null;
       return {
         id: `doaj-${a.id}`,
         title: bib.title ?? "Unknown",
-        authors: (bib.author ?? []).map((au: any) => au.name).join("; "),
+        authors: (bib.author ?? []).map((au: NamedAuthor) => au.name).join("; "),
         year: bib.year ? parseInt(bib.year) : null,
         abstract: bib.abstract ?? "",
         doi,

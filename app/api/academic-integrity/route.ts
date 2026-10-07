@@ -4,7 +4,7 @@ import { rateLimit, rateLimitKey } from '@/server/rate-limit';
 const CURRENT_YEAR = new Date().getFullYear();
 const OUTDATED_BEFORE = CURRENT_YEAR - 10;
 
-function extractJson(text: string): any {
+function extractJson(text: string): Record<string, unknown> | null {
   if (!text) return null;
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fenced ? fenced[1] : text;
@@ -18,7 +18,7 @@ function extractJson(text: string): any {
   }
 }
 
-async function callAI(system: string, user: string, maxTokens = 1200): Promise<any> {
+async function callAI(system: string, user: string, maxTokens = 1200): Promise<Record<string, unknown> | null> {
   const key = process.env.AI_GATEWAY_API_KEY;
   if (!key) throw new Error('AI service not configured');
   const baseUrl = (process.env.AI_GATEWAY_BASE_URL || 'https://ai-gateway.vercel.sh/v1').replace(/\/$/, '');
@@ -70,7 +70,7 @@ async function analyseCitations(text: string) {
     'List every reference you can identify.';
   const result = await callAI(system, `Check these citations (APA 7th):\n\n"""${text.slice(0, 8000)}"""`, 1800);
   let outdated_count = 0;
-  const citations = (Array.isArray(result?.citations) ? result.citations : []).map((c: any) => {
+  const citations = (Array.isArray(result?.citations) ? result.citations : []).map((c: Record<string, unknown>) => {
     const year = c?.year && Number.isFinite(Number(c.year)) ? Number(c.year) : null;
     const outdated = year !== null && year < OUTDATED_BEFORE;
     if (outdated) outdated_count += 1;

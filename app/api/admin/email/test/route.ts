@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
 import { GLOBAL_ADMIN_ROLES } from '@/server/auth/permissions';
-import { getEmailProviderStatus, sendEmail, verifyGmailTransport } from '@/server/email';
-import { EmailDeliveryError } from '@/server/email';
+import { getEmailProviderStatus, sendEmail, verifyGmailTransport, EmailDeliveryError } from '@/server/email';
 import { template } from '@/server/email/resend';
 import { logger } from '@/server/logging/logger';
 

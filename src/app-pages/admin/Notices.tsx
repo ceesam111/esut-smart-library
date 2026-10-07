@@ -90,7 +90,7 @@ export default function NoticesPage() {
       body_text: selectedTemplate.body_text,
       body_html: selectedTemplate.body_html ?? '',
     });
-  }, [selectedTemplate?.id]);
+  }, [selectedTemplate]);
 
   const fetchTemplates = useCallback(async () => {
     try {

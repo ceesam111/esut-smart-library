@@ -98,7 +98,7 @@ export default function NewspaperIndex() {
   }, []);
 
   useEffect(() => {
-    Promise.all([loadSerials(), loadLogs()]).then(() => setLoading(false));
+    void Promise.all([loadSerials(), loadLogs()]).then(() => setLoading(false));
   }, [loadSerials, loadLogs]);
 
   const flash = (msg: string) => {
@@ -226,7 +226,7 @@ export default function NewspaperIndex() {
       ) : tab === 'monitor' ? (
         <MonitorTab logs={logs} />
       ) : (
-        <ManualTab serials={serials} categories={CATEGORIES} onAdded={() => { loadSerials(); flash('Article indexed.'); }} />
+        <ManualTab serials={serials} categories={CATEGORIES} onAdded={() => { void loadSerials(); flash('Article indexed.'); }} />
       )}
     </div>
   );
@@ -380,7 +380,7 @@ function ManualTab({ serials, categories, onAdded }: { serials: Serial[]; catego
       indexed_by: userData.user?.id ?? null,
       indexed_at: new Date().toISOString(),
     };
-    const existing = loadLocalArray<any>(LOCAL_ARTICLES_KEY);
+    const existing = loadLocalArray<Record<string, unknown>>(LOCAL_ARTICLES_KEY);
     saveLocalArray(LOCAL_ARTICLES_KEY, [{ id: makeId('article'), ...article }, ...existing]);
     const { error: insErr } = await supabase.from('newspaper_articles').insert(article);
     setSaving(false);

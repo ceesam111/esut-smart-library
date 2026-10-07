@@ -10,7 +10,7 @@ export interface CounterReport {
 export async function generateCounterR5(startDate: string, endDate: string): Promise<CounterReport> {
   const supabase = getSupabaseAdminClient();
 
-  const [pageViews, searches, downloads] = await Promise.all([
+  const [pageViews, _searches, downloads] = await Promise.all([
     supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'page_view').gte('created_at', startDate).lte('created_at', endDate),
     supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'search').gte('created_at', startDate).lte('created_at', endDate),
     supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'download').gte('created_at', startDate).lte('created_at', endDate),

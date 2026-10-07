@@ -213,7 +213,7 @@ describe('routeChatCompletion', () => {
     expect(result.attempts[0]).toMatchObject({ ok: false, status: 404, reason: 'invalid_request' });
     expect(result.attempts[1]).toMatchObject({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    const sentModels = fetchMock.mock.calls.map((call: any[]) => JSON.parse(String(call[1]?.body)).model as string);
+    const sentModels = fetchMock.mock.calls.map((call: unknown[]) => JSON.parse(String((call[1] as { body?: unknown } | undefined)?.body)).model as string);
     expect(new Set(sentModels).size).toBe(2);
   });
 

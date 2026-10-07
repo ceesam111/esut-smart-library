@@ -13,7 +13,7 @@ const TYPE_ICONS: Record<string, string> = {
 };
 
 const GREEN = '#6B1D2A';
-const GOLD  = '#D4A017';
+
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -54,9 +54,9 @@ export default function NotificationBell() {
   }
 
   function handleNotifClick(id: string, url: string | null) {
-    markRead(id);
+    void markRead(id);
     setOpen(false);
-    if (url) navigate(url);
+    if (url) void navigate(url);
   }
 
   return (

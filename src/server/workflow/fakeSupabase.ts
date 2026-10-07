@@ -8,9 +8,11 @@
  * (a conditional update that matches zero rows returns an empty data array).
  */
 
-export type Row = Record<string, any>;
+export type Row = Record<string, unknown>;
 
-type Filter = { col: string; value: any; kind: 'eq' | 'in' | 'neq' };
+type Filter = { col: string; value: unknown; kind: 'eq' | 'in' | 'neq' };
+
+type QueryResult = { data: Row | Row[] | null; error: { message: string } | null };
 
 class FakeQuery {
   private table: string;
@@ -53,17 +55,17 @@ class FakeQuery {
     return this;
   }
 
-  eq(col: string, value: any) {
+  eq(col: string, value: unknown) {
     this.filters.push({ col, value, kind: 'eq' });
     return this;
   }
 
-  neq(col: string, value: any) {
+  neq(col: string, value: unknown) {
     this.filters.push({ col, value, kind: 'neq' });
     return this;
   }
 
-  in(col: string, values: any[]) {
+  in(col: string, values: unknown[]) {
     this.filters.push({ col, value: values, kind: 'in' });
     return this;
   }
@@ -88,7 +90,7 @@ class FakeQuery {
     return this;
   }
 
-  then(resolve: any, reject?: any) {
+  then(resolve?: (value: QueryResult) => unknown, reject?: (reason: unknown) => unknown) {
     return Promise.resolve(this.execute()).then(resolve, reject);
   }
 
@@ -96,11 +98,11 @@ class FakeQuery {
     return this.filters.every((f) => {
       if (f.kind === 'eq') return row[f.col] === f.value;
       if (f.kind === 'neq') return row[f.col] !== f.value;
-      return (f.value as any[]).includes(row[f.col]);
+      return (f.value as unknown[]).includes(row[f.col]);
     });
   }
 
-  private execute(): { data: any; error: any } {
+  private execute(): QueryResult {
     const table = this.db.table(this.table);
     this.db.log.push({ op: this.op, table: this.table });
 
@@ -149,7 +151,7 @@ class FakeQuery {
         const av = a[col];
         const bv = b[col];
         if (av === bv) return 0;
-        const cmp = av > bv ? 1 : -1;
+        const cmp = (av as number) > (bv as number) ? 1 : -1;
         return ascending ? cmp : -cmp;
       });
     }
@@ -172,7 +174,7 @@ export interface FakeOperation {
 export class FakeSupabase {
   private tables = new Map<string, Row[]>();
   private ids = new Map<string, number>();
-  rpcResults = new Map<string, any>();
+  rpcResults = new Map<string, unknown>();
   /** Every statement executed, in order — used to prove history is append-only. */
   log: FakeOperation[] = [];
   /** Runs before an update is applied; lets a test simulate a concurrent writer. */

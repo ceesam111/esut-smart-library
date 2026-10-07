@@ -25,7 +25,7 @@ export default function Newsletter() {
   const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data } = await supabase
         .from('newsletter_issues')
         .select('id, subject, content, sent_date, recipient_scope')

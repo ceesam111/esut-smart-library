@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MemoryGame from './MemoryGame';
 import WordPuzzle from './WordPuzzle';
@@ -21,7 +21,7 @@ const BREAK_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
 export default function GamesHub({ onReturn }: { onReturn?: () => void }) {
   const [active, setActive] = useState<GameKey>('memory');
   const [showPrompt, setShowPrompt] = useState(false);
-  const startedAt = useRef(Date.now());
+  
 
   useEffect(() => {
     const t = setTimeout(() => setShowPrompt(true), BREAK_LIMIT_MS);

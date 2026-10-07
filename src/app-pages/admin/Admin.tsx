@@ -57,118 +57,99 @@ const QUICK_ACTIONS = [
   { label: 'Content Engine',           href: '/admin/content-engine', icon: '🤖' },
 ];
 
+const branchOptions = [
+  { label: institutionConfig.libraryMode === 'multi' ? 'All Branches' : 'All', slug: 'all', code: 'all' },
+  { label: institutionConfig.mainLibrary.name, slug: institutionConfig.mainLibrary.slug, code: institutionConfig.mainLibrary.code },
+  ...(institutionConfig.libraryMode === 'multi' ? institutionConfig.branchLibraries.map((b) => ({ label: b.name, slug: b.slug, code: b.code })) : []),
+  ...institutionConfig.facultyLibraries.map((b) => ({ label: b.name, slug: b.slug, code: b.code })),
+];
+
 export default function Admin() {
   const [kpis, setKpis] = useState<KPI[]>([]);
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const branchOptions = [
-    { label: institutionConfig.libraryMode === 'multi' ? 'All Branches' : 'All', slug: 'all', code: 'all' },
-    { label: institutionConfig.mainLibrary.name, slug: institutionConfig.mainLibrary.slug, code: institutionConfig.mainLibrary.code },
-    ...(institutionConfig.libraryMode === 'multi' ? institutionConfig.branchLibraries.map((b) => ({ label: b.name, slug: b.slug, code: b.code })) : []),
-    ...institutionConfig.facultyLibraries.map((b) => ({ label: b.name, slug: b.slug, code: b.code })),
-  ];
   const [selectedBranch, setSelectedBranch] = useState('all');
   const [branchStats, setBranchStats] = useState<BranchStats>({ catalogue: 0, available: 0, loans: 0, patrons: 0, reservations: 0 });
   const [rules, setRules] = useState<CirculationRules>({ reservation_expiry_days: 7, undergraduate_loan_days: 14, postgraduate_loan_days: 30, academic_staff_loan_days: 90, non_academic_staff_loan_days: 21, default_loan_days: 14, fine_rate_per_day: 50, fine_grace_days: 0, fine_max_amount: 0, fines_suspended: false });
   const [rulesMsg, setRulesMsg] = useState('');
   const [fineSummary, setFineSummary] = useState<FineSummary>({ count: 0, amount: 0 });
 
-  useEffect(() => { load(); }, []);
-  useEffect(() => { loadBranchStats(selectedBranch); }, [selectedBranch]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [
+          { count: items },
+          { count: patrons },
+          { count: pendingRepo },
+          { count: pendingRequests },
+          { count: pendingResearchers },
+          { count: theses },
+          repoRows,
+          patronRows,
+          requestRows,
+          settingsRow,
+          finesRows,
+        ] = await Promise.all([
+          supabase.from('catalogue_items').select('*', { count: 'exact', head: true }),
+          supabase.from('patrons').select('*', { count: 'exact', head: true }),
+          supabase.from('repository_items').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
+          supabase.from('resource_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('researchers').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('repository_items').select('*', { count: 'exact', head: true })
+            .in('item_type', ['Undergraduate Long Essay', 'Final Year Project', 'Thesis'])
+            .eq('status', 'published'),
+          supabase.from('repository_items').select('id, title, item_type, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(5),
+          supabase.from('patrons').select('id, full_name, patron_category, created_at').order('created_at', { ascending: false }).limit(5),
+          supabase.from('resource_requests').select('id, title, status, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
+          supabase.from('app_settings').select('value').eq('key', 'circulation_rules').maybeSingle(),
+          supabase.from('fines').select('id, amount', { count: 'exact', head: true }).eq('status', 'unpaid'),
+        ]);
 
-  async function load() {
-    try {
-      const [
-        { count: items },
-        { count: patrons },
-        { count: pendingRepo },
-        { count: pendingRequests },
-        { count: pendingResearchers },
-        { count: theses },
-        repoRows,
-        patronRows,
-        requestRows,
-        settingsRow,
-        finesRows,
-      ] = await Promise.all([
-        supabase.from('catalogue_items').select('*', { count: 'exact', head: true }),
-        supabase.from('patrons').select('*', { count: 'exact', head: true }),
-        supabase.from('repository_items').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
-        supabase.from('resource_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('researchers').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('repository_items').select('*', { count: 'exact', head: true })
-          .in('item_type', ['Undergraduate Long Essay', 'Final Year Project', 'Thesis'])
-          .gte('created_at', new Date(new Date().getFullYear(), 0, 1).toISOString()),
-        supabase.from('repository_items').select('id, title, created_at, status').order('created_at', { ascending: false }).limit(4),
-        supabase.from('patrons').select('id, full_name, created_at, category').order('created_at', { ascending: false }).limit(3),
-        supabase.from('resource_requests').select('id, title, created_at').order('created_at', { ascending: false }).limit(3),
-        supabase.from('app_settings').select('value').eq('key', 'circulation_rules').maybeSingle(),
-        supabase.from('fines').select('amount').eq('status', 'unpaid'),
+        setRules((prev) => (settingsRow.data?.value as CirculationRules) ?? prev);
+        setFineSummary({ count: finesRows.count ?? 0, amount: finesRows.count ?? 0 });
+
+        setKpis([
+          { label: 'Catalogue Items', value: items ?? 0, icon: '📚', color: 'bg-primary-100 text-primary-700', link: '/admin/catalog' },
+          { label: 'Registered Patrons', value: patrons ?? 0, icon: '👥', color: 'bg-teal-100 text-teal-700', link: '/admin/patrons' },
+          { label: 'Pending Deposits', value: pendingRepo ?? 0, icon: '📤', color: 'bg-amber-100 text-amber-700', link: '/admin/repository' },
+          { label: 'Pending Requests', value: pendingRequests ?? 0, icon: '📨', color: 'bg-cyan-100 text-cyan-700', link: '/admin/requests' },
+          { label: 'Pending Researchers', value: pendingResearchers ?? 0, icon: '🔬', color: 'bg-purple-100 text-purple-700', link: '/admin/researchers' },
+          { label: 'Published Theses', value: theses ?? 0, icon: '🎓', color: 'bg-green-100 text-green-700', link: '/admin/theses' },
+        ]);
+
+        setRecent([
+          ...(repoRows.data ?? []).map((r) => ({ label: r.title, meta: r.item_type, at: r.created_at, badge: 'New', badgeColor: 'bg-green-100 text-green-700' })),
+          ...(patronRows.data ?? []).map((p) => ({ label: p.full_name, meta: p.patron_category, at: p.created_at, badge: 'Patron', badgeColor: 'bg-blue-100 text-blue-700' })),
+          ...(requestRows.data ?? []).map((r) => ({ label: r.title, meta: r.status, at: r.created_at, badge: 'Request', badgeColor: 'bg-amber-100 text-amber-700' })),
+        ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 8));
+      } catch (err) {
+        console.error('Admin dashboard error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
+  useEffect(() => {
+    const loadBranchStats = async (branch: string) => {
+      const option = branchOptions.find((b) => b.slug === branch) ?? branchOptions[0];
+      const catalogueQuery = supabase.from('catalogue_items').select('id, available_copies', { count: 'exact' });
+      if (option.slug !== 'all') catalogueQuery.or(`library_slug.eq.${option.slug},library_code.eq.${option.code},branch_origin.eq.${option.code}`);
+      const catalogue = await catalogueQuery;
+      const itemIds = (catalogue.data ?? []).map((row: { id: string }) => row.id);
+      const available = (catalogue.data ?? []).reduce((sum: number, row: { available_copies: number | null }) => sum + (Number(row.available_copies) || 0), 0);
+      const [loans, reservations, patrons] = await Promise.all([
+        itemIds.length ? supabase.from('loans').select('id', { count: 'exact', head: true }).in('catalogue_item_id', itemIds).eq('status', 'active') : Promise.resolve({ count: 0 }),
+        itemIds.length ? supabase.from('reservations').select('id', { count: 'exact', head: true }).in('catalogue_item_id', itemIds).in('status', ['pending', 'ready_for_collection']) : Promise.resolve({ count: 0 }),
+        option.slug === 'all'
+          ? supabase.from('patrons').select('id', { count: 'exact', head: true }).eq('status', 'active')
+          : supabase.from('patrons').select('id', { count: 'exact', head: true }).or(`preferred_branch.ilike.%${option.label}%,faculty_code.eq.${option.code}`).eq('status', 'active'),
       ]);
-
-      const settingsValue = settingsRow.data?.value as Partial<CirculationRules> | undefined;
-      if (settingsValue) setRules((prev) => ({ ...prev, ...settingsValue }));
-
-      setKpis([
-        { label: 'Catalogue Items',    value: (items ?? 0).toLocaleString(),   icon: '📚', color: '#6B1D2A', link: '/admin/catalogue' },
-        { label: 'Registered Patrons', value: (patrons ?? 0).toLocaleString(), icon: '👥', color: '#005F73', link: '/admin/patrons' },
-        { label: 'Pending Repository', value: pendingRepo ?? 0,                icon: '📂', color: (pendingRepo ?? 0) > 0 ? '#B5451B' : '#2D6A4F', link: '/admin/repository' },
-        { label: 'Pending Requests',   value: pendingRequests ?? 0,            icon: '📩', color: (pendingRequests ?? 0) > 0 ? '#B5451B' : '#2D6A4F', link: '/admin/ill' },
-        { label: 'Pending Researchers',value: pendingResearchers ?? 0,         icon: '🔬', color: (pendingResearchers ?? 0) > 0 ? '#B5451B' : '#2D6A4F', link: '/admin/researchers' },
-        { label: 'Theses This Year',   value: (theses ?? 0).toLocaleString(),  icon: '🎓', color: '#1F4E79', link: '/admin/theses' },
-      ]);
-      const fineAmount = (finesRows.data ?? []).reduce((sum, fine) => sum + Number(fine.amount ?? 0), 0);
-      setFineSummary({ count: finesRows.data?.length ?? 0, amount: fineAmount });
-
-      const allRecent: RecentItem[] = [
-        ...((repoRows.data ?? []).map(r => ({
-          label: r.title ?? 'Untitled submission',
-          meta: 'Repository submission',
-          at: r.created_at,
-          badge: r.status === 'submitted' ? 'Pending' : r.status,
-          badgeColor: r.status === 'submitted' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700',
-        }))),
-        ...((patronRows.data ?? []).map(r => ({
-          label: r.full_name ?? 'New patron',
-          meta: `New patron — ${r.category ?? 'patron'}`,
-          at: r.created_at,
-          badge: 'New',
-          badgeColor: 'bg-blue-100 text-blue-700',
-        }))),
-        ...((requestRows.data ?? []).map(r => ({
-          label: r.title ?? 'Resource request',
-          meta: 'Resource request',
-          at: r.created_at,
-          badge: 'Request',
-          badgeColor: 'bg-purple-100 text-purple-700',
-        }))),
-      ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 10);
-
-      setRecent(allRecent);
-      await loadBranchStats(selectedBranch);
-    } catch (err) {
-      console.error('Admin dashboard error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadBranchStats(branch: string) {
-    const option = branchOptions.find((b) => b.slug === branch) ?? branchOptions[0];
-    const catalogueQuery = supabase.from('catalogue_items').select('id, available_copies', { count: 'exact' });
-    if (option.slug !== 'all') catalogueQuery.or(`library_slug.eq.${option.slug},library_code.eq.${option.code},branch_origin.eq.${option.code}`);
-    const catalogue = await catalogueQuery;
-    const itemIds = (catalogue.data ?? []).map((row: any) => row.id);
-    const available = (catalogue.data ?? []).reduce((sum: number, row: any) => sum + (Number(row.available_copies) || 0), 0);
-    const [loans, reservations, patrons] = await Promise.all([
-      itemIds.length ? supabase.from('loans').select('id', { count: 'exact', head: true }).in('catalogue_item_id', itemIds).eq('status', 'active') : Promise.resolve({ count: 0 }),
-      itemIds.length ? supabase.from('reservations').select('id', { count: 'exact', head: true }).in('catalogue_item_id', itemIds).in('status', ['pending', 'ready_for_collection']) : Promise.resolve({ count: 0 }),
-      option.slug === 'all'
-        ? supabase.from('patrons').select('id', { count: 'exact', head: true }).eq('status', 'active')
-        : supabase.from('patrons').select('id', { count: 'exact', head: true }).or(`preferred_branch.ilike.%${option.label}%,faculty_code.eq.${option.code}`).eq('status', 'active'),
-    ]);
-    setBranchStats({ catalogue: catalogue.count ?? 0, available, loans: loans.count ?? 0, reservations: reservations.count ?? 0, patrons: patrons.count ?? 0 });
-  }
+      setBranchStats({ catalogue: catalogue.count ?? 0, available, loans: loans.count ?? 0, reservations: reservations.count ?? 0, patrons: patrons.count ?? 0 });
+    };
+    void loadBranchStats(selectedBranch);
+  }, [selectedBranch]);
 
   async function saveRules() {
     setRulesMsg('Saving...');

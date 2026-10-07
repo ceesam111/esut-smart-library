@@ -151,20 +151,39 @@ function useLyriaVoice() {
   return { speak, stop, speaking, supported: true };
 }
 
+interface SpeechRecognitionEventLike {
+  results: { transcript: string }[][];
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
 function useMicInput(onTranscript: (text: string) => void) {
   const [recording, setRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const supported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   const startRecording = useCallback(() => {
     if (!supported) return;
-    const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    const w = window as unknown as {
+      SpeechRecognition: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition: new () => SpeechRecognitionLike;
+    };
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     const recognition = new SR();
     recognition.lang = 'en-NG';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (e: any) => {
+    recognition.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
       onTranscript(transcript);
     };
@@ -196,7 +215,7 @@ export default function AILibrarian() {
 
   const handleMicTranscript = useCallback((text: string) => {
     setInput(text);
-    setTimeout(() => send(text), 100);
+    setTimeout(() => { void send(text); }, 100);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { recording, startRecording, stopRecording, supported: micSupported } = useMicInput(handleMicTranscript);
@@ -230,7 +249,7 @@ export default function AILibrarian() {
     abortRef.current = new AbortController();
 
     try {
-      let res = await fetch(API_URL, {
+      const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMessages }),
@@ -266,16 +285,17 @@ export default function AILibrarian() {
         return updated;
       });
 
-      if (voiceMode) speak(finalContent);
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
+      if (voiceMode) void speak(finalContent);
+    } catch (err) {
+      const errName = err instanceof Error ? err.name : '';
+      if (errName !== 'AbortError') {
         const errMsg = "I'm temporarily unavailable. Please try again shortly.";
         setMessages((prev) => {
           const updated = [...prev];
           updated[updated.length - 1] = { ...updated[updated.length - 1], content: errMsg };
           return updated;
         });
-        if (voiceMode) speak(errMsg);
+        if (voiceMode) void speak(errMsg);
       }
     } finally {
       setStreaming(false);
@@ -289,11 +309,6 @@ export default function AILibrarian() {
     setMessages([{ ...WELCOME, ts: Date.now() }]);
     setStreaming(false);
     setInput('');
-  };
-
-  const toggleVoice = () => {
-    if (voiceMode) stop();
-    setVoiceMode((v) => !v);
   };
 
   const wa = `https://wa.me/${institutionConfig.whatsappNumber.replace(/\D/g, '')}`;

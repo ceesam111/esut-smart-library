@@ -168,7 +168,7 @@ export default function Login() {
       const priority: AppRole[] = ['super_admin', 'librarian', 'faculty_librarian', 'researcher_lecturer', 'student', 'admin_staff', 'guest'];
       role = priority.find((candidate) => userRoles.includes(candidate)) ?? (hasAccess ? (profile?.account_role as AppRole | null) : null) ?? null;
     }
-    navigate(getDashboardPath(role));
+    void navigate(getDashboardPath(role));
   }
 
   const { locked } = getLockoutState();

@@ -44,6 +44,13 @@ interface CrossrefWork {
 const SEMESTERS = ['First Semester', 'Second Semester', 'Harmattan', 'Rain'];
 const SESSIONS = ['2025/2026', '2024/2025', '2023/2024'];
 
+interface CatalogueHit {
+  id: string;
+  title: string;
+  authors: string | string[] | null;
+  call_number: string | null;
+}
+
 export default function LecturerReadingLists() {
   const navigate = useNavigate();
   const [lists, setLists] = useState<ReadingList[]>([]);
@@ -76,18 +83,18 @@ export default function LecturerReadingLists() {
 
   // Catalogue search for library type
   const [catalogueSearch, setCatalogueSearch] = useState('');
-  const [catalogueResults, setCatalogueResults] = useState<any[]>([]);
+  const [catalogueResults, setCatalogueResults] = useState<CatalogueHit[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(false);
-  const [selectedCatalogue, setSelectedCatalogue] = useState<any>(null);
+  const [selectedCatalogue, setSelectedCatalogue] = useState<CatalogueHit | null>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { await navigate('/login'); return; }
       setUserId(user.id);
       await fetchLists(user.id);
     })();
-  }, []);
+  }, [navigate]);
 
   const fetchLists = async (uid: string) => {
     setLoading(true);
@@ -97,7 +104,7 @@ export default function LecturerReadingLists() {
       .eq('lecturer_id', uid)
       .order('created_at', { ascending: false });
 
-    const withCount = (data ?? []).map((l: any) => ({
+    const withCount = (data ?? []).map((l: ReadingList & { course_reading_list_items?: { count: number }[] }) => ({
       ...l,
       item_count: l.course_reading_list_items?.[0]?.count ?? 0,
     }));
@@ -117,7 +124,7 @@ export default function LecturerReadingLists() {
       setLists(prev => [{ ...data, item_count: 0 }, ...prev]);
       setShowCreate(false);
       setNewList({ course_title: '', course_code: '', department: '', semester: SEMESTERS[0], session: SESSIONS[0] });
-      openList({ ...data, item_count: 0 });
+      await openList({ ...data, item_count: 0 });
     }
     setCreating(false);
   };
@@ -175,8 +182,8 @@ export default function LecturerReadingLists() {
       }
 
       setDoiLookup({ title, authors, journal, year, url, oaUrl });
-    } catch (e: any) {
-      setDoiError(e.message ?? 'Failed to look up DOI');
+    } catch (e) {
+      setDoiError((e instanceof Error ? e.message : null) ?? 'Failed to look up DOI');
     } finally {
       setDoiLoading(false);
     }
@@ -252,8 +259,8 @@ export default function LecturerReadingLists() {
       setCatalogueSearch(''); setCatalogueResults([]); setSelectedCatalogue(null);
       setPdfFile(null);
       setShowAddItem(false);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
     } finally {
       setAddingItem(false);
       setPdfUploading(false);
@@ -330,7 +337,7 @@ export default function LecturerReadingLists() {
                     <p className="text-xs text-neutral-500">{list.semester} · {list.session} · {list.item_count ?? 0} items · {list.view_count} views</p>
                   </div>
                   <button
-                    onClick={e => { e.stopPropagation(); toggleActive(list); }}
+                    onClick={e => { e.stopPropagation(); void toggleActive(list); }}
                     className="text-xs btn-outline py-1 px-2 shrink-0"
                   >
                     {list.is_active ? 'Deactivate' : 'Activate'}
@@ -526,7 +533,7 @@ export default function LecturerReadingLists() {
                 <input
                   className="input w-full"
                   value={catalogueSearch}
-                  onChange={e => { setCatalogueSearch(e.target.value); searchCatalogue(e.target.value); }}
+                  onChange={e => { setCatalogueSearch(e.target.value); void searchCatalogue(e.target.value); }}
                   placeholder="Search by title…"
                 />
                 {catalogueLoading && <p className="text-xs text-neutral-400">Searching…</p>}

@@ -17,7 +17,7 @@ interface BlogPost {
   category: string;
   tags: string;
   content: string;
-  body: any;
+  body: string;
   comments_enabled: boolean;
   seo_title: string | null;
   seo_description: string | null;
@@ -46,7 +46,7 @@ export default function BlogPost() {
 
   useEffect(() => {
     if (!slug) return;
-    load(slug);
+    void load(slug);
   }, [slug]);
 
   async function load(slug: string) {
@@ -103,7 +103,7 @@ export default function BlogPost() {
     setCommentBody('');
   }
 
-  const coverOf = (p: any) => p.cover_image_url || p.cover_image;
+  const coverOf = (p: BlogPost) => p.cover_image_url || p.cover_image || undefined;
 
   if (loading) {
     return (

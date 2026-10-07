@@ -102,7 +102,7 @@ const TRUSTED_AUTO_APPROVAL_SOURCES = new Set([
   'OpenAlex',
 ]);
 
-export function isTrustedAutoApprovable(candidate: any) {
+export function isTrustedAutoApprovable(candidate: ResourceCandidate) {
   if (!TRUSTED_AUTO_APPROVAL_SOURCES.has(String(candidate.source_name ?? ''))) return false;
   if (!['open', 'public_domain'].includes(String(candidate.rights_status ?? ''))) return false;
   if (candidate.confidence !== 'clean_match') return false;

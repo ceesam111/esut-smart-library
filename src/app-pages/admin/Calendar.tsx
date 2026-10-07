@@ -38,7 +38,7 @@ const EMPTY_CALENDAR: CalendarRecord = {
   public_holidays: [],
 };
 
-type Period = 'semester_1' | 'exams_1' | 'semester_2' | 'exams_2' | 'vacation' | 'between';
+
 
 function detectPeriod(cal: CalendarRecord): { label: string; color: string } {
   const today = new Date().toISOString().slice(0, 10);
@@ -115,7 +115,7 @@ export default function Calendar() {
   const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data } = await supabase
         .from('academic_calendar')
         .select('*')
@@ -189,7 +189,7 @@ export default function Calendar() {
       updated_at: new Date().toISOString(),
     };
 
-    let error: any = null;
+    let error: { message: string } | null;
 
     if (calendarId) {
       ({ error } = await supabase.from('academic_calendar').update(payload).eq('id', calendarId));

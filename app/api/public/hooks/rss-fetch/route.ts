@@ -11,9 +11,9 @@ const parser = new Parser({
 });
 
 export async function POST(req: Request) {
-  let roles: { primaryRole: string | null };
+  
   try {
-    roles = await requireRole(req, LIBRARY_ADMIN_ROLES);
+    await requireRole(req, LIBRARY_ADMIN_ROLES);
   } catch {
     return NextResponse.json({ success: false, error: 'Staff access required.' }, { status: 403 });
   }

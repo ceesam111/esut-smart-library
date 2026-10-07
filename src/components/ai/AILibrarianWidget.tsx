@@ -89,20 +89,39 @@ function useSpeech() {
   return { speak, stop, speaking, supported };
 }
 
+interface SpeechRecognitionEventLike {
+  results: Array<Array<{ transcript: string }>>;
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
 function useMicInput(onTranscript: (text: string) => void) {
   const [recording, setRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const supported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   const startRecording = useCallback(() => {
     if (!supported) return;
-    const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    const w = window as unknown as {
+      SpeechRecognition: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition: new () => SpeechRecognitionLike;
+    };
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     const recognition = new SR();
     recognition.lang = 'en-NG';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (e: any) => {
+    recognition.onresult = (e: SpeechRecognitionEventLike) => {
       const transcript = e.results[0][0].transcript;
       onTranscript(transcript);
     };
@@ -138,7 +157,7 @@ export default function AILibrarianWidget() {
   const tel = `tel:${institutionConfig.contactPhone}`;
 
   const handleMicTranscript = useCallback((text: string) => {
-    send(text);
+    void send(text);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { recording, startRecording, stopRecording, supported: micSupported } = useMicInput(handleMicTranscript);
@@ -227,8 +246,9 @@ export default function AILibrarianWidget() {
       });
 
       if (voiceMode) speak(finalContent);
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
+    } catch (err) {
+      const name = err instanceof Error ? err.name : undefined;
+      if (name !== 'AbortError') {
         const errMsg = "I'm temporarily unavailable. Please try again shortly.";
         setMessages((prev) => {
           const updated = [...prev];

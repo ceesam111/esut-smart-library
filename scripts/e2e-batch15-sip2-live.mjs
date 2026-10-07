@@ -152,7 +152,7 @@ class Sip2Conn {
     this.sock = null;
   }
 
-  connect(timeoutMs = 5000) {
+  connect(_timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
       const opts = { host: '127.0.0.1', port: SIP2_PORT };
       const s = this.useTls ? tls.connect({ ...opts, rejectUnauthorized: false }) : net.connect(opts);

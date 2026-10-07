@@ -8,7 +8,7 @@ import LibrarianForm from '@/components/auth/LibrarianForm';
 import RegistrationSuccessModal from '@/components/auth/RegistrationSuccessModal';
 import type { RegisterResult } from '@/lib/registration';
 
-const GREEN = '#6B1D2A';
+
 const GOLD = '#D4A017';
 
 type Kind = 'student' | 'researcher' | 'admin_staff' | 'librarian';

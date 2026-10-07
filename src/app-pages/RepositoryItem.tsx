@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { trackClientEvent } from '@/lib/analytics';
 import BackButton from '@/components/BackButton';
@@ -8,6 +9,73 @@ import ImageViewer, { isImageFile } from '@/components/repository/ImageViewer';
 
 type CitationStyle = 'apa' | 'harvard' | 'mla' | 'chicago';
 type TabType = 'overview' | 'versions' | 'reviews' | 'discussion' | 'annotations' | 'cite';
+
+type AuthorEntry = string | { name?: string | null; orcid?: string | null };
+
+interface RepoItemRow {
+  id: string;
+  handle: string | null;
+  item_type: string | null;
+  type: string | null;
+  title: string;
+  authors: unknown;
+  abstract: string | null;
+  subjects: string[] | null;
+  keywords: string[] | null;
+  year: number | null;
+  language: string | null;
+  faculty_code: string | null;
+  department: string | null;
+  supervisor: string | null;
+  doi: string | null;
+  file_url: string | null;
+  visibility: string;
+  status: string;
+  embargo_until: string | null;
+  view_count: number;
+  download_count: number;
+  similarity_score: number | null;
+  created_at: string;
+}
+
+interface PatronRow {
+  id: string;
+  full_name: string;
+  faculty_code: string | null;
+}
+
+interface ReviewRow {
+  id: string;
+  user_id: string | null;
+  rating: number;
+  body: string | null;
+  patron_name: string | null;
+  created_at: string;
+}
+
+interface DiscussionRow {
+  id: string;
+  patron_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+interface AnnotationRow {
+  id: string;
+  patron_name: string | null;
+  created_at: string;
+  is_private: boolean;
+  highlighted_text: string;
+  comment: string | null;
+}
+
+interface VersionRow {
+  id: string;
+  version_number: number;
+  change_note: string | null;
+  created_at: string;
+  file_url: string | null;
+}
 
 function Stars({ rating, onClick }: { rating: number; onClick?: (n: number) => void }) {
   return (
@@ -38,35 +106,35 @@ function Initials({ name }: { name: string }) {
 export default function RepositoryItem() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<any>(null);
+  const [item, setItem] = useState<RepoItemRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCitation, setActiveCitation] = useState<CitationStyle>('apa');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [copied, setCopied] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [patron, setPatron] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [patron, setPatron] = useState<PatronRow | null>(null);
   const [showPdf, setShowPdf] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [avgRating, setAvgRating] = useState(0);
-  const [myReview, setMyReview] = useState<any>(null);
+  const [myReview, setMyReview] = useState<ReviewRow | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewBody, setReviewBody] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  const [discussions, setDiscussions] = useState<any[]>([]);
+  const [discussions, setDiscussions] = useState<DiscussionRow[]>([]);
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
 
-  const [annotations, setAnnotations] = useState<any[]>([]);
+  const [annotations, setAnnotations] = useState<AnnotationRow[]>([]);
   const [newHighlight, setNewHighlight] = useState('');
   const [newAnnotation, setNewAnnotation] = useState('');
   const [annotationPrivate, setAnnotationPrivate] = useState(false);
   const [submittingAnnotation, setSubmittingAnnotation] = useState(false);
 
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<VersionRow[]>([]);
   const [reserving, setReserving] = useState(false);
   const [reserveMsg, setReserveMsg] = useState('');
   const [showImage, setShowImage] = useState(false);
@@ -102,7 +170,7 @@ export default function RepositoryItem() {
 
       setReviews(revs ?? []);
       if (revs && revs.length > 0) {
-        setAvgRating(Math.round((revs.reduce((s: number, r: any) => s + r.rating, 0) / revs.length) * 10) / 10);
+        setAvgRating(Math.round((revs.reduce((s: number, r: ReviewRow) => s + r.rating, 0) / revs.length) * 10) / 10);
       }
       setDiscussions(disc ?? []);
       setAnnotations(anns ?? []);
@@ -112,19 +180,51 @@ export default function RepositoryItem() {
       if (u) {
         const { data: p } = await supabase.from('patrons').select('id, full_name, faculty_code').eq('user_id', u.id).maybeSingle();
         setPatron(p);
-        const existing = revs?.find((r: any) => r.user_id === u.id);
+        const existing = revs?.find((r: ReviewRow) => r.user_id === u.id);
         if (existing) { setMyReview(existing); setReviewRating(existing.rating); setReviewBody(existing.body ?? ''); }
       }
 
       setLoading(false);
     };
-    init();
+    void init();
   }, [id]);
+
+  useEffect(() => {
+    if (!item) return;
+    const isPublic = item.visibility === 'global'
+      && item.status === 'published'
+      && (!item.embargo_until || new Date(item.embargo_until) <= new Date());
+    if (!isPublic) return;
+
+    const tags: Array<{ name: string; content: string }> = [
+      { name: 'citation_title', content: String(item.title ?? '') },
+    ];
+
+    const authors: unknown[] = Array.isArray(item.authors) ? item.authors : [];
+    authors.forEach((entry) => {
+      const name = typeof entry === 'string' ? entry : ((entry as { name?: string })?.name ?? '');
+      if (name) tags.push({ name: 'citation_author', content: name });
+    });
+
+    const publicationYear = item.year ?? (item.created_at ? new Date(item.created_at).getFullYear() : '');
+    if (publicationYear) tags.push({ name: 'citation_publication_date', content: String(publicationYear) });
+    if (item.doi) tags.push({ name: 'citation_doi', content: String(item.doi) });
+
+    const nodes = tags.map((tag) => {
+      const element = document.createElement('meta');
+      element.setAttribute('name', tag.name);
+      element.setAttribute('content', tag.content);
+      document.head.appendChild(element);
+      return element;
+    });
+
+    return () => nodes.forEach((element) => element.remove());
+  }, [item]);
 
   const generateCitation = (style: CitationStyle): string => {
     if (!item) return '';
     const authors = Array.isArray(item.authors)
-      ? item.authors.map((a: any) => (typeof a === 'string' ? a : a.name ?? '')).join(', ')
+      ? item.authors.map((a: AuthorEntry) => (typeof a === 'string' ? a : a.name ?? '')).join(', ')
       : String(item.authors ?? 'Unknown');
     const { title, year, doi } = item;
     const ref = doi ? `https://doi.org/${doi}` : `${window.location.origin}/repository/${item.handle ?? id}`;
@@ -137,7 +237,7 @@ export default function RepositoryItem() {
   };
 
   const handleCopyCitation = () => {
-    navigator.clipboard.writeText(generateCitation(activeCitation));
+    void navigator.clipboard.writeText(generateCitation(activeCitation));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -146,11 +246,11 @@ export default function RepositoryItem() {
     if (!item?.file_url) return;
     window.open(item.file_url, '_blank');
     await supabase.from('repository_items').update({ download_count: (item.download_count ?? 0) + 1 }).eq('id', id!);
-    setItem((prev: any) => ({ ...prev, download_count: (prev.download_count ?? 0) + 1 }));
+    setItem(prev => (prev ? { ...prev, download_count: (prev.download_count ?? 0) + 1 } : prev));
   };
 
   const handleReserve = async () => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) { await navigate('/login'); return; }
     setReserving(true);
     setReserveMsg('');
     await new Promise(r => setTimeout(r, 600));
@@ -166,7 +266,7 @@ export default function RepositoryItem() {
       item_type: 'repository', item_id: id,
       rating: reviewRating, body: reviewBody.trim() || null,
     };
-    let saved: any;
+    let saved: ReviewRow;
     if (myReview) {
       const { data } = await supabase.from('reviews').update({ rating: reviewRating, body: reviewBody.trim() || null }).eq('id', myReview.id).select().single();
       saved = data;
@@ -187,7 +287,7 @@ export default function RepositoryItem() {
     if (saved) {
       setMyReview(saved);
       const all = myReview ? reviews.map(r => r.id === myReview.id ? saved : r) : [saved, ...reviews];
-      setAvgRating(Math.round((all.reduce((s: number, r: any) => s + r.rating, 0) / all.length) * 10) / 10);
+      setAvgRating(Math.round((all.reduce((s: number, r: ReviewRow) => s + r.rating, 0) / all.length) * 10) / 10);
     }
     setSubmittingReview(false);
   };
@@ -241,38 +341,6 @@ export default function RepositoryItem() {
     );
   }
 
-  useEffect(() => {
-    if (!item) return;
-    const isPublic = item.visibility === 'global'
-      && item.status === 'published'
-      && (!item.embargo_until || new Date(item.embargo_until) <= new Date());
-    if (!isPublic) return;
-
-    const tags: Array<{ name: string; content: string }> = [
-      { name: 'citation_title', content: String(item.title ?? '') },
-    ];
-
-    const authors: unknown[] = Array.isArray(item.authors) ? item.authors : [];
-    authors.forEach((entry) => {
-      const name = typeof entry === 'string' ? entry : ((entry as { name?: string })?.name ?? '');
-      if (name) tags.push({ name: 'citation_author', content: name });
-    });
-
-    const publicationYear = item.year ?? (item.created_at ? new Date(item.created_at).getFullYear() : '');
-    if (publicationYear) tags.push({ name: 'citation_publication_date', content: String(publicationYear) });
-    if (item.doi) tags.push({ name: 'citation_doi', content: String(item.doi) });
-
-    const nodes = tags.map((tag) => {
-      const element = document.createElement('meta');
-      element.setAttribute('name', tag.name);
-      element.setAttribute('content', tag.content);
-      document.head.appendChild(element);
-      return element;
-    });
-
-    return () => nodes.forEach((element) => element.remove());
-  }, [item]);
-
   if (!item) {
     return (
       <div className="pt-16 min-h-screen flex items-center justify-center">
@@ -285,7 +353,7 @@ export default function RepositoryItem() {
     );
   }
 
-  const authorsArr: any[] = Array.isArray(item.authors) ? item.authors : [];
+  const authorsArr: AuthorEntry[] = Array.isArray(item.authors) ? item.authors : [];
   const typeLabel = item.item_type || item.type || 'Document';
   const itemUrl = typeof window !== 'undefined' ? `${window.location.origin}/repository/${id}` : '';
 
@@ -430,7 +498,7 @@ export default function RepositoryItem() {
 
               {/* Authors with ORCID links */}
               <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
-                {authorsArr.map((a: any, i: number) => {
+                {authorsArr.map((a: AuthorEntry, i: number) => {
                   const name = typeof a === 'string' ? a : (a.name ?? '');
                   const orcid = typeof a === 'object' ? (a.orcid ?? null) : null;
                   return (
@@ -555,7 +623,7 @@ export default function RepositoryItem() {
                     {versions.length === 0 ? (
                       <p className="text-neutral-400 text-sm text-center py-4">No version history yet.</p>
                     ) : (
-                      versions.map((v: any) => (
+                      versions.map((v: VersionRow) => (
                         <div key={v.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-100">
                           <div>
                             <p className="text-sm font-semibold text-neutral-800">Version {v.version_number}</p>
@@ -601,7 +669,7 @@ export default function RepositoryItem() {
                     )}
                     {reviews.length === 0
                       ? <p className="text-neutral-400 text-sm text-center py-4">No reviews yet.</p>
-                      : reviews.map((r: any) => (
+                      : reviews.map((r: ReviewRow) => (
                         <div key={r.id} className="flex gap-3">
                           <Initials name={r.patron_name ?? '?'} />
                           <div className="flex-1">
@@ -704,7 +772,7 @@ export default function RepositoryItem() {
                     )}
                     {annotations.length === 0
                       ? <p className="text-neutral-400 text-sm text-center py-4">No annotations yet.</p>
-                      : annotations.map((a: any) => (
+                      : annotations.map((a: AnnotationRow) => (
                         <div key={a.id} className="border border-amber-200 rounded-xl overflow-hidden">
                           <div className="bg-amber-50 px-4 py-2 flex items-center justify-between">
                             <div className="flex items-center gap-2">

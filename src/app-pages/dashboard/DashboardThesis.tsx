@@ -29,7 +29,7 @@ export default function DashboardThesis() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
-          navigate('/login');
+          void navigate('/login');
           return;
         }
 
@@ -61,7 +61,7 @@ export default function DashboardThesis() {
       }
     };
 
-    fetchThesis();
+    void fetchThesis();
   }, [navigate]);
 
   if (loading) {

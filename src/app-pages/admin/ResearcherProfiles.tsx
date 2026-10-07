@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { sendTransactionalEmail } from '@/lib/email';
 
@@ -35,7 +35,7 @@ export default function ResearcherProfiles() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const query = supabase
       .from('researcher_profiles')
@@ -47,9 +47,9 @@ export default function ResearcherProfiles() {
     const { data } = await query;
     setProfiles((data as Profile[]) ?? []);
     setLoading(false);
-  };
+  }, [filter]);
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { void load(); }, [load]);
 
   const counts = profiles.reduce<Record<string, number>>((acc, p) => {
     acc[p.status] = (acc[p.status] || 0) + 1;

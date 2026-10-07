@@ -16,14 +16,14 @@ export default function ILLHistory() {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<ILLTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [patronId, setPatronId] = useState<string | null>(null);
+  const [, setPatronId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchILLTickets = async () => {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
-          navigate('/login');
+          void navigate('/login');
           return;
         }
 
@@ -51,7 +51,7 @@ export default function ILLHistory() {
       }
     };
 
-    fetchILLTickets();
+    void fetchILLTickets();
   }, [navigate]);
 
   const getStatusBadgeClass = (status: string) => {

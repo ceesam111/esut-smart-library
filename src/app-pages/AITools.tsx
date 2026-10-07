@@ -4,7 +4,6 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   AI_TOOLS,
   AI_TOOL_GROUPS,
-  AI_TOOL_AUDIENCES,
   AI_TOOLS_SOURCE_DATE,
   type AITool,
 } from '@/config/aiTools.data';

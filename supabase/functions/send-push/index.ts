@@ -65,7 +65,6 @@ Deno.serve(async (req) => {
       let count = 0;
       let page = 1;
       const perPage = 1000;
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { data: list, error: listErr } =
           await admin.auth.admin.listUsers({ page, perPage });

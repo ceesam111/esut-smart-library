@@ -68,7 +68,7 @@ export default function AdminTeam() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const startNew = () => {
     setEditingId(null);
@@ -79,7 +79,7 @@ export default function AdminTeam() {
 
   const startEdit = (m: Member) => {
     setEditingId(m.id);
-    const { id, ...rest } = m;
+    const { id: _id, ...rest } = m;
     setForm(rest);
     setError('');
     setView('editor');

@@ -11,7 +11,6 @@
  * Run: node_modules\.bin\tsx.cmd scripts/e2e-fixity-live.ts
  * Flags: --keep (leave fixtures behind for manual inspection)
  */
-/* eslint-disable no-console -- CLI diagnostic tool: its printed report is the deliverable. */
 import { loadDotEnv } from './demo-seed-lib';
 import { createHash, randomUUID } from 'node:crypto';
 

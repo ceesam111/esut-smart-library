@@ -160,7 +160,7 @@ function SubscriptionsTab() {
     setLoading(false);
   }, [statusFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const openNew = () => { setEditing(null); setForm(blank); setShowForm(true); };
   const openEdit = (s: Subscription) => {
@@ -197,7 +197,7 @@ function SubscriptionsTab() {
     }
     setSaving(false);
     setShowForm(false);
-    load();
+    await load();
   };
 
   const renewalWarning = (date: string | null) => {
@@ -388,7 +388,7 @@ function IssueTrackerTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
 
@@ -406,7 +406,7 @@ function IssueTrackerTab() {
       status: 'expected',
     }));
     await supabase.from('serials_issues').insert(inserts);
-    load();
+    await load();
   };
 
   const addIssue = async (subId: string) => {
@@ -422,11 +422,11 @@ function IssueTrackerTab() {
     setSaving(false);
     setAdding(null);
     setNewIssue({ volume: '', issue_number: '', predicted_date: '', actual_arrival_date: '', status: 'expected' });
-    load();
+    await load();
   };
 
   const updateIssueStatus = async (id: string, status: string, subId: string) => {
-    const patch: any = { status };
+    const patch: { status: string; actual_arrival_date?: string } = { status };
     if (status === 'received') patch.actual_arrival_date = new Date().toISOString().slice(0, 10);
     await supabase.from('serials_issues').update(patch).eq('id', id);
     setIssues((prev) => ({
@@ -596,7 +596,7 @@ function RoutingTab() {
     if (!selected && s?.length) setSelected(s[0].id);
   }, [selected]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const currentList = routing[selected] ?? [];
 
@@ -612,12 +612,12 @@ function RoutingTab() {
     setSaving(false);
     setShowAdd(false);
     setNewEntry({ patron_name: '', patron_email: '' });
-    load();
+    await load();
   };
 
   const removeEntry = async (id: string) => {
     await supabase.from('serials_routing').delete().eq('id', id);
-    load();
+    await load();
   };
 
   const moveEntry = async (id: string, dir: -1 | 1) => {
@@ -629,17 +629,17 @@ function RoutingTab() {
       supabase.from('serials_routing').update({ sequence_order: list[swapIdx].sequence_order }).eq('id', list[idx].id),
       supabase.from('serials_routing').update({ sequence_order: list[idx].sequence_order }).eq('id', list[swapIdx].id),
     ]);
-    load();
+    await load();
   };
 
   const markRouted = async (id: string) => {
     await supabase.from('serials_routing').update({ routed_at: new Date().toISOString() }).eq('id', id);
-    load();
+    await load();
   };
 
   const markReturned = async (id: string) => {
     await supabase.from('serials_routing').update({ returned_at: new Date().toISOString() }).eq('id', id);
-    load();
+    await load();
   };
 
   return (
@@ -784,9 +784,16 @@ function MissingIssuesTab() {
     );
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
-  const generateClaimEmail = (issue: any) => {
+  type ClaimIssue = {
+    volume: string;
+    issue_number: string;
+    predicted_date: string;
+    serials_subscriptions?: { title?: string; issn?: string; acquisition_suppliers?: { name?: string } };
+  };
+
+  const generateClaimEmail = (issue: ClaimIssue) => {
     const sup = issue.serials_subscriptions?.acquisition_suppliers;
     const sub = issue.serials_subscriptions;
     const body = `Dear ${sup?.name ?? 'Supplier'},\n\nWe wish to bring to your attention that the following issue has not been received:\n\nJournal: ${sub?.title ?? 'N/A'}\nISSN: ${sub?.issn ?? 'N/A'}\nVolume/Issue: ${issue.volume ? `Vol. ${issue.volume}, ` : ''}No. ${issue.issue_number}\nExpected Date: ${fmtDate(issue.predicted_date)}\n\nKindly arrange for a replacement copy or advise on the expected delivery date at your earliest convenience.\n\nYours faithfully,\nAcquisitions Librarian\nESUT University Library`;
@@ -801,12 +808,7 @@ function MissingIssuesTab() {
     await supabase.from('serials_issues')
       .update({ status: 'claimed', claim_sent_at: new Date().toISOString() }).eq('id', id);
     setSaving(false);
-    load();
-  };
-
-  const flagMissing = async (id: string) => {
-    await supabase.from('serials_issues').update({ status: 'missing' }).eq('id', id);
-    load();
+    await load();
   };
 
   return (

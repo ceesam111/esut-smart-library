@@ -232,13 +232,11 @@ ${records}
   return new NextResponse(body, { headers: { 'Content-Type': 'text/xml; charset=UTF-8' } });
 }
 
-function xmlErrorResponse(diagnostic: ReturnType<typeof sruDiagnostic>) {
+function xmlErrorResponse(diagnostic: SruDiagnostic) {
   return new NextResponse(errorResponse(diagnostic), {
     status: 400,
     headers: { 'Content-Type': 'text/xml; charset=UTF-8' },
   });
 }
 
-function sruDiagnostic(number: number, message: string, details?: string) {
-  return { uri: `info:srw/diagnostic/1/${number}`, details, message };
-}
+type SruDiagnostic = { uri: string; details: string | undefined; message: string };

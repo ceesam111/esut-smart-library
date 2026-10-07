@@ -10,7 +10,7 @@ interface FeedEvent {
   patron_name: string | null;
   faculty_code: string | null;
   event_type: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   likes_count: number;
   created_at: string;
   is_removed?: boolean;
@@ -35,11 +35,18 @@ function initials(name: string | null) {
 }
 
 function eventDescription(event: FeedEvent): { verb: string; detail: string; link?: string } {
-  const p = event.payload;
+  const p = event.payload as {
+    rating?: number;
+    item_title?: string;
+    item_type?: string;
+    item_id?: string;
+    list_name?: string;
+    club_name?: string;
+  };
   switch (event.event_type) {
     case 'review_created':
       return {
-        verb: `rated ${['', '★', '★★', '★★★', '★★★★', '★★★★★'][p.rating] ?? ''}`,
+        verb: `rated ${['', '★', '★★', '★★★', '★★★★', '★★★★★'][p.rating ?? 0] ?? ''}`,
         detail: p.item_title ?? 'an item',
         link: p.item_type === 'catalogue' ? `/catalogue/${p.item_id}` : `/repository/${p.item_id}`,
       };
@@ -109,8 +116,8 @@ export default function Feed() {
         supabase.from('feed_event_likes').select('event_id').eq('user_id', userId),
         supabase.from('feed_event_reports').select('event_id').eq('user_id', userId),
       ]);
-      setLikedIds(new Set((likes ?? []).map((l: any) => l.event_id)));
-      setReportedIds(new Set((reports ?? []).map((r: any) => r.event_id)));
+      setLikedIds(new Set((likes ?? []).map((l: { event_id: string }) => l.event_id)));
+      setReportedIds(new Set((reports ?? []).map((r: { event_id: string }) => r.event_id)));
     } else {
       setLikedIds(new Set());
       setReportedIds(new Set());
@@ -118,7 +125,7 @@ export default function Feed() {
     setLoading(false);
   }, [userId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const handlePost = async () => {
     const text = draft.trim();
@@ -148,7 +155,7 @@ export default function Feed() {
     const wasLiked = likedIds.has(eventId);
     setLikedIds(prev => {
       const next = new Set(prev);
-      wasLiked ? next.delete(eventId) : next.add(eventId);
+      if (wasLiked) { next.delete(eventId); } else { next.add(eventId); }
       return next;
     });
     const current = events.find(e => e.id === eventId)?.likes_count ?? 0;
@@ -315,7 +322,7 @@ export default function Feed() {
                           {isPost ? (
                             <>
                               <p className="text-sm font-semibold text-neutral-800">{event.patron_name ?? 'A patron'}</p>
-                              <p className="text-sm text-neutral-700 mt-1 whitespace-pre-wrap break-words">{event.payload?.text}</p>
+                              <p className="text-sm text-neutral-700 mt-1 whitespace-pre-wrap break-words">{event.payload?.text as string}</p>
                             </>
                           ) : (
                             <p className="text-sm leading-relaxed">

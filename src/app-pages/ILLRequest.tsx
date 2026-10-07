@@ -51,7 +51,7 @@ export default function ILLRequest() {
     const checkAuth = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
-        navigate('/login?redirect=/catalogue/ill-request');
+        void navigate('/login?redirect=/catalogue/ill-request');
         return;
       }
 
@@ -67,7 +67,7 @@ export default function ILLRequest() {
       }
       setLoadingAuth(false);
     };
-    checkAuth();
+    void checkAuth();
   }, [navigate]);
 
   const set = (field: keyof FormState, value: string) => {
@@ -116,8 +116,8 @@ export default function ILLRequest() {
 
       if (insertErr) throw insertErr;
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err?.message ?? 'Submission failed. Please try again.');
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message ?? 'Submission failed. Please try again.');
     } finally {
       setSubmitting(false);
     }

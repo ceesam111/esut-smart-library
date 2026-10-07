@@ -94,7 +94,7 @@ export async function enrichCatalogueRow(row: NormalizedCatalogueRow): Promise<E
     // Local deterministic fallback keeps development moving before the Edge Function is deployed.
   }
 
-  let data: CatalogueEnrichment | null = null;
+  let data: CatalogueEnrichment | null;
   try { data = await lookupOpenLibrary(row.isbn); } catch { data = null; }
   if (!data) {
     try { data = await lookupGoogleBooks(row.isbn); } catch { data = null; }

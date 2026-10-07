@@ -4,8 +4,7 @@ import BackButton from '@/components/BackButton';
 import LibraryResourceCard from '@/components/LibraryResourceCard';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { OPEN_ACCESS_DATABASES } from '@/config/openAccessDatabases.data';
-import type { LibraryResource } from '@/config/libraryResources.config';
-import { OPAC_URL } from '@/config/libraryResources.config';
+import { OPAC_URL, type LibraryResource } from '@/config/libraryResources.config';
 
 export default function OpenAccessDatabases() {
   usePageTitle('Open Access Databases');

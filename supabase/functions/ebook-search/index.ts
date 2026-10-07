@@ -23,6 +23,14 @@ export interface EbookResult {
   download_url: string | null;
 }
 
+interface GutenbergBook {
+  id?: number;
+  title?: string;
+  authors?: { name?: string }[];
+  subjects?: string[];
+  formats?: Record<string, string>;
+}
+
 async function searchGutenberg(query: string): Promise<EbookResult[]> {
   try {
     const res = await fetch(
@@ -30,8 +38,8 @@ async function searchGutenberg(query: string): Promise<EbookResult[]> {
       { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results ?? []).slice(0, 6).map((b: any) => {
+    const data = await res.json() as { results?: GutenbergBook[] };
+    return (data.results ?? []).slice(0, 6).map((b) => {
       const htmlUrl   = b.formats?.["text/html"] ?? null;
       const pdfUrl    = b.formats?.["application/pdf"] ?? null;
       const epubUrl   = b.formats?.["application/epub+zip"] ?? null;
@@ -40,7 +48,7 @@ async function searchGutenberg(query: string): Promise<EbookResult[]> {
       return {
         id: `gutenberg-${b.id}`,
         title: b.title ?? "Unknown",
-        authors: (b.authors ?? []).map((a: any) => a.name).join("; "),
+        authors: (b.authors ?? []).map((a) => a.name).join("; "),
         year: null,
         subject: (b.subjects ?? []).slice(0, 3).join(", "),
         source: "gutenberg",
@@ -53,6 +61,15 @@ async function searchGutenberg(query: string): Promise<EbookResult[]> {
   } catch { return []; }
 }
 
+interface OpenLibraryDoc {
+  key?: string;
+  title?: string;
+  author_name?: string[];
+  first_publish_year?: number;
+  cover_i?: number;
+  subject?: string[];
+}
+
 async function searchOpenLibrary(query: string): Promise<EbookResult[]> {
   try {
     const res = await fetch(
@@ -60,8 +77,8 @@ async function searchOpenLibrary(query: string): Promise<EbookResult[]> {
       { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    return (data.docs ?? []).filter((b: any) => b.title).slice(0, 6).map((b: any) => ({
+    const data = await res.json() as { docs?: OpenLibraryDoc[] };
+    return (data.docs ?? []).filter((b) => b.title).slice(0, 6).map((b) => ({
       id: `openlibrary-${b.key?.replace("/works/", "") ?? Math.random().toString(36).slice(2)}`,
       title: b.title ?? "Unknown",
       authors: (b.author_name ?? []).slice(0, 3).join("; "),
@@ -76,6 +93,18 @@ async function searchOpenLibrary(query: string): Promise<EbookResult[]> {
   } catch { return []; }
 }
 
+interface MetadataEntry {
+  key?: string;
+  value?: string;
+}
+
+interface MetadataBook {
+  uuid?: string;
+  id?: string | number;
+  name?: string;
+  metadata?: MetadataEntry[];
+}
+
 async function searchOAPEN(query: string): Promise<EbookResult[]> {
   try {
     const res = await fetch(
@@ -83,11 +112,11 @@ async function searchOAPEN(query: string): Promise<EbookResult[]> {
       { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.results ?? []);
-    return items.slice(0, 6).map((b: any) => {
-      const metaArr: any[] = b.metadata ?? [];
-      const get = (key: string) => metaArr.find((m: any) => m.key === key)?.value ?? null;
+    const data = await res.json() as unknown;
+    const items: MetadataBook[] = Array.isArray(data) ? data : ((data as { results?: MetadataBook[] }).results ?? []);
+    return items.slice(0, 6).map((b) => {
+      const metaArr = b.metadata ?? [];
+      const get = (key: string) => metaArr.find((m) => m.key === key)?.value ?? null;
       const title = get("dc.title") ?? b.name ?? "Unknown";
       const authors = get("dc.contributor.author") ?? "";
       const year = parseInt(get("dc.date.issued") ?? "") || null;
@@ -117,11 +146,11 @@ async function searchDOAB(query: string): Promise<EbookResult[]> {
       { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.results ?? []);
-    return items.slice(0, 6).map((b: any) => {
-      const metaArr: any[] = b.metadata ?? [];
-      const get = (key: string) => metaArr.find((m: any) => m.key === key)?.value ?? null;
+    const data = await res.json() as unknown;
+    const items: MetadataBook[] = Array.isArray(data) ? data : ((data as { results?: MetadataBook[] }).results ?? []);
+    return items.slice(0, 6).map((b) => {
+      const metaArr = b.metadata ?? [];
+      const get = (key: string) => metaArr.find((m) => m.key === key)?.value ?? null;
       const title = get("dc.title") ?? b.name ?? "Unknown";
       const authors = get("dc.contributor.author") ?? "";
       const year = parseInt(get("dc.date.issued") ?? "") || null;
@@ -143,6 +172,24 @@ async function searchDOAB(query: string): Promise<EbookResult[]> {
   } catch { return []; }
 }
 
+interface GoogleVolume {
+  id?: string;
+  volumeInfo?: {
+    title?: string;
+    authors?: string[];
+    publishedDate?: string;
+    categories?: string[];
+    imageLinks?: { thumbnail?: string };
+    canonicalVolumeLink?: string;
+  };
+  accessInfo?: {
+    viewability?: string;
+    webReaderLink?: string;
+    pdf?: { downloadLink?: string };
+    epub?: { downloadLink?: string };
+  };
+}
+
 async function searchGoogleBooks(query: string): Promise<EbookResult[]> {
   const GOOGLE_BOOKS_KEY = Deno.env.get("GOOGLE_BOOKS_KEY") ?? "";
   try {
@@ -152,11 +199,11 @@ async function searchGoogleBooks(query: string): Promise<EbookResult[]> {
       { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = await res.json() as { items?: GoogleVolume[] };
     return (data.items ?? [])
-      .filter((b: any) => b.accessInfo?.viewability === "ALL_PAGES" || b.accessInfo?.viewability === "PARTIAL")
+      .filter((b) => b.accessInfo?.viewability === "ALL_PAGES" || b.accessInfo?.viewability === "PARTIAL")
       .slice(0, 6)
-      .map((b: any) => ({
+      .map((b) => ({
         id: `gbooks-${b.id}`,
         title: b.volumeInfo?.title ?? "Unknown",
         authors: (b.volumeInfo?.authors ?? []).join("; "),

@@ -98,15 +98,18 @@ function extractPublicationYear(value: unknown): number | null {
   return match ? Number(match[0]) : null;
 }
 
-function firstText(value: any): string {
+function firstText(value: unknown): string {
   if (!value) return '';
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) return firstText(value[0]);
-  if (typeof value === 'object') return firstText(value.value ?? value.name ?? value.text);
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    return firstText(obj.value ?? obj.name ?? obj.text);
+  }
   return String(value);
 }
 
-function joinTexts(value: any): string {
+function joinTexts(value: unknown): string {
   if (!value) return '';
   if (Array.isArray(value)) return value.map(firstText).filter(Boolean).join('; ');
   return firstText(value);
@@ -126,7 +129,7 @@ async function lookupLocRecord(identifier: string) {
   const res = await fetch(`https://www.loc.gov/books/?fo=json&c=5&all=true&q=${q}`);
   if (!res.ok) return null;
   const data = await res.json();
-  const item = data.results?.find((r: any) => String(r?.number ?? '').includes(identifier) || String(r?.isbn ?? '').includes(identifier) || String(r?.issn ?? '').includes(identifier)) ?? data.results?.[0];
+  const item = data.results?.find((r: { number?: string; isbn?: string; issn?: string }) => String(r?.number ?? '').includes(identifier) || String(r?.isbn ?? '').includes(identifier) || String(r?.issn ?? '').includes(identifier)) ?? data.results?.[0];
   if (!item) return null;
   const subjectValues = Array.isArray(item.subject) ? item.subject : [];
   const lcc = firstText(item.call_number ?? item.lccn ?? item.classification_lcc);
@@ -220,7 +223,7 @@ export default function CatalogueNew() {
   useEffect(() => {
     fetch('/api/catalogue/frameworks')
       .then(r => r.ok ? r.json() : { frameworks: [] })
-      .then(data => setFrameworks(data.frameworks?.map((f: any) => ({ code: f.code, name: f.name })) ?? []))
+      .then(data => setFrameworks(data.frameworks?.map((f: { code: string; name: string }) => ({ code: f.code, name: f.name })) ?? []))
       .catch(() => {});
   }, []);
 
@@ -267,11 +270,11 @@ export default function CatalogueNew() {
         applyBookData({
           ...locData,
           title: olBook.title,
-          authors: olBook.authors?.map((a: any) => a.name).join(', ') ?? '',
+          authors: olBook.authors?.map((a: { name?: string }) => a.name).join(', ') ?? '',
           publisher: olBook.publishers?.[0]?.name ?? '',
           place_of_publication: olBook.publish_places?.[0]?.name ?? '',
           year: extractPublicationYear(olBook.publish_date) ?? form.year,
-          subjects: olBook.subjects?.map((s: any) => s.name ?? s).join('; ') ?? '',
+          subjects: olBook.subjects?.map((s: { name?: string }) => s.name ?? s).join('; ') ?? '',
           cover_image: olBook.cover?.large ?? olBook.cover?.medium ?? '',
           abstract: firstText(olBook.description ?? olBook.notes),
           series: joinTexts(olBook.series),
@@ -473,8 +476,8 @@ export default function CatalogueNew() {
       : f));
 
   // ── Build MARC21 JSON from fields ───────────────────────────────────────────
-  const buildMarc21 = () => marcFields.reduce((acc: any, f) => {
-    acc[f.tag] = { ind1: f.ind1, ind2: f.ind2, subfields: f.subfields.reduce((s: any, sf) => { s[sf.code] = sf.value; return s; }, {}) };
+  const buildMarc21 = () => marcFields.reduce<Record<string, unknown>>((acc, f) => {
+    acc[f.tag] = { ind1: f.ind1, ind2: f.ind2, subfields: f.subfields.reduce<Record<string, string>>((s, sf) => { s[sf.code] = sf.value; return s; }, {}) };
     return acc;
   }, { leader: '00000nam a2200000 i 4500' });
 
@@ -497,7 +500,7 @@ export default function CatalogueNew() {
     if (!title.trim()) { setErrorMsg('Title is required.'); return; }
     setSaving(true);
     try {
-      let payload: any;
+      let payload: Record<string, unknown>;
       if (mode === 'simple') {
         const authorsArr = form.authors.split(',').map(a => a.trim()).filter(Boolean);
         const subjectsArr = form.subjects.split(/[;,]/).map(s => s.trim()).filter(Boolean);
@@ -545,7 +548,7 @@ export default function CatalogueNew() {
         };
       }
 
-      const { data, error } = await supabase.from('catalogue_items').insert(payload).select('id').single();
+      const { error } = await supabase.from('catalogue_items').insert(payload).select('id').single();
       if (error) throw error;
 
       // Log Z39.50 import if applicable
@@ -556,9 +559,9 @@ export default function CatalogueNew() {
         }).throwOnError();
       }
 
-      navigate(`/admin/catalogue`);
-    } catch (err: any) {
-      setErrorMsg(err.message ?? 'Failed to save. Please try again.');
+      await navigate(`/admin/catalogue`);
+    } catch (err) {
+      setErrorMsg(err instanceof Error && err.message ? err.message : 'Failed to save. Please try again.');
       setTimeout(() => setErrorMsg(''), 5000);
     } finally { setSaving(false); }
   };
@@ -722,7 +725,7 @@ export default function CatalogueNew() {
                     {source.label}
                   </a>
                 ))}
-                <button onClick={() => { setZ3950Open(true); loadZ3950Targets(); }} className="btn-primary text-xs">Z39.50 Import</button>
+                <button onClick={() => { setZ3950Open(true); void loadZ3950Targets(); }} className="btn-primary text-xs">Z39.50 Import</button>
               </div>
             </div>
           </div>

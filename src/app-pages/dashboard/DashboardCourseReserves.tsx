@@ -41,9 +41,9 @@ export default function DashboardCourseReserves() {
   const [patronId, setPatronId] = useState('');
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { void navigate('/login'); return; }
 
       const { data: patron } = await supabase
         .from('patrons')
@@ -60,7 +60,7 @@ export default function DashboardCourseReserves() {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      const formatted = (rawLists ?? []).map((l: any) => ({
+      const formatted = (rawLists ?? []).map((l: Record<string, unknown>) => ({
         id: l.id,
         course_code: l.course_code,
         course_title: l.course_title,
@@ -68,10 +68,10 @@ export default function DashboardCourseReserves() {
         session: l.session,
         department: l.department,
         is_active: l.is_active,
-        items: (l.course_reading_list_items ?? []).sort((a: CourseItem, b: CourseItem) =>
+        items: ((l.course_reading_list_items ?? []) as CourseItem[]).sort((a: CourseItem, b: CourseItem) =>
           a.reading_priority === 'required' && b.reading_priority !== 'required' ? -1 : 1
         ),
-      }));
+      })) as CourseList[];
 
       setLists(formatted);
       setLoading(false);
@@ -96,7 +96,7 @@ export default function DashboardCourseReserves() {
   };
 
   const openLink = (item: CourseItem) => {
-    recordClick(item);
+    void recordClick(item);
     const url = item.oa_pdf_url || item.pdf_url || item.external_url || (item.doi ? `https://doi.org/${item.doi}` : null);
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };

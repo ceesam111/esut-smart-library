@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // ── Block types ───────────────────────────────────────────────────────────────
@@ -11,7 +11,7 @@ export type BlockType =
 export interface Block {
   id: string;
   type: BlockType;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 interface CMSPage {
@@ -22,7 +22,28 @@ interface CMSPage {
   status: 'draft' | 'published';
 }
 
-const BLOCK_DEFS: { type: BlockType; label: string; icon: string; defaultData: Record<string, any> }[] = [
+type BlockFields = {
+  level?: string;
+  text?: string;
+  url?: string;
+  alt?: string;
+  caption?: string;
+  label?: string;
+  style?: string;
+  attribution?: string;
+  name?: string;
+  role?: string;
+  email?: string;
+  bio?: string;
+  photo?: string;
+  heading?: string;
+  items: { q: string; a: string }[];
+  ids: string[];
+  left: unknown[];
+  right: unknown[];
+};
+
+const BLOCK_DEFS: { type: BlockType; label: string; icon: string; defaultData: Record<string, unknown> }[] = [
   { type: 'heading',            label: 'Heading',           icon: 'H',  defaultData: { level: 'h2', text: 'New Heading' } },
   { type: 'paragraph',          label: 'Paragraph',         icon: '¶',  defaultData: { text: 'Enter paragraph text here…' } },
   { type: 'image',              label: 'Image',             icon: '🖼', defaultData: { url: '', alt: '', caption: '' } },
@@ -43,8 +64,8 @@ function uid() { return Math.random().toString(36).slice(2); }
 
 // ── Block editor forms ────────────────────────────────────────────────────────
 
-function BlockEditor({ block, onChange }: { block: Block; onChange: (data: Record<string, any>) => void }) {
-  const d = block.data;
+function BlockEditor({ block, onChange }: { block: Block; onChange: (data: Record<string, unknown>) => void }) {
+  const d = block.data as BlockFields;
 
   if (block.type === 'heading') return (
     <div className="space-y-2">
@@ -103,7 +124,7 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (data: Recor
         <div key={i} className="border rounded-lg p-3 space-y-2">
           <div><label className="label text-xs">Question {i + 1}</label><input className="input" value={item.q} onChange={e => { const items = [...d.items]; items[i] = { ...item, q: e.target.value }; onChange({ ...d, items }); }} /></div>
           <div><label className="label text-xs">Answer</label><textarea className="input w-full resize-y" rows={2} value={item.a} onChange={e => { const items = [...d.items]; items[i] = { ...item, a: e.target.value }; onChange({ ...d, items }); }} /></div>
-          <button onClick={() => { const items = d.items.filter((_: any, j: number) => j !== i); onChange({ ...d, items }); }} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+          <button onClick={() => { const items = d.items.filter((_: unknown, j: number) => j !== i); onChange({ ...d, items }); }} className="text-xs text-red-500 hover:text-red-700">Remove</button>
         </div>
       ))}
       <button onClick={() => onChange({ ...d, items: [...d.items, { q: 'New Question?', a: 'Answer.' }] })} className="btn-outline text-xs w-full">+ Add Question</button>
@@ -147,7 +168,7 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (data: Recor
 // ── Block preview ─────────────────────────────────────────────────────────────
 
 function BlockPreview({ block }: { block: Block }) {
-  const d = block.data;
+  const d = block.data as BlockFields;
   const def = BLOCK_DEFS.find(b => b.type === block.type);
 
   if (block.type === 'heading') {
@@ -189,9 +210,7 @@ export default function CMS() {
   const dragSrcId = useRef<string | null>(null);
   const dragSrcIsNew = useRef<BlockType | null>(null);
 
-  useEffect(() => { loadPages(); }, []);
-
-  async function loadPages() {
+  const loadPages = useCallback(async () => {
     const { data } = await supabase.from('cms_pages').select('id, title, slug, blocks, status').order('title');
     setPages(data?.map(p => ({
       id: p.id, title: p.title, slug: p.slug,
@@ -199,7 +218,11 @@ export default function CMS() {
       status: (p.status ?? 'draft') as 'draft' | 'published',
     })) ?? []);
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadPages();
+  }, [loadPages]);
 
   function openPage(page: CMSPage) {
     setSelectedPage({ ...page });
@@ -242,7 +265,7 @@ export default function CMS() {
     setSaved(false);
   }
 
-  function updateBlock(id: string, data: Record<string, any>) {
+  function updateBlock(id: string, data: Record<string, unknown>) {
     setSelectedPage(p => p ? { ...p, blocks: p.blocks.map(b => b.id === id ? { ...b, data } : b) } : null);
     setSaved(false);
   }

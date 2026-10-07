@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import BackButton from '@/components/BackButton';
@@ -17,6 +17,13 @@ interface ThesisRecord {
   revision_notes: string | null;
   embargo_enabled: boolean | null;
   similarity_score: number | null;
+}
+
+interface WorkflowEntry {
+  stage: string;
+  action: string;
+  notes: string | null;
+  created_at: string;
 }
 
 const STAGES = [
@@ -42,14 +49,10 @@ export default function ThesisStatusPublic() {
   const [searchType, setSearchType] = useState<'ref' | 'id'>('ref');
   const [searchValue, setSearchValue] = useState(params.get('ref') ?? '');
   const [thesis, setThesis] = useState<ThesisRecord | null>(null);
-  const [workflow, setWorkflow] = useState<any[]>([]);
+  const [workflow, setWorkflow] = useState<WorkflowEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
-
-  useEffect(() => {
-    if (params.get('ref')) handleSearch(null, params.get('ref')!);
-  }, []);
 
   const handleSearch = async (e: React.FormEvent | null, overrideVal?: string) => {
     e?.preventDefault();
@@ -80,13 +83,20 @@ export default function ThesisStatusPublic() {
         .eq('thesis_id', data.id)
         .order('created_at', { ascending: true });
       setWorkflow(wf ?? []);
-    } catch (e: any) {
+    } catch {
       setError('Error searching. Please try again.');
     } finally {
       setLoading(false);
       setSearched(true);
     }
   };
+
+  const searchRef = useRef(handleSearch);
+  searchRef.current = handleSearch;
+
+  useEffect(() => {
+    if (params.get('ref')) void searchRef.current(null, params.get('ref')!);
+  }, [params]);
 
   const currentStage = thesis ? stageIndex(thesis.status) : -1;
   const isReturned = thesis?.status === 'returned_to_student';

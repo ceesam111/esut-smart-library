@@ -49,7 +49,7 @@ export default function Communities() {
   });
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
   const fetchData = async () => {
@@ -93,7 +93,7 @@ export default function Communities() {
       setShowForm(false);
       setEditingCommunity(null);
       setCommunityForm({ name: '', slug: '', description: '', faculty_code: '', sort_order: 0 });
-      fetchData();
+      void fetchData();
     } catch (error) {
       console.error('Error saving community:', error);
     }
@@ -122,7 +122,7 @@ export default function Communities() {
       setShowForm(false);
       setEditingCollection(null);
       setCollectionForm({ name: '', slug: '', description: '', community_id: '', sort_order: 0 });
-      fetchData();
+      void fetchData();
     } catch (error) {
       console.error('Error saving collection:', error);
     }
@@ -134,7 +134,7 @@ export default function Communities() {
       await supabase.from('repository_collections').delete().eq('community_id', id);
       const { error } = await supabase.from('repository_communities').delete().eq('id', id);
       if (error) throw error;
-      fetchData();
+      void fetchData();
     } catch (error) {
       console.error('Error deleting community:', error);
     }
@@ -145,7 +145,7 @@ export default function Communities() {
     try {
       const { error } = await supabase.from('repository_collections').delete().eq('id', id);
       if (error) throw error;
-      fetchData();
+      void fetchData();
     } catch (error) {
       console.error('Error deleting collection:', error);
     }

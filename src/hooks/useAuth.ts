@@ -101,10 +101,10 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-        load();
+        void load();
       }
     });
     return () => sub.subscription.unsubscribe();

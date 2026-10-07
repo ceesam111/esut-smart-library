@@ -65,7 +65,7 @@ export default function Events() {
   const [regDone, setRegDone] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    const load = async () => {
       const { data } = await supabase
         .from('events')
         .select('id, title, description, cover_image_url, image_url, start_at, end_at, venue, location, category, department, registration_required, max_attendees, registrations_count, is_virtual, virtual_url, status')
@@ -75,7 +75,8 @@ export default function Events() {
       const cats = [...new Set(evts.map(e => e.category).filter(Boolean))].sort();
       setCategories(cats);
       setLoading(false);
-    })();
+    };
+    void load();
   }, []);
 
   const filtered = events.filter(e => !category || e.category === category);

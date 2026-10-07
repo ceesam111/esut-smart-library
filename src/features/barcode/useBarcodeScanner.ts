@@ -15,6 +15,21 @@ interface QueuedScan {
   createdAt: string;
 }
 
+interface BarcodeDetectorLike {
+  detect: (video: HTMLVideoElement) => Promise<Array<{ rawValue: string; format?: string }>>;
+}
+
+interface QuaggaDetectionResult {
+  codeResult?: { code?: string; format?: string };
+}
+
+interface QuaggaLike {
+  init: (config: Record<string, unknown>, callback: (err: Error | null) => void) => void;
+  onDetected: (callback: (result: QuaggaDetectionResult) => void) => void;
+  start: () => void;
+  stop: () => void;
+}
+
 const QUEUE_KEY = 'smart-library-unsynced-scans';
 
 export function loadQueuedScans(): QueuedScan[] {
@@ -34,7 +49,7 @@ export function clearQueuedScan(id: string) {
 
 export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const quaggaRef = useRef<any>(null);
+  const quaggaRef = useRef<QuaggaLike | null>(null);
   const rafRef = useRef<number>();
   const streamRef = useRef<MediaStream | null>(null);
   const cooldownRef = useRef(false);
@@ -46,7 +61,7 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
   const stop = useCallback(async () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (quaggaRef.current) {
-      try { quaggaRef.current.stop(); } catch {}
+      try { quaggaRef.current.stop(); } catch { /* decoder already stopped */ }
       quaggaRef.current = null;
     }
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -65,7 +80,10 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
   }, [onDetected]);
 
   const startNativeLoop = useCallback(() => {
-    const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+    const w = window as unknown as {
+      BarcodeDetector: new (options: { formats: string[] }) => BarcodeDetectorLike;
+    };
+    const BarcodeDetectorCtor = w.BarcodeDetector;
     const detector = new BarcodeDetectorCtor({ formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'] });
     const loop = async () => {
       const video = videoRef.current;
@@ -74,16 +92,16 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
           const hits = await detector.detect(video);
           const hit = hits?.[0];
           if (hit?.rawValue) await handleCode(hit.rawValue, hit.format);
-        } catch {}
+        } catch { /* no barcode in this frame */ }
       }
-      rafRef.current = requestAnimationFrame(loop);
+      rafRef.current = requestAnimationFrame(() => { void loop(); });
     };
-    loop();
+    void loop();
   }, [handleCode]);
 
   const startQuagga = useCallback(async () => {
     const mod = await import('@ericblade/quagga2');
-    const Quagga = (mod as any).default ?? mod;
+    const Quagga = (mod.default ?? mod) as unknown as QuaggaLike;
     quaggaRef.current = Quagga;
     await new Promise<void>((resolve, reject) => {
       Quagga.init({
@@ -96,10 +114,10 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
         locate: true,
       }, (err: Error | null) => err ? reject(err) : resolve());
     });
-    Quagga.onDetected((result: any) => {
+    Quagga.onDetected((result: QuaggaDetectionResult) => {
       const code = result?.codeResult?.code;
       const format = result?.codeResult?.format;
-      if (code) handleCode(code, format);
+      if (code) void handleCode(code, format);
     });
     Quagga.start();
   }, [handleCode]);
@@ -139,7 +157,7 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
     }
   }, [startNativeLoop, startQuagga]);
 
-  useEffect(() => () => { stop(); }, [stop]);
+  useEffect(() => () => { void stop(); }, [stop]);
 
   return { videoRef, status, error, backend, lastCode, start, stop, queueScan: (code: string) => queueScan(code, mode), queuedScans: loadQueuedScans() };
 }

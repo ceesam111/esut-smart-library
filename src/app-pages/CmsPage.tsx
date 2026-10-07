@@ -3,10 +3,57 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { sendTransactionalEmail } from '@/lib/email';
 
+interface BlockCardData {
+  icon?: string;
+  title?: string;
+  text?: string;
+  link?: string;
+  link_label?: string;
+}
+
+interface BlockMemberData {
+  photo?: string;
+  name?: string;
+  role?: string;
+  email?: string;
+}
+
+interface BlockFaqData {
+  q: string;
+  a: string;
+}
+
+interface BlockStatData {
+  value?: string | number;
+  label?: string;
+}
+
+interface BlockData {
+  bg_image?: string;
+  height?: string | number;
+  heading?: string;
+  subheading?: string;
+  cta_label?: string;
+  cta_url?: string;
+  html?: string;
+  url?: string;
+  alt?: string;
+  caption?: string;
+  left?: string;
+  right?: string;
+  email?: string;
+  title?: string;
+  text?: string;
+  cards?: BlockCardData[];
+  members?: BlockMemberData[];
+  items?: BlockFaqData[];
+  stats?: BlockStatData[];
+}
+
 interface Block {
   id: string;
   type: string;
-  data: Record<string, any>;
+  data: BlockData;
 }
 
 interface CMSPage {
@@ -90,14 +137,14 @@ function renderBlock(block: Block) {
       );
 
     case 'card_grid': {
-      const cards: any[] = d.cards || [];
+      const cards: BlockCardData[] = d.cards || [];
       return (
         <section key={block.id} className="py-10 px-6 bg-neutral-50">
           <div className="max-w-5xl mx-auto">
             {d.heading && <h2 className="text-2xl font-bold text-neutral-900 mb-2 text-center">{d.heading}</h2>}
             {d.subheading && <p className="text-neutral-500 text-center mb-8">{d.subheading}</p>}
             <div className={`grid gap-6 ${cards.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-              {cards.map((card: any, i: number) => (
+              {cards.map((card, i) => (
                 <div key={i} className="bg-white rounded-xl border border-neutral-200 p-6 shadow-sm">
                   {card.icon && <div className="text-3xl mb-3">{card.icon}</div>}
                   {card.title && <h3 className="font-semibold text-neutral-900 mb-2">{card.title}</h3>}
@@ -116,13 +163,13 @@ function renderBlock(block: Block) {
     }
 
     case 'team_grid': {
-      const members: any[] = d.members || [];
+      const members: BlockMemberData[] = d.members || [];
       return (
         <section key={block.id} className="py-10 px-6">
           <div className="max-w-5xl mx-auto">
             {d.heading && <h2 className="text-2xl font-bold text-neutral-900 mb-8 text-center">{d.heading}</h2>}
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {members.map((m: any, i: number) => (
+              {members.map((m, i) => (
                 <div key={i} className="text-center">
                   {m.photo && (
                     <img src={m.photo} alt={m.name} className="w-24 h-24 rounded-full object-cover mx-auto mb-3 shadow" />
@@ -144,13 +191,13 @@ function renderBlock(block: Block) {
     }
 
     case 'faq': {
-      const faqs: any[] = d.items || [];
+      const faqs: BlockFaqData[] = d.items || [];
       return (
         <section key={block.id} className="py-10 px-6">
           <div className="max-w-3xl mx-auto">
             {d.heading && <h2 className="text-2xl font-bold text-neutral-900 mb-8 text-center">{d.heading}</h2>}
             <div className="divide-y divide-neutral-200">
-              {faqs.map((faq: any, i: number) => (
+              {faqs.map((faq, i) => (
                 <FAQItem key={i} question={faq.q} answer={faq.a} />
               ))}
             </div>
@@ -199,11 +246,11 @@ function renderBlock(block: Block) {
       );
 
     case 'stats_bar': {
-      const stats: any[] = d.stats || [];
+      const stats: BlockStatData[] = d.stats || [];
       return (
         <section key={block.id} className="py-10 px-6 bg-neutral-900 text-white">
           <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {stats.map((s: any, i: number) => (
+            {stats.map((s, i) => (
               <div key={i}>
                 <p className="text-3xl font-bold text-amber-400">{s.value}</p>
                 <p className="text-sm text-neutral-400 mt-1">{s.label}</p>
@@ -341,7 +388,7 @@ export default function CmsPage() {
 
   useEffect(() => {
     if (!slug) return;
-    (async () => {
+    void (async () => {
       const { data } = await supabase
         .from('cms_pages')
         .select('id, title, slug, blocks, status')

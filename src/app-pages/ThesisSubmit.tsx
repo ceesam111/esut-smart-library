@@ -57,7 +57,7 @@ export default function ThesisSubmit() {
   useEffect(() => {
     void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) { void navigate('/login'); return; }
       setUserId(user.id);
       const { data: patron } = await supabase
         .from('patrons')
@@ -72,7 +72,7 @@ export default function ThesisSubmit() {
       if (patron?.programme) setProgramme(prev => prev || patron.programme!);
       setProfileLoaded(true);
     })();
-  }, []);
+  }, [navigate]);
 
   const addKeyword = () => {
     const kw = kwInput.trim();

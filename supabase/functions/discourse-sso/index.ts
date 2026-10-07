@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
     let userId: string | null = null;
     let userEmail = "";
     let userName = "";
-    let matricNo = "";
+    
     let avatarUrl = "";
     let isAdmin = false;
 
@@ -93,7 +93,6 @@ Deno.serve(async (req: Request) => {
           userName      = (patron.matric_number ?? patron.full_name ?? userEmail.split("@")[0])
             .replace(/\s+/g, "_")
             .toLowerCase();
-          matricNo      = patron.matric_number ?? "";
           avatarUrl     = patron.avatar_url ?? "";
           isAdmin       = patron.patron_category === "Staff" || patron.patron_category === "Librarian";
         } else {

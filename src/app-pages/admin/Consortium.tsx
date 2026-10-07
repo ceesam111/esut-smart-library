@@ -35,6 +35,13 @@ interface ConsortiumDb {
   password?: string | null;
 }
 
+interface AccessLog {
+  id: string;
+  database_id: string | null;
+  user_name: string | null;
+  accessed_at: string;
+}
+
 const EMPTY_MEMBER = {
   institution_name: '', short_code: '', contact_person: '', email: '',
   phone: '', website: '', city: '', country: 'Nigeria', notes: '',
@@ -49,7 +56,7 @@ export default function AdminConsortium() {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [databases, setDatabases] = useState<ConsortiumDb[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showMemberForm, setShowMemberForm] = useState(false);
@@ -70,11 +77,11 @@ export default function AdminConsortium() {
     ]);
     setMembers((m as Member[]) ?? []);
     setDatabases((d as ConsortiumDb[]) ?? []);
-    setLogs(l ?? []);
+    setLogs((l as AccessLog[]) ?? []);
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const flash = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 3500); };
 
@@ -101,20 +108,20 @@ export default function AdminConsortium() {
     setMemberForm({ ...EMPTY_MEMBER });
     setShowMemberForm(false);
     flash('Partner institution onboarded.');
-    load();
+    await load();
   };
 
   const toggleMemberStatus = async (m: Member) => {
     const next = m.status === 'active' ? 'suspended' : 'active';
     await supabase.from('consortium_members').update({ status: next }).eq('id', m.id);
-    load();
+    await load();
   };
 
   const removeMember = async (m: Member) => {
     if (m.is_founding_member) { flash('The founding member cannot be removed.'); return; }
     if (!window.confirm(`Remove ${m.institution_name} and its contributed databases?`)) return;
     await supabase.from('consortium_members').delete().eq('id', m.id);
-    load();
+    await load();
   };
 
   const saveDb = async (memberId: string) => {
@@ -135,13 +142,13 @@ export default function AdminConsortium() {
     setDbForm({ ...EMPTY_DB });
     setDbFormFor(null);
     flash('Contributed database added.');
-    load();
+    await load();
   };
 
   const removeDb = async (id: string) => {
     if (!window.confirm('Remove this contributed database?')) return;
     await supabase.from('consortium_databases').delete().eq('id', id);
-    load();
+    await load();
   };
 
   if (authLoading) return <div className="p-8 text-neutral-500">Loading…</div>;

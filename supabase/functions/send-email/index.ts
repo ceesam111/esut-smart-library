@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
     });
 
   try {
-    const { to, to_name, subject, html }: Payload = await req.json();
+    const { to, to_name: _to_name, subject, html }: Payload = await req.json();
 
     if (!to || !subject || !html) {
       return json({ error: "Missing required fields: to, subject, html" }, 400);

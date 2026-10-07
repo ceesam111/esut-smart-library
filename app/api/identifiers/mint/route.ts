@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireUser(request);
+    await requireUser(request);
     const body = await request.json().catch(() => ({}));
     const { title, creators, year, action } = body as { title?: string; creators?: string[]; year?: number; action?: string };
 

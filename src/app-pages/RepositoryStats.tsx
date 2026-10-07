@@ -26,19 +26,20 @@ export default function RepositoryStats() {
   const [topViewed, setTopViewed]         = useState<TopItem[]>([]);
   const [loading, setLoading]             = useState(true);
 
-  useEffect(() => { loadAll(); }, []);
-
-  const loadAll = async () => {
-    setLoading(true);
-    await Promise.all([
-      loadTotals(),
-      loadByType(),
-      loadByFaculty(),
-      loadMonthly(),
-      loadTopItems(),
-    ]);
-    setLoading(false);
-  };
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([
+        loadTotals(),
+        loadByType(),
+        loadByFaculty(),
+        loadMonthly(),
+        loadTopItems(),
+      ]);
+      setLoading(false);
+    };
+    void loadAll();
+  }, []);
 
   const loadTotals = async () => {
     const [{ count: items }, { count: dois }, { count: harvests }] = await Promise.all([
@@ -119,8 +120,8 @@ export default function RepositoryStats() {
     setTopViewed((vw ?? []) as TopItem[]);
   };
 
-  const authorStr = (authors: any): string => {
-    if (Array.isArray(authors)) return authors.map((a: any) => (typeof a === 'string' ? a : a?.name ?? '')).filter(Boolean).join('; ');
+  const authorStr = (authors: unknown): string => {
+    if (Array.isArray(authors)) return authors.map((a: unknown) => (typeof a === 'string' ? a : (a as { name?: string })?.name ?? '')).filter(Boolean).join('; ');
     return String(authors ?? '');
   };
 

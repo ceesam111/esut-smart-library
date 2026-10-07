@@ -6,7 +6,7 @@ describe('structured logger redaction', () => {
     const output = redact({
       authorization: 'Bearer secret-token',
       nested: { password: 'pass', apiKey: 'key', safe: 'value' },
-    }) as any;
+    }) as { authorization: string; nested: Record<string, string> };
 
     expect(output.authorization).toBe('[redacted]');
     expect(output.nested.password).toBe('[redacted]');

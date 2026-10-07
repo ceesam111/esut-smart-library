@@ -89,7 +89,7 @@ export default function IrDeposit() {
     await supabase.from('ir_audit_logs').insert({ user_id: user.id, action: 'deposit', target_handle: handle, metadata: { title: form.title, department: form.department, file_type: file.type || safeName.split('.').pop() } });
     setSaving(false);
     if (insertError) { setError(insertError.message); return; }
-    navigate(`/repository/${encodeURIComponent(handle)}`);
+    void navigate(`/repository/${encodeURIComponent(handle)}`);
   };
 
   return (

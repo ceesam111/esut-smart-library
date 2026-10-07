@@ -36,7 +36,7 @@ export default function Fines() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    fetchFines();
+    void fetchFines();
   }, []);
 
   const fetchFines = async () => {
@@ -86,7 +86,7 @@ export default function Fines() {
 
       setSelectedFine(null);
       setPaymentForm({ fineId: '', amount: 0, payment_method: 'cash', reference: '' });
-      fetchFines();
+      void fetchFines();
     } catch (error) {
       console.error('Error processing payment:', error);
     } finally {

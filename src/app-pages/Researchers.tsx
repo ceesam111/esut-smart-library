@@ -24,7 +24,7 @@ export default function Researchers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchResearchers();
+    void fetchResearchers();
   }, []);
 
   const fetchResearchers = async () => {
@@ -36,16 +36,20 @@ export default function Researchers() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      const normalized = (data || []).map((profile: any) => ({
-        ...profile,
-        name: profile.name || profile.full_name || [profile.salutation, profile.first_name, profile.middle_name, profile.surname].filter(Boolean).join(' ') || 'Unnamed researcher',
-        rank: profile.rank || profile.academic_rank || 'Researcher',
-        faculty: profile.faculty || profile.faculty_name || profile.department || 'ESUT',
-        photo_url: profile.photo_url || profile.profile_photo_url || '/nigerian-library-people.svg',
-        orcid: profile.orcid || profile.orcid_id || null,
-        h_index: profile.h_index ?? 0,
-        total_citations: profile.total_citations ?? 0,
-      }));
+      const normalized = (data || []).map((row) => {
+        const profile = row as Record<string, unknown>;
+        return {
+          id: String(profile.id ?? ''),
+          slug: String(profile.slug ?? ''),
+          name: String(profile.name || profile.full_name || [profile.salutation, profile.first_name, profile.middle_name, profile.surname].filter(Boolean).join(' ') || 'Unnamed researcher'),
+          rank: String(profile.rank || profile.academic_rank || 'Researcher'),
+          faculty: String(profile.faculty || profile.faculty_name || profile.department || 'ESUT'),
+          photo_url: String(profile.photo_url || profile.profile_photo_url || '/nigerian-library-people.svg'),
+          orcid: (profile.orcid || profile.orcid_id || null) as string | null,
+          h_index: Number(profile.h_index ?? 0),
+          total_citations: Number(profile.total_citations ?? 0),
+        } as ResearcherProfile;
+      });
       setResearchers(normalized);
       setFilteredResearchers(normalized);
     } catch (err) {

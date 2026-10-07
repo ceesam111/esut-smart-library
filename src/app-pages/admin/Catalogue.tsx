@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
@@ -89,14 +89,14 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
   const [editShelf, setEditShelf]     = useState('');
   const [editStatus, setEditStatus]   = useState('available');
 
-  useEffect(() => { loadCopies(); }, []);
-
-  async function loadCopies() {
+  const loadCopies = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from('catalogue_copies').select('*').eq('item_id', item.id).order('created_at');
     setCopies((data ?? []) as CatalogueCopy[]);
     setLoading(false);
-  }
+  }, [item.id]);
+
+  useEffect(() => { void loadCopies(); }, [loadCopies]);
 
   function startEdit(copy: CatalogueCopy) {
     const parsed = parseShelfLocation(copy.shelf_location);
@@ -122,7 +122,7 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
     await supabase.from('catalogue_items').update({ available_copies: avail, total_copies: allCopies.length }).eq('id', item.id);
     setEditId(null);
     setSaving(false);
-    loadCopies();
+    await loadCopies();
   }
 
   async function deleteCopy(copyId: string) {
@@ -131,7 +131,7 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
     const remaining = copies.filter(c => c.id !== copyId);
     const avail = remaining.filter(c => c.status === 'available').length;
     await supabase.from('catalogue_items').update({ available_copies: avail, total_copies: remaining.length }).eq('id', item.id);
-    loadCopies();
+    await loadCopies();
     onSaved();
   }
 
@@ -155,7 +155,7 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
     setNewShelf('');
     setNewStatus('available');
     setAddingNew(false);
-    loadCopies();
+    await loadCopies();
     onSaved();
   }
 
@@ -419,10 +419,7 @@ export default function Catalogue() {
   const [copyModalItem, setCopyModalItem] = useState<CatalogueItem | null>(null);
   const pageSize = 25;
 
-  useEffect(() => { fetchItems(); }, []);
-  useEffect(() => { applyFilters(); }, [items, searchTerm, filterFormat, filterStatus]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('catalogue_items')
@@ -435,9 +432,9 @@ export default function Catalogue() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = items;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -449,7 +446,10 @@ export default function Catalogue() {
     if (filterStatus) filtered = filtered.filter((item) => item.status === filterStatus);
     setFilteredItems(filtered);
     setCurrentPage(1);
-  };
+  }, [items, searchTerm, filterFormat, filterStatus]);
+
+  useEffect(() => { void fetchItems(); }, [fetchItems]);
+  useEffect(() => { applyFilters(); }, [applyFilters]);
 
   const toggleStatus = async (id: string, currentStatus: string) => {
     let newStatus: string;
@@ -463,7 +463,7 @@ export default function Catalogue() {
     try {
       const { error } = await supabase.from('catalogue_items').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
-      fetchItems();
+      await fetchItems();
     } catch (error) {
       console.error('Error updating item status:', error);
     }
@@ -477,7 +477,7 @@ export default function Catalogue() {
         available_copies: 0,
       }).eq('id', id);
       if (error) throw error;
-      fetchItems();
+      await fetchItems();
     } catch (error) {
       console.error('Error withdrawing item:', error);
     }

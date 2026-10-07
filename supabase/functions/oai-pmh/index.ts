@@ -23,7 +23,7 @@ function datestamp(iso: string): string {
   return iso.substring(0, 10);
 }
 
-function dcRecord(item: any): string {
+function dcRecord(item: { authors: unknown[]; subjects: unknown[]; keywords: unknown[]; doi: string | null; id: string }): string {
   const authors = Array.isArray(item.authors) ? item.authors : [];
   const subjects = Array.isArray(item.subjects) ? item.subjects : [];
   const keywords = Array.isArray(item.keywords) ? item.keywords : [];
@@ -31,7 +31,7 @@ function dcRecord(item: any): string {
   const itemUrl = `https://library.esut.edu.ng/repository/${item.id}`;
 
   const creatorTags = authors
-    .map((a: any) => `<dc:creator>${xmlEscape(typeof a === "string" ? a : (a.name ?? ""))}</dc:creator>`)
+    .map((a: unknown) => `<dc:creator>${xmlEscape(typeof a === "string" ? a : ((a as { name?: string })?.name ?? ""))}</dc:creator>`)
     .join("\n        ");
 
   const subjectTags = [...subjects, ...keywords]
@@ -153,7 +153,7 @@ Deno.serve(async (req: Request) => {
       .order("name");
 
     const sets = (communities ?? [])
-      .map((c: any) => `<set>
+      .map((c: { slug: string; name: string }) => `<set>
       <setSpec>${xmlEscape(c.slug)}</setSpec>
       <setName>${xmlEscape(c.name)}</setName>
     </set>`)
@@ -232,7 +232,7 @@ Deno.serve(async (req: Request) => {
       return xml(oaiError("noRecordsMatch", "No records match the query", verb));
     }
 
-    const records = items.map((item: any) => {
+    const records = items.map((item: { id: string; updated_at: string; faculty_code: string | null }) => {
       const header = `<header>
         <identifier>${oaiIdentifier(item.id)}</identifier>
         <datestamp>${datestamp(item.updated_at)}</datestamp>

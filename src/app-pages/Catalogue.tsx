@@ -51,6 +51,46 @@ interface EbookResponse {
   all: EbookResult[];
 }
 
+interface CatalogueItemRow {
+  id: string;
+  title: string | { name?: string | null; value?: string | null; text?: string | null } | null;
+  authors: string[] | string | null;
+  year: number | string | null;
+  format: string | null;
+  item_type?: string | null;
+  cover_image: string | null;
+  isbn: string | null;
+  faculty_code: string | null;
+  available_copies: number;
+  total_copies: number;
+  language: string | null;
+  subjects: string[] | null;
+  view_count: number;
+  download_count: number;
+  call_number: string | null;
+  visibility: string;
+}
+
+interface ResourceCandidate {
+  id?: string | number;
+  source_record_id?: string | number;
+  title?: string;
+  authors?: unknown;
+  year?: number | null;
+  subjects?: unknown;
+  source_name?: string;
+  source?: string;
+  cover_url?: string | null;
+  cover_image?: string | null;
+  source_url?: string | null;
+  download_url?: string | null;
+}
+
+interface ResourceSearchData {
+  externalCandidates?: ResourceCandidate[];
+  localResults?: ResourceCandidate[];
+}
+
 const SUBJECT_PILLS = ['Education', 'Science', 'Arts', 'Management', 'General'];
 
 const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -128,7 +168,7 @@ function emptyEbookResponse(): EbookResponse {
   };
 }
 
-function mapResourceSearchToEbooks(data: any): EbookResponse {
+function mapResourceSearchToEbooks(data: ResourceSearchData): EbookResponse {
   const response = emptyEbookResponse();
   const candidates = [...(data.externalCandidates ?? []), ...(data.localResults ?? [])];
   for (const item of candidates) {
@@ -179,8 +219,8 @@ function FreeEbooksTab() {
     }
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); setQuery(inputVal); doSearch(inputVal); };
-  const handlePill   = (pill: string)        => { setInputVal(pill); setQuery(pill); doSearch(pill); };
+  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); setQuery(inputVal); void doSearch(inputVal); };
+  const handlePill   = (pill: string)        => { setInputVal(pill); setQuery(pill); void doSearch(pill); };
 
   const visible: EbookResult[] = results
     ? (sourceFilter === 'all' ? results.all : (results[sourceFilter as keyof EbookResponse] as EbookResult[]) ?? [])
@@ -337,7 +377,7 @@ export default function Catalogue() {
     searchParams.get('tab') === 'ebooks' ? 'ebooks' : 'local'
   );
 
-  const [items, setItems]             = useState<any[]>([]);
+  const [items, setItems]             = useState<CatalogueItemRow[]>([]);
   const [total, setTotal]             = useState(0);
   const [loading, setLoading]         = useState(true);
   const [catalogueError, setCatalogueError] = useState<string | null>(null);
@@ -369,7 +409,7 @@ export default function Catalogue() {
   }, [search, mainTab]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user));
+    void supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user));
   }, []);
 
   const switchTab = (tab: 'local' | 'ebooks') => {
@@ -422,7 +462,7 @@ export default function Catalogue() {
     setLoading(false);
   }, [search, faculty, formats_sel, yearRange, language, availability, page, isLoggedIn, mainTab]);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => { void fetchItems(); }, [fetchItems]);
 
   const toggleFormat = (f: string) => {
     setFormats(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
@@ -654,7 +694,7 @@ export default function Catalogue() {
   );
 }
 
-function CatalogueCard({ item, query }: { item: any; query?: string }) {
+function CatalogueCard({ item, query }: { item: CatalogueItemRow; query?: string }) {
   const title = typeof item.title === 'string' ? item.title : (item.title?.name || item.title?.value || item.title?.text || 'Untitled');
   const trackClick = () => {
     void trackClientEvent({

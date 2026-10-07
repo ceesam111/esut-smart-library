@@ -41,7 +41,7 @@ export default function PatronProfile() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
-          navigate('/login');
+          void navigate('/login');
           return;
         }
 
@@ -70,7 +70,7 @@ export default function PatronProfile() {
       }
     };
 
-    fetchProfile();
+    void fetchProfile();
   }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

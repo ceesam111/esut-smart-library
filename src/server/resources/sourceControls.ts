@@ -23,7 +23,14 @@ function envPresent(name?: string) {
   return !name || Boolean(process.env[name]);
 }
 
-function configFromRow(row: any, source: typeof RESOURCE_SOURCES[number]): ResourceSourceControl {
+type SourceControlRow = {
+  id?: string;
+  enabled?: boolean;
+  query_config?: Record<string, unknown>;
+  source_type?: string;
+};
+
+function configFromRow(row: SourceControlRow | null | undefined, source: typeof RESOURCE_SOURCES[number]): ResourceSourceControl {
   const config = row?.query_config ?? {};
   return {
     id: row?.id,
@@ -53,7 +60,7 @@ export async function getTenantSourceControls(tenantId: string): Promise<{ contr
     throw new Error(error.message);
   }
 
-  const rowsByType = new Map((data ?? []).map((row: any) => [row.source_type, row]));
+  const rowsByType = new Map((data ?? []).map((row: { source_type: string }) => [row.source_type, row]));
   const missing = RESOURCE_SOURCES.filter((source) => !rowsByType.has(source.sourceType));
   if (missing.length) {
     await supabase.from('resource_harvest_sources').upsert(missing.map((source) => ({

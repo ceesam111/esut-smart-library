@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync} from 'fs';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
@@ -112,9 +112,6 @@ async function svcJson(path, init = {}) {
   return { status: res.status, body };
 }
 
-function like(pattern) {
-  return `like.${encodeURIComponent(pattern)}`;
-}
 
 async function findUserByEmail(email) {
   const res = await withRetry(() => fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=200`, { headers: serviceHeaders }));
@@ -627,7 +624,7 @@ async function e2eRestart(ctx) {
   const finalBySeq = new Map();
   let attempts = 0;
   let lastRes = null;
-  let lastBody = {};
+  let lastBody;
   for (let pass = 0; pass < 3; pass++) {
     attempts += 1;
     const batch = pass === 0
@@ -648,7 +645,7 @@ async function e2eRestart(ctx) {
     await sleep(500);
   }
   const res = lastRes ?? { status: 0 };
-  const body = lastBody;
+  
   const statuses = [...finalBySeq.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r.status);
   const resultMsgs = [...finalBySeq.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => `seq${r.local_seq}:${r.status}${r.conflict_code ? `[${r.conflict_code}]` : ''} ${r.message}`);
   const { body: ledRows } = await svcJson(

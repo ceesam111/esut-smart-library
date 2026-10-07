@@ -10,7 +10,7 @@ interface BlogPost {
   author: string;
   category: string;
   tags: string;
-  body: any;
+  body: unknown;
   content: string;
   status: 'draft' | 'published';
   comments_enabled: boolean;
@@ -28,6 +28,10 @@ interface BlogComment {
   created_at: string;
   post_title?: string;
 }
+
+type BlogCommentRow = BlogComment & {
+  blog_posts?: { title?: string | null } | null;
+};
 
 const BLANK: Omit<BlogPost, 'id' | 'created_at'> = {
   title: '',
@@ -65,8 +69,8 @@ export default function Blog() {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    load();
-    loadPendingCount();
+    void load();
+    void loadPendingCount();
   }, []);
 
   async function load() {
@@ -95,7 +99,7 @@ export default function Blog() {
       .eq('is_approved', approved)
       .order('created_at', { ascending: false });
 
-    const mapped = (data ?? []).map((c: any) => ({
+    const mapped = ((data ?? []) as BlogCommentRow[]).map((c) => ({
       ...c,
       post_title: c.blog_posts?.title ?? 'Unknown Post',
     }));
@@ -120,7 +124,7 @@ export default function Blog() {
 
   function openComments() {
     setCommentFilter('pending');
-    loadComments(false);
+    void loadComments(false);
     setView('comments');
   }
 
@@ -169,13 +173,13 @@ export default function Blog() {
 
     setSaving(false);
     setSaved(true);
-    load();
+    await load();
   }
 
   async function remove(id: string) {
     if (!confirm('Delete this post?')) return;
     await supabase.from('blog_posts').delete().eq('id', id);
-    load();
+    await load();
   }
 
   const filtered = posts.filter(p => filter === 'all' || p.status === filter);
@@ -190,7 +194,7 @@ export default function Blog() {
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => { setView('list'); load(); }}
+            onClick={() => { setView('list'); void load(); }}
             className="text-sm text-neutral-500 hover:text-neutral-700 flex items-center gap-1"
           >
             ← Back
@@ -340,7 +344,7 @@ export default function Blog() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => { setView('list'); loadPendingCount(); }}
+            onClick={() => { setView('list'); void loadPendingCount(); }}
             className="text-sm text-neutral-500 hover:text-neutral-700 flex items-center gap-1"
           >
             ← Back
@@ -350,7 +354,7 @@ export default function Blog() {
 
         <div className="flex gap-1 bg-neutral-100 p-1 rounded-lg mb-6 w-fit">
           <button
-            onClick={() => { setCommentFilter('pending'); loadComments(false); }}
+            onClick={() => { setCommentFilter('pending'); void loadComments(false); }}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
               commentFilter === 'pending' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
             }`}
@@ -363,7 +367,7 @@ export default function Blog() {
             )}
           </button>
           <button
-            onClick={() => { setCommentFilter('approved'); loadComments(true); }}
+            onClick={() => { setCommentFilter('approved'); void loadComments(true); }}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
               commentFilter === 'approved' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
             }`}

@@ -12,6 +12,15 @@ interface CatalogueItem {
   downloads: number;
 }
 
+interface FacultyCatalogueRow {
+  id: string;
+  title: string;
+  authors?: string | null;
+  year?: number | null;
+  type?: string | null;
+  downloads?: number | null;
+}
+
 export default function Faculty() {
   const { slug } = useParams<{ slug: string }>();
   const [items, setItems] = useState<CatalogueItem[]>([]);
@@ -34,7 +43,7 @@ export default function Faculty() {
 
         if (error) throw error;
 
-        const catalogueItems = (data || []).map((item: any) => ({
+        const catalogueItems = (data || []).map((item: FacultyCatalogueRow) => ({
           id: item.id,
           title: item.title,
           authors: item.authors || 'Unknown',
@@ -46,8 +55,8 @@ export default function Faculty() {
         setItems(catalogueItems);
         setStats({
           total: data?.length || 0,
-          thesis: data?.filter((d: any) => d.type === 'Thesis').length || 0,
-          papers: data?.filter((d: any) => d.type === 'Research Paper').length || 0,
+          thesis: data?.filter((d: FacultyCatalogueRow) => d.type === 'Thesis').length || 0,
+          papers: data?.filter((d: FacultyCatalogueRow) => d.type === 'Research Paper').length || 0,
         });
       } catch (error) {
         console.error('Error fetching faculty data:', error);
@@ -56,7 +65,7 @@ export default function Faculty() {
       }
     };
 
-    fetchFacultyData();
+    void fetchFacultyData();
   }, [faculty]);
 
   if (!faculty) {

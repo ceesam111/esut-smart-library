@@ -16,8 +16,7 @@ const nextConfig = {
   // (they are already NEXT_PUBLIC_ in Vercel config)
   env: {},
 
-  // Silence ESLint during production builds (we run lint separately)
-  eslint: { ignoreDuringBuilds: true },
+  // Lint runs via `npm run lint` and CI (Next 16 no longer lints during build).
 
   // TypeScript is checked with `npm run typecheck` before deployment.
   // No build-time type suppression — build fails on type errors.

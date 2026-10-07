@@ -111,7 +111,7 @@ export default function AdminRequests() {
       setReservations((holds ?? []) as unknown as Reservation[]);
       setLoading(false);
     };
-    load();
+    void load();
   }, []);
 
   // Stats

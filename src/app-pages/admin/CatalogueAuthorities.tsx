@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface Authority {
@@ -45,9 +45,12 @@ export default function CatalogueAuthorities() {
   const [alert, setAlert]             = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
 
-  useEffect(() => { fetchAll(); }, []);
+  const showAlert = useCallback((type: 'success' | 'error', msg: string) => {
+    setAlert({ type, msg });
+    setTimeout(() => setAlert(null), 4000);
+  }, []);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -76,12 +79,9 @@ export default function CatalogueAuthorities() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showAlert]);
 
-  const showAlert = (type: 'success' | 'error', msg: string) => {
-    setAlert({ type, msg });
-    setTimeout(() => setAlert(null), 4000);
-  };
+  useEffect(() => { void fetchAll(); }, [fetchAll]);
 
   const openAdd = () => {
     setForm(EMPTY);
@@ -133,9 +133,10 @@ export default function CatalogueAuthorities() {
         showAlert('success', 'Authority term updated.');
       }
       setModal(null);
-      fetchAll();
-    } catch (err: any) {
-      showAlert('error', err?.message ?? 'Save failed.');
+      await fetchAll();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
+      showAlert('error', message ?? 'Save failed.');
     } finally {
       setSaving(false);
     }
@@ -146,7 +147,7 @@ export default function CatalogueAuthorities() {
     const { error } = await supabase.from('authority_control').delete().eq('id', id);
     if (error) { showAlert('error', 'Delete failed.'); return; }
     showAlert('success', 'Authority term deleted.');
-    fetchAll();
+    await fetchAll();
   };
 
   const filtered = authorities.filter((a) => {

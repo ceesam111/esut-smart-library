@@ -86,7 +86,7 @@ export default function Shelves() {
 
   const newCode = buildCode(newLib, newFloor, newBay, newShelf);
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { void loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
@@ -97,7 +97,7 @@ export default function Shelves() {
     const rows = (shelvesRes.data ?? []) as Shelf[];
     setShelves(rows);
     const counts: Record<string, number> = {};
-    (itemsRes.data ?? []).forEach((r: any) => {
+    (itemsRes.data ?? []).forEach((r: { shelf_code: string | null }) => {
       if (r.shelf_code) counts[r.shelf_code] = (counts[r.shelf_code] ?? 0) + 1;
     });
     setItemCounts(counts);

@@ -402,6 +402,25 @@ interface DoabBook {
 
 const DOAB_PER_PAGE = 12;
 
+interface SearchGroup {
+  results?: SearchResultItem[];
+}
+
+interface SearchResultItem {
+  id: string;
+  source_record_id?: string;
+  title: string;
+  authors: string[] | string;
+  publisher?: string;
+  source_name?: string;
+  year?: number;
+  subjects?: string[];
+  category?: string;
+  cover_url: string | null;
+  source_url?: string;
+  download_url?: string;
+}
+
 function FreeEbooksStrip() {
   const [books, setBooks] = useState<DoabBook[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -413,10 +432,11 @@ function FreeEbooksStrip() {
     let active = true;
     fetch('/api/search/resources?q=education&limit=8&legalOnly=true')
       .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
+      .then((raw) => {
+        const data = raw as { groups?: Record<string, SearchGroup> } | null;
         if (!active || !data?.groups) return;
-        const openBooks = Object.values(data.groups).flatMap((group: any) => group.results ?? []).slice(0, 8);
-        setBooks(openBooks.map((item: any) => ({
+        const openBooks = Object.values(data.groups).flatMap((group) => group.results ?? []).slice(0, 8);
+        setBooks(openBooks.map((item) => ({
           id: item.id ?? item.source_record_id ?? item.title,
           title: item.title,
           authors: Array.isArray(item.authors) ? item.authors.join(', ') : item.authors ?? '',
@@ -426,7 +446,7 @@ function FreeEbooksStrip() {
           cover_url: item.cover_url,
           record_url: item.source_url ?? item.download_url ?? '/search/global',
         })));
-        setSubjects([...new Set(openBooks.flatMap((item: any) => item.subjects ?? []))].slice(0, 12) as string[]);
+        setSubjects([...new Set(openBooks.flatMap((item) => item.subjects ?? []))].slice(0, 12) as string[]);
       })
       .catch(() => {})
       .finally(() => active && setLoading(false));

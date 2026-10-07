@@ -80,10 +80,10 @@ export default function AmbientSounds() {
     stop();
     let ctx = ctxRef.current;
     if (!ctx) {
-      ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       ctxRef.current = ctx;
     }
-    ctx.resume();
+    void ctx.resume();
 
     const profile = SOUND_PROFILES[key];
     const src = ctx.createBufferSource();

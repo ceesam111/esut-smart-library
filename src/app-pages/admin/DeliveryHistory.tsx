@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +53,7 @@ export default function DeliveryHistoryPage() {
       if (data.success) {
         setHistory(data.history);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load delivery history');
     } finally {
       setLoading(false);
@@ -62,7 +61,7 @@ export default function DeliveryHistoryPage() {
   }, [filterStatus, filterChannel]);
 
   useEffect(() => {
-    fetchHistory();
+    void fetchHistory();
   }, [fetchHistory]);
 
   const handleRetry = async (id: string) => {
@@ -76,11 +75,11 @@ export default function DeliveryHistoryPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('Retry initiated');
-        fetchHistory();
+        await fetchHistory();
       } else {
         toast.error(data.error || 'Retry failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Retry failed');
     } finally {
       setRetryingId(null);

@@ -51,25 +51,26 @@ export default function CatalogueStats() {
   const [byLibrary,        setByLibrary]        = useState<LibraryItemCount[]>([]);
   const [unassignedItems,  setUnassignedItems]  = useState<UnassignedItem[]>([]);
 
-  useEffect(() => { loadAll(); }, []);
-
-  const loadAll = async () => {
-    setLoading(true);
-    await Promise.all([
-      loadByFormat(),
-      loadByBranch(),
-      loadMonthly(),
-      loadTopItems(),
-      loadNeverBorrowed(),
-      loadSubjects(),
-      loadAuthors(),
-      loadTotals(),
-      loadShelfOccupancy(),
-      loadByLibrary(),
-      loadUnassigned(),
-    ]);
-    setLoading(false);
-  };
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([
+        loadByFormat(),
+        loadByBranch(),
+        loadMonthly(),
+        loadTopItems(),
+        loadNeverBorrowed(),
+        loadSubjects(),
+        loadAuthors(),
+        loadTotals(),
+        loadShelfOccupancy(),
+        loadByLibrary(),
+        loadUnassigned(),
+      ]);
+      setLoading(false);
+    };
+    void loadAll();
+  }, []);
 
   const loadAuthors = async () => {
     const { data } = await supabase.from('catalogue_items').select('authors');

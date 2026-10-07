@@ -13,7 +13,7 @@ interface BaseLibrary {
   description: string;
 }
 
-interface BranchLibrary extends BaseLibrary {}
+
 
 interface FacultyLibrary extends BaseLibrary {
   faculty: string;

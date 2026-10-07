@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
 import ThesisFileButton from '@/components/ThesisFileButton';
@@ -64,16 +64,16 @@ export default function AdminTheses() {
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => { void fetchTheses(); }, [filter]);
-
-  const fetchTheses = async () => {
+  const fetchTheses = useCallback(async () => {
     setLoading(true);
     let q = supabase.from('theses').select('*').order('created_at', { ascending: false });
     if (filter) q = q.eq('status', filter);
     const { data } = await q;
     setTheses(data ?? []);
     setLoading(false);
-  };
+  }, [filter]);
+
+  useEffect(() => { void fetchTheses(); }, [fetchTheses]);
 
   const openThesis = async (t: Thesis) => {
     setSelected(t);

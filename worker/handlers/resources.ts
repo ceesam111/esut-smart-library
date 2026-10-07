@@ -12,7 +12,7 @@ function safePath(value: string) {
   return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90) || 'resource';
 }
 
-export const harvestResources: AgentJobHandler = async (job, { supabase }) => {
+export const harvestResources: AgentJobHandler = async (job, { supabase: _supabase }) => {
   requireTenant(job);
   const query = textPayload(job, 'query');
   if (!query) throw new Error('resources.harvest requires payload.query.');

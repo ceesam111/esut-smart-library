@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { sendEmail, emailRepositoryRejected, emailRepositoryPublished } from '@/lib/email';
 
 // ── Export helpers ───────────────────────────────────────────────────────────
+type AuthorEntry = string | { name?: string };
+
 function buildCSV(items: RepoItem[]): string {
   const esc = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`;
-  const authorStr = (a: any) =>
-    (Array.isArray(a) ? a : []).map((x: any) => (typeof x === 'string' ? x : x?.name ?? '')).join('; ');
+  const authorStr = (a: unknown) =>
+    (Array.isArray(a) ? a : []).map((x: AuthorEntry) => (typeof x === 'string' ? x : x?.name ?? '')).join('; ');
   const header = ['Title','Authors','Abstract','Year','Item Type','Department','Faculty','Subjects','Keywords','DOI','Visibility','Download Count','View Count','Status'].join(',');
   const rows = items.map(i => [
     esc(i.title), esc(authorStr(i.authors)), esc(i.abstract ?? ''),
@@ -20,8 +22,8 @@ function buildCSV(items: RepoItem[]): string {
 
 function buildDublinCoreXML(items: RepoItem[]): string {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const authorStr = (a: any) =>
-    (Array.isArray(a) ? a : []).map((x: any) => (typeof x === 'string' ? x : x?.name ?? '')).filter(Boolean);
+  const authorStr = (a: unknown) =>
+    (Array.isArray(a) ? a : []).map((x: AuthorEntry) => (typeof x === 'string' ? x : x?.name ?? '')).filter(Boolean);
   const records = items.map(i => {
     const creators = authorStr(i.authors).map((n: string) => `    <dc:creator>${esc(n)}</dc:creator>`).join('\n');
     const subjects = (Array.isArray(i.subjects) ? i.subjects : [String(i.subjects ?? '')]).map((s: string) => `    <dc:subject>${esc(s)}</dc:subject>`).join('\n');
@@ -45,8 +47,8 @@ ${records}
 
 function buildMARCXML(items: RepoItem[]): string {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const authorStr = (a: any) =>
-    (Array.isArray(a) ? a : []).map((x: any) => (typeof x === 'string' ? x : x?.name ?? '')).filter(Boolean);
+  const authorStr = (a: unknown) =>
+    (Array.isArray(a) ? a : []).map((x: AuthorEntry) => (typeof x === 'string' ? x : x?.name ?? '')).filter(Boolean);
   const records = items.map(i => {
     const creators = authorStr(i.authors);
     return `  <record>
@@ -72,16 +74,23 @@ function downloadFile(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+interface MatchedSource {
+  title?: string | null;
+  url?: string | null;
+  similarity?: number | null;
+  matchedWords?: number | null;
+}
+
 interface RepoItem {
   id: string; title: string; item_type: string | null; type: string;
   faculty_code: string | null; department: string | null;
   submitter_id: string | null; status: string;
-  created_at: string; authors: any[]; abstract: string | null;
-  keywords: any[]; subjects: any[]; year: number | null;
+  created_at: string; authors: unknown; abstract: string | null;
+  keywords: unknown; subjects: unknown; year: number | null;
   language: string; doi: string | null; zenodo_id: string | null;
   file_url: string | null; visibility: string;
   similarity_score: number | null; ai_content_score: number | null;
-  matched_sources: any[] | null; plagiarism_scanned_at: string | null;
+  matched_sources: MatchedSource[] | null; plagiarism_scanned_at: string | null;
 }
 
 type FilterStatus = '' | 'submitted' | 'review' | 'approved' | 'published' | 'rejected';
@@ -126,16 +135,16 @@ export default function AdminRepository() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exporting, setExporting]           = useState(false);
 
-  useEffect(() => { fetchItems(); }, [filterStatus]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     let q = supabase.from('repository_items').select('*').order('created_at', { ascending: false });
     if (filterStatus) q = q.eq('status', filterStatus);
     const { data, error } = await q;
     if (!error) setItems(data ?? []);
     setLoading(false);
-  };
+  }, [filterStatus]);
+
+  useEffect(() => { void fetchItems(); }, [fetchItems]);
 
   const openItem = async (item: RepoItem) => {
     setSelected(item);
@@ -166,7 +175,7 @@ export default function AdminRepository() {
       .eq('id', selected.id);
     if (!error) {
       setSelected(prev => prev ? { ...prev, status: newStatus } : null);
-      fetchItems();
+      await fetchItems();
     }
     setActionLoading(false);
   };
@@ -186,19 +195,20 @@ export default function AdminRepository() {
       setSelected(prev => prev ? { ...prev, status: 'published', doi } : null);
       if (submitterEmail) {
         const html = emailRepositoryPublished(selected.title, doi);
-        sendEmail(submitterEmail, submitterName || submitterEmail, 'Your submission has been published', html);
+        await sendEmail(submitterEmail, submitterName || submitterEmail, 'Your submission has been published', html);
       }
-      fetchItems();
-    } catch (e: any) {
-      if (e.message?.includes('ZENODO_TOKEN')) {
+      await fetchItems();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes('ZENODO_TOKEN')) {
         await updateStatus('published');
         setZenodoResult({ ok: true, doi: '' });
         if (submitterEmail) {
           const html = emailRepositoryPublished(selected.title, '');
-          sendEmail(submitterEmail, submitterName || submitterEmail, 'Your submission has been published', html);
+          await sendEmail(submitterEmail, submitterName || submitterEmail, 'Your submission has been published', html);
         }
       } else {
-        setZenodoResult({ ok: false, error: e.message });
+        setZenodoResult({ ok: false, error: message });
       }
     } finally {
       setZenodoLoading(false);
@@ -215,16 +225,16 @@ export default function AdminRepository() {
     if (!error) {
       if (submitterEmail) {
         const html = emailRepositoryRejected(selected.title, rejectReason.trim());
-        sendEmail(submitterEmail, submitterName || submitterEmail, 'Update on your repository submission', html);
+        await sendEmail(submitterEmail, submitterName || submitterEmail, 'Update on your repository submission', html);
       }
       setSlideOpen(false);
-      fetchItems();
+      await fetchItems();
     }
     setActionLoading(false);
   };
 
-  const authorNames = (authors: any[]) =>
-    (Array.isArray(authors) ? authors : []).map((a: any) => typeof a === 'string' ? a : (a.name ?? '')).join('; ');
+  const authorNames = (authors: unknown) =>
+    (Array.isArray(authors) ? authors : []).map((a: AuthorEntry) => typeof a === 'string' ? a : (a.name ?? '')).join('; ');
 
   const handleExport = async (type: 'csv' | 'dc' | 'marc') => {
     setExporting(true);
@@ -318,7 +328,7 @@ export default function AdminRepository() {
                     {item.doi ? <span className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>DOI</span> : '—'}
                   </td>
                   <td className="p-3">
-                    <button className="btn-outline text-xs py-1 px-2" onClick={e => { e.stopPropagation(); openItem(item); }}>
+                    <button className="btn-outline text-xs py-1 px-2" onClick={e => { e.stopPropagation(); void openItem(item); }}>
                       Review
                     </button>
                   </td>
@@ -378,7 +388,7 @@ export default function AdminRepository() {
                 <div>
                   <h4 className="font-semibold text-sm text-neutral-700 mb-2">Keywords</h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {selected.keywords.map((k: any) => (
+                    {selected.keywords.map((k: unknown) => (
                       <span key={String(k)} className="badge badge-secondary text-xs">{String(k)}</span>
                     ))}
                   </div>
@@ -428,7 +438,7 @@ export default function AdminRepository() {
                       <div>
                         <p className="text-xs font-semibold text-neutral-600 mb-2">Top Matched Sources</p>
                         <div className="space-y-2">
-                          {selected.matched_sources.map((src: any, i: number) => (
+                          {selected.matched_sources.map((src, i) => (
                             <div key={i} className="flex items-start gap-3 text-xs bg-neutral-50 rounded-lg p-2.5">
                               <span className="font-bold text-neutral-400 min-w-[20px]">#{i + 1}</span>
                               <div className="flex-1 min-w-0">

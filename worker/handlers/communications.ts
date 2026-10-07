@@ -1,7 +1,19 @@
-import type { AgentJobHandler } from '../types';
+import type { AgentJob, AgentJobHandler } from '../types';
 import { createApproval, requireTenant, safeResult, textPayload } from './utils';
 import { workerJsonCompletion } from '../ai';
 import { sendEmail } from '../../src/server/email';
+
+interface LoanReminderRow {
+  id: string;
+  due_date: string;
+  patron_id: string;
+  catalogue_items?: { title?: string } | null;
+}
+
+interface AuthUserRow {
+  id: string;
+  email?: string;
+}
 
 export const draftNewsletter: AgentJobHandler = async (job, { supabase }) => {
   requireTenant(job);
@@ -37,8 +49,9 @@ export const sendOverdueEmails: AgentJobHandler = async (job, { supabase }) => {
 
   if (loanErr) throw new Error(loanErr.message);
   if (!overdueLoans?.length) return safeResult('No overdue loans found.', { sent: 0 });
+  const overdueRows = overdueLoans as unknown as LoanReminderRow[];
 
-  const patronIds = [...new Set(overdueLoans.map((l: any) => l.patron_id))];
+  const patronIds = [...new Set(overdueRows.map((l: LoanReminderRow) => l.patron_id))];
   const { data: patrons, error: patronErr } = await supabase
     .from('patrons')
     .select('id, user_id, full_name')
@@ -49,7 +62,7 @@ export const sendOverdueEmails: AgentJobHandler = async (job, { supabase }) => {
   const { data: users, error: userErr } = await supabase.auth.admin.listUsers();
   if (userErr) throw new Error(userErr.message);
 
-  const userMap = new Map((users?.users ?? []).map((u: any) => [u.id, u.email]));
+  const userMap = new Map((users?.users ?? []).map((u: AuthUserRow) => [u.id, u.email]));
   let sent = 0;
   let failed = 0;
 
@@ -57,9 +70,9 @@ export const sendOverdueEmails: AgentJobHandler = async (job, { supabase }) => {
     const email = userMap.get(patron.user_id);
     if (!email) { failed++; continue; }
 
-    const patronLoans = overdueLoans
-      .filter((l: any) => l.patron_id === patron.id)
-      .map((l: any) => ({
+    const patronLoans = overdueRows
+      .filter((l: LoanReminderRow) => l.patron_id === patron.id)
+      .map((l: LoanReminderRow) => ({
         title: l.catalogue_items?.title ?? 'Unknown item',
         due_date: l.due_date,
         days_overdue: Math.ceil((Date.now() - new Date(l.due_date).getTime()) / 86400000),
@@ -96,8 +109,9 @@ export const sendDueSoonEmails: AgentJobHandler = async (job, { supabase }) => {
 
   if (loanErr) throw new Error(loanErr.message);
   if (!dueSoonLoans?.length) return safeResult('No due-soon loans found.', { sent: 0 });
+  const dueSoonRows = dueSoonLoans as unknown as LoanReminderRow[];
 
-  const patronIds = [...new Set(dueSoonLoans.map((l: any) => l.patron_id))];
+  const patronIds = [...new Set(dueSoonRows.map((l: LoanReminderRow) => l.patron_id))];
   const { data: patrons, error: patronErr } = await supabase
     .from('patrons')
     .select('id, user_id, full_name')
@@ -108,7 +122,7 @@ export const sendDueSoonEmails: AgentJobHandler = async (job, { supabase }) => {
   const { data: users, error: userErr } = await supabase.auth.admin.listUsers();
   if (userErr) throw new Error(userErr.message);
 
-  const userMap = new Map((users?.users ?? []).map((u: any) => [u.id, u.email]));
+  const userMap = new Map((users?.users ?? []).map((u: AuthUserRow) => [u.id, u.email]));
   let sent = 0;
   let failed = 0;
 
@@ -116,9 +130,9 @@ export const sendDueSoonEmails: AgentJobHandler = async (job, { supabase }) => {
     const email = userMap.get(patron.user_id);
     if (!email) { failed++; continue; }
 
-    const patronLoans = dueSoonLoans
-      .filter((l: any) => l.patron_id === patron.id)
-      .map((l: any) => ({
+    const patronLoans = dueSoonRows
+      .filter((l: LoanReminderRow) => l.patron_id === patron.id)
+      .map((l: LoanReminderRow) => ({
         title: l.catalogue_items?.title ?? 'Unknown item',
         due_date: l.due_date,
       }));
@@ -139,7 +153,7 @@ export const sendDueSoonEmails: AgentJobHandler = async (job, { supabase }) => {
   return safeResult('Due-soon emails processed.', { sent, failed, total: dueSoonLoans.length });
 };
 
-function require(job: any) {
+function require(job: AgentJob) {
   requireTenant(job);
 }
 

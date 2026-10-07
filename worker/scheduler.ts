@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { WorkerConfig } from './config';
 
 interface AgentSchedule {
@@ -11,7 +12,7 @@ interface AgentSchedule {
   interval_minutes: number;
 }
 
-export async function enqueueDueSchedules(supabase: any, config: WorkerConfig) {
+export async function enqueueDueSchedules(supabase: SupabaseClient, config: WorkerConfig) {
   if (!config.schedulerEnabled) return 0;
   const { data, error } = await supabase
     .from('agent_schedules')

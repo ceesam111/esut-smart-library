@@ -1,8 +1,7 @@
 import { institutionConfig as cfg } from '@config/institution.config';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBearerToken, requireUser } from '@/server/auth/requireUser';
-import { sendEmail, validateSendEmailOptions } from '@/server/email';
-import { EmailDeliveryError, type SendEmailOptions } from '@/server/email';
+import { sendEmail, validateSendEmailOptions, EmailDeliveryError, type SendEmailOptions } from '@/server/email';
 import { logger } from '@/server/logging/logger';
 import { verifyRecoveryReceipt } from '@/server/registration/recoveryReceipt';
 

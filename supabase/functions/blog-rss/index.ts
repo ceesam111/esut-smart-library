@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-Deno.serve(async (req: Request) => {
+Deno.serve(async (_req: Request) => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
   const siteUrl = "https://library.esut.edu.ng";
   const now = new Date().toUTCString();
 
-  const items = (posts ?? []).map((p: any) => {
+  const items = (posts ?? []).map((p: { published_date: string | null; created_at: string; excerpt: string | null; content: string | null }) => {
     const pubDate = p.published_date
       ? new Date(p.published_date).toUTCString()
       : new Date(p.created_at).toUTCString();

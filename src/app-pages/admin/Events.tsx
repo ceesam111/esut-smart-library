@@ -65,7 +65,7 @@ export default function Events() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   async function load() {
@@ -135,7 +135,7 @@ export default function Events() {
     setMessage(error ? `Saved locally. Backend sync failed: ${error.message}` : 'Event saved.');
     setSaving(false);
     setView('list');
-    if (!error) load();
+    if (!error) void load();
   }
 
   async function remove(id: string) {
@@ -144,7 +144,7 @@ export default function Events() {
     setEvents(next);
     saveLocalArray(LOCAL_EVENTS_KEY, loadLocalArray<Event>(LOCAL_EVENTS_KEY).filter((event) => event.id !== id));
     await supabase.from('events').delete().eq('id', id);
-    load();
+    void load();
   }
 
   async function toggleAttended(regId: string, current: boolean) {

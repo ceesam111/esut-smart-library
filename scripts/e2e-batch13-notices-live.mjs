@@ -155,7 +155,7 @@ if (phase === 'edit' || phase === 'all') {
   const overdue = findOverdue(listBody.templates);
   check('found overdue template', !!overdue, overdue ? `id=${overdue.id} v${overdue.version}` : 'missing');
 
-  let instanceId = null;
+  
 
   if (overdue) {
     const baseSubject = stripMarker(overdue.subject);
@@ -298,7 +298,7 @@ if (phase === 'edit' || phase === 'all') {
     method: 'POST', body: JSON.stringify({ repositoryItemId: REPO_ITEM }),
   });
   const wfBody = await wfCreate.json();
-  instanceId = wfBody?.data?.id;
+  const instanceId = wfBody?.data?.id;
   check('workflow instance created for fixture item', wfCreate.status === 201 && !!instanceId, `status=${wfCreate.status} id=${instanceId ?? wfBody?.error}`);
 
   if (instanceId) {

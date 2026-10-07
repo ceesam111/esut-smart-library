@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Rows } from './CatalogueImportBatch';
+import { Rows, type StagingRow } from './CatalogueImportBatch';
 
 async function authFetch(url: string, init?: RequestInit) {
   const { data: { session } } = await supabase.auth.getSession();
@@ -13,17 +13,18 @@ async function authFetch(url: string, init?: RequestInit) {
 }
 
 export default function CatalogueStaging() {
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<StagingRow[]>([]);
   const [filter, setFilter] = useState('');
   const [message, setMessage] = useState('');
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const json = await authFetch(`/api/admin/catalogue/staging?status=pending${filter ? `&confidence=${filter}` : ''}`);
       setRows(json.rows ?? []);
     } catch (error) { setMessage((error as Error).message); }
-  }
-  useEffect(() => { load(); }, [filter]);
+  }, [filter]);
+
+  useEffect(() => { void load(); }, [load]);
 
   async function approve(id: string) { await authFetch(`/api/admin/catalogue/staging/${id}/approve`, { method: 'POST', body: '{}' }); await load(); }
   async function reject(id: string) { const reason = prompt('Rejection reason:'); if (!reason) return; await authFetch(`/api/admin/catalogue/staging/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }); await load(); }

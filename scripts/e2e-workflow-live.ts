@@ -8,7 +8,6 @@
  * Run: node_modules\.bin\tsx.cmd scripts/e2e-workflow-live.ts
  * Flags: --keep (leave fixtures behind for manual inspection)
  */
-/* eslint-disable no-console -- CLI diagnostic tool: its printed report is the deliverable. */
 import { loadDotEnv } from './demo-seed-lib';
 import { randomUUID } from 'node:crypto';
 

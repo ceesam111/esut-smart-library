@@ -48,8 +48,8 @@ async function validateOrcid(orcid: string): Promise<{ valid: boolean; name: str
 export default function RepositorySubmit() {
   const navigate = useNavigate();
   const { role, isApproved } = useAuth();
-  const [user, setUser] = useState<any>(null);
-  const [patron, setPatron] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [patron, setPatron] = useState<{ faculty_code?: string | null; department?: string | null } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   const [title, setTitle] = useState('');
@@ -84,7 +84,7 @@ export default function RepositorySubmit() {
       if (p?.department) setDepartment(p.department);
       setAuthLoading(false);
     };
-    load();
+    void load();
   }, []);
 
   const orcidTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,13 +101,15 @@ export default function RepositorySubmit() {
         updated[idx].orcid = formatted;
         if (formatted.replace(/-/g, '').length === 16) {
           updated[idx].orcidStatus = 'checking';
-          orcidTimer.current = setTimeout(async () => {
-            const result = await validateOrcid(formatted);
-            setAuthors(prev2 => {
-              const a2 = [...prev2];
-              a2[idx] = { ...a2[idx], orcidStatus: result.valid ? 'valid' : 'invalid', orcidName: result.name };
-              return a2;
-            });
+          orcidTimer.current = setTimeout(() => {
+            void (async () => {
+              const result = await validateOrcid(formatted);
+              setAuthors(prev2 => {
+                const a2 = [...prev2];
+                a2[idx] = { ...a2[idx], orcidStatus: result.valid ? 'valid' : 'invalid', orcidName: result.name };
+                return a2;
+              });
+            })();
           }, 800);
         }
         return updated;
@@ -145,6 +147,7 @@ export default function RepositorySubmit() {
   };
 
   const handleSubmit = async () => {
+    if (!user) return;
     const err = validate();
     if (err) { setError(err); return; }
     setError('');
@@ -262,9 +265,9 @@ export default function RepositorySubmit() {
         console.warn('Workflow not started:', wfError);
       }
 
-      navigate(`/repository/${inserted.id}`, { state: { submitted: true } });
-    } catch (e: any) {
-      setError(e.message ?? 'Submission failed. Please try again.');
+      await navigate(`/repository/${inserted.id}`, { state: { submitted: true } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Submission failed. Please try again.');
     } finally {
       setSubmitting(false);
     }

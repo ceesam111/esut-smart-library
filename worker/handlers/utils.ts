@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AgentJob } from '../types';
 
 export function requireTenant(job: AgentJob) {
@@ -9,7 +10,7 @@ export function textPayload(job: AgentJob, key: string, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
-export async function createApproval(supabase: any, job: AgentJob, contentType: string, title: string, payload: Record<string, unknown>) {
+export async function createApproval(supabase: SupabaseClient, job: AgentJob, contentType: string, title: string, payload: Record<string, unknown>) {
   const { data, error } = await supabase.from('approval_queue').insert({
     tenant_id: job.tenant_id,
     content_type: contentType,

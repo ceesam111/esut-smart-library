@@ -38,7 +38,7 @@ export default function Newsletter() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   async function load() {
@@ -84,7 +84,7 @@ export default function Newsletter() {
     }
     setSaving(false);
     setMessage('Draft saved.');
-    load();
+    await load();
   }
 
   async function sendNow() {
@@ -93,13 +93,13 @@ export default function Newsletter() {
     setMessage('');
 
     // Determine recipients
-    let emailRecipients: { name: string; email: string }[] = [];
+    
     let query = supabase.from('patrons').select('full_name, email').not('email', 'is', null).eq('status', 'active');
     if (form.recipient_scope !== 'all') {
       query = query.eq('patron_category', form.recipient_scope);
     }
     const { data: patrons } = await query;
-    emailRecipients = (patrons ?? []).filter(p => p.email).map(p => ({ name: p.full_name ?? p.email, email: p.email! }));
+    const emailRecipients = (patrons ?? []).filter(p => p.email).map(p => ({ name: p.full_name ?? p.email, email: p.email! }));
 
     if (emailRecipients.length === 0) {
       setSending(false);
@@ -130,7 +130,7 @@ export default function Newsletter() {
     setSending(false);
     setMessage(failed > 0 ? `Sent to ${sent} recipients (${failed} failed).` : `Sent to ${sent} recipients.`);
     setTab('history');
-    load();
+    await load();
   }
 
   function buildEmailHtml(subject: string, body: string) {

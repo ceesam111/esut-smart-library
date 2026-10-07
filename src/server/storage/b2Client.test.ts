@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { S3Client } from '@aws-sdk/client-s3';
 import {
   __setB2ClientForTests,
   appBackupKey,
@@ -35,7 +36,7 @@ describe('b2Client', () => {
 
   it('dispatches S3-compatible commands', async () => {
     const mock = new MockS3Client();
-    __setB2ClientForTests(mock as any);
+    __setB2ClientForTests(mock as unknown as S3Client);
     await uploadObject({ bucket: 'files', key: 'k', body: 'x' });
     await deleteObject({ bucket: 'files', key: 'k' });
     await objectExists({ bucket: 'files', key: 'k' });
@@ -52,7 +53,7 @@ describe('b2Client', () => {
 
   it('treats missing objects as non-existent', async () => {
     const mock = { send: vi.fn(async () => { const error = new Error('missing'); error.name = 'NotFound'; throw error; }) };
-    __setB2ClientForTests(mock as any);
+    __setB2ClientForTests(mock as unknown as S3Client);
     await expect(objectExists({ bucket: 'files', key: 'missing' })).resolves.toBe(false);
   });
 });

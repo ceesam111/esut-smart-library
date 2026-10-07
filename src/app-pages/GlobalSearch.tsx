@@ -80,8 +80,51 @@ const SOURCE_COLORS: Record<string, string> = {
   'PubMed Central — Pending review': 'bg-red-100 text-red-800',
 };
 
-function unwrapApi<T = any>(payload: any): T {
-  return payload && payload.success === true && 'data' in payload ? payload.data : payload;
+interface LocalSearchRow {
+  id: string;
+  title: string;
+  authors?: unknown;
+  year?: number | null;
+  doi?: string | null;
+  source_url?: string | null;
+  cover_image?: string | null;
+  item_type?: string | null;
+}
+
+interface ExternalSearchActions {
+  approved?: boolean;
+  readOnline?: string | null;
+  download?: string | null;
+  canDownloadLegally?: boolean;
+}
+
+interface ExternalSearchRow {
+  id: string;
+  title?: string;
+  authors?: unknown;
+  year?: number | null;
+  description?: string | null;
+  doi?: string | null;
+  source_url?: string | null;
+  source_name: string;
+  cover_url?: string | null;
+  rights_status?: string | null;
+  item_type?: string | null;
+  actions?: ExternalSearchActions;
+}
+
+interface SearchApiPayload {
+  localResults?: LocalSearchRow[];
+  externalCandidates?: ExternalSearchRow[];
+  localQuality?: 'good' | 'weak' | 'none';
+  externalLookupOffered?: boolean;
+  externalLookupTriggered?: boolean;
+  autoApprovedCount?: number;
+}
+
+function unwrapApi<T>(payload: unknown): T {
+  const p = payload as { success?: boolean; data?: T } | null | undefined;
+  return p && p.success === true && 'data' in p ? (p.data as T) : (payload as T);
 }
 
 function EbookCard({ result, onAddToList, canAdd, onOpen }: {
@@ -192,8 +235,8 @@ export default function GlobalSearch() {
     return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
   }, []);
 
-  const mapApiResults = useCallback((data: any): SearchResults => {
-    const local: SearchResult[] = (data.localResults ?? []).map((item: any) => ({
+  const mapApiResults = useCallback((data: SearchApiPayload): SearchResults => {
+    const local: SearchResult[] = (data.localResults ?? []).map((item) => ({
       id: item.id,
       title: item.title,
       authors: Array.isArray(item.authors) ? item.authors.join(', ') : String(item.authors ?? ''),
@@ -207,7 +250,7 @@ export default function GlobalSearch() {
       cover_url: item.cover_image ?? null,
       item_type: item.item_type ?? null,
     }));
-    const external: SearchResult[] = (data.externalCandidates ?? []).map((item: any) => ({
+    const external: SearchResult[] = (data.externalCandidates ?? []).map((item) => ({
       id: item.id,
       title: item.title || 'Untitled external resource',
       authors: Array.isArray(item.authors) ? item.authors.join(', ') : '',
@@ -260,7 +303,7 @@ export default function GlobalSearch() {
     try {
       const response = await fetch(`/api/search/resources?q=${encodeURIComponent(q)}`, { headers: await authHeaders() });
       const raw = await response.json();
-      const data = unwrapApi(raw);
+      const data = unwrapApi<SearchApiPayload>(raw);
       if (!response.ok) throw new Error(raw.error?.message || raw.error || 'Search failed.');
       setResults(mapApiResults(data));
     } catch (err) {
@@ -277,7 +320,7 @@ export default function GlobalSearch() {
     try {
       const response = await fetch(`/api/search/resources?q=${encodeURIComponent(query)}&expand=true`, { headers: await authHeaders() });
       const raw = await response.json();
-      const data = unwrapApi(raw);
+      const data = unwrapApi<SearchApiPayload>(raw);
       if (!response.ok) throw new Error(raw.error?.message || raw.error || 'External search failed.');
       setResults(mapApiResults(data));
     } catch (err) {
@@ -287,7 +330,7 @@ export default function GlobalSearch() {
     }
   }, [authHeaders, mapApiResults, query]);
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); runSearch(query); };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); void runSearch(query); };
 
   const handleOpenResult = useCallback((result: SearchResult) => {
     const isLocal = result.sourceTag === 'ESUT Library';
@@ -305,7 +348,7 @@ export default function GlobalSearch() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setNotice({ type: 'error', msg: 'Please sign in to save items or request library review.' });
-      setTimeout(() => navigate('/login'), 1200);
+      setTimeout(() => { void navigate('/login'); }, 1200);
       return;
     }
     if (result.sourceTag.includes('Pending review')) {

@@ -65,3 +65,12 @@ New findings this batch:
 2. **Phantom dependency:** `src/server/oai/service.test.ts` imported `@xmldom/xmldom` without it ever being declared — now in `devDependencies`.
 3. **Next.js 16 convention:** `middleware.ts` is deprecated (renamed `proxy.ts`); still functional at 16.3.6 (build reports `ƒ Proxy (Middleware)`) — rename is an ops cleanup, not a breakage.
 4. Gates after Batch 16: tsc **0** · vitest **696/696 (85 files)** · `next build` **0** · changed-file eslint **0** · npm audit **5 high (dev-only, unfixable)**.
+
+## Batch 17 closure (2026-10-07)
+
+| Defect | Outcome | Evidence |
+| --- | --- | --- |
+| D2 lint gate red | **CLOSED** | repo-wide baseline 919 problems (633 errors / 286 warnings, 201 files) → **0 / 0**, `npm run lint` (`eslint . --max-warnings=0`) exit 0 on 2026-10-07. No suppressions: parser scoping rewired to `projectService`, `react-hooks` registered, `checksVoidReturn.attributes: false` and `scripts/** no-console off` documented, 7 dead files deleted, all remaining violations fixed in code. Full forensic record: `docs/audit/batch17-lint-baseline.md` |
+| Type fallout from `any` → real types (introduced during Batch 17, not at HEAD) | **RESOLVED** | 182 `tsc` errors across 44 files (worker context typed, `Record<string, unknown>` boundaries, helpers hoisted out of effects, Supabase responses read without `.data`) fixed with behavior-preserving type-level edits; HEAD `bb70cae` verified clean in a separate worktree |
+
+Gates after Batch 17: lint **0 errors / 0 warnings (exit 0)** · tsc **0** · vitest **696/696 (85 files)** · `next build` **0** · npm audit unchanged (5 dev-only).

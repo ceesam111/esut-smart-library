@@ -34,8 +34,8 @@ export default function Wellbeing() {
   const returnPath = typeof window !== 'undefined' ? sessionStorage.getItem('studyBreakReturn') : null;
   const handleReturn = () => {
     sessionStorage.removeItem('studyBreakReturn');
-    if (returnPath) navigate(returnPath);
-    else navigate(-1);
+    if (returnPath) void navigate(returnPath);
+    else void navigate(-1);
   };
 
   return (
