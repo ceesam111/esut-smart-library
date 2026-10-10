@@ -13,6 +13,7 @@ const navItems: { labelKey: TranslationKey; href: string; icon: string; show?: b
   { labelKey: 'dashboard.overview',       href: '/dashboard',                  icon: '⊞' },
   { labelKey: 'dashboard.myAccount',     href: '/dashboard/account',          icon: '👤' },
   { labelKey: 'dashboard.libraryCard',   href: '/dashboard/library-card',     icon: '🪪' },
+  { labelKey: 'slaas.myAccess',          href: '/dashboard/access',           icon: '🔳' },
   { labelKey: 'dashboard.myLoans',       href: '/dashboard/loans',            icon: '📚' },
   { labelKey: 'dashboard.illRequests',   href: '/dashboard/ill',              icon: '📦' },
   { labelKey: 'dashboard.readingLists',  href: '/dashboard/reading-lists',    icon: '📋' },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-type ScannerMode = 'catalogue' | 'lookup';
+type ScannerMode = 'catalogue' | 'lookup' | 'qr';
 type ScannerStatus = 'idle' | 'starting' | 'scanning' | 'permission_denied' | 'unsupported' | 'error';
 
 interface UseBarcodeScannerOptions {
@@ -84,7 +84,8 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
       BarcodeDetector: new (options: { formats: string[] }) => BarcodeDetectorLike;
     };
     const BarcodeDetectorCtor = w.BarcodeDetector;
-    const detector = new BarcodeDetectorCtor({ formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'] });
+    const formats = mode === 'qr' ? ['qr_code'] : ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'];
+    const detector = new BarcodeDetectorCtor({ formats });
     const loop = async () => {
       const video = videoRef.current;
       if (video?.readyState && video.readyState >= 2) {
@@ -97,7 +98,7 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
       rafRef.current = requestAnimationFrame(() => { void loop(); });
     };
     void loop();
-  }, [handleCode]);
+  }, [handleCode, mode]);
 
   const startQuagga = useCallback(async () => {
     const mod = await import('@ericblade/quagga2');
@@ -147,6 +148,9 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
         startNativeLoop();
         return;
       }
+      if (mode === 'qr') {
+        throw new Error('QR camera scanning needs BarcodeDetector support. Use Chrome or Edge, or enter the QR credential manually.');
+      }
       setBackend('quagga');
       setStatus('scanning');
       await startQuagga();
@@ -155,7 +159,7 @@ export function useBarcodeScanner({ mode, onDetected }: UseBarcodeScannerOptions
       setStatus(name === 'NotAllowedError' ? 'permission_denied' : 'error');
       setError(name === 'NotAllowedError' ? 'Camera permission denied. Allow camera access and retry.' : (err as Error).message || 'Scanner failed to start.');
     }
-  }, [startNativeLoop, startQuagga]);
+  }, [mode, startNativeLoop, startQuagga]);
 
   useEffect(() => () => { void stop(); }, [stop]);
 

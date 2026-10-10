@@ -6,10 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useI18n, type TranslationKey } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDashboardLabel, roleCan, type Feature } from '@/config/roles.config';
+import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
 
 const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
 
-type NavItem = { labelKey: TranslationKey; href: string; icon: string; show?: boolean; accountManager?: boolean; module?: 'catalog' | 'ir'; feature?: Feature };
+type NavItem = { labelKey: TranslationKey; href: string; icon: string; show?: boolean; accountManager?: boolean; module?: 'catalog' | 'ir'; feature?: Feature; roles?: string[] };
 const adminNav: { groupKey: TranslationKey; items: NavItem[] }[] = [
   { groupKey: 'admin.overview',  items: [
     { labelKey: 'admin.dashboard',          href: '/admin',                       icon: '⊞' },
@@ -70,6 +71,13 @@ const adminNav: { groupKey: TranslationKey; items: NavItem[] }[] = [
     { labelKey: 'admin.circulationDeskNav',    href: '/admin/circulation',           icon: '🧾' },
     { labelKey: 'admin.offlineSync',        href: '/admin/offline-sync',          icon: '📶' },
     { labelKey: 'admin.sip2Terminals',      href: '/admin/sip2-terminals',        icon: '📟' },
+  ]},
+  { groupKey: 'slaas.navGroup', items: [
+    { labelKey: 'slaas.dashboard',   href: '/admin/access',             icon: '🚪', roles: LIBRARY_ADMIN_ROLES },
+    { labelKey: 'slaas.scanner',     href: '/admin/access/scanner',     icon: '📷', roles: LIBRARY_ADMIN_ROLES },
+    { labelKey: 'slaas.visitors',    href: '/admin/access/visitors',    icon: '🪪', roles: LIBRARY_ADMIN_ROLES },
+    { labelKey: 'slaas.branches',    href: '/admin/access/branches',    icon: '🏢', roles: LIBRARY_ADMIN_ROLES },
+    { labelKey: 'slaas.visits',      href: '/admin/access/visits',      icon: '📋', roles: LIBRARY_ADMIN_ROLES },
   ]},
   { groupKey: 'admin.system', items: [
     { labelKey: 'admin.accountManagement', href: '/admin/accounts',              icon: '🔐', accountManager: true },
@@ -163,7 +171,7 @@ export default function AdminLayout() {
           <nav className="p-3 space-y-4 flex-1">
             {adminNav.map((group) => {
               const visibleItems = group.items.filter(
-                (i) => i.show !== false && (!i.feature || roleCan(role, i.feature)) && (!i.accountManager || isAccountManager) && (!i.module || (i.module === 'catalog' ? canSeeCatalog : canSeeIr)),
+                (i) => i.show !== false && (!i.feature || roleCan(role, i.feature)) && (!i.accountManager || isAccountManager) && (!i.module || (i.module === 'catalog' ? canSeeCatalog : canSeeIr)) && (!i.roles || (!!role && i.roles.includes(role))),
               );
               if (!visibleItems.length) return null;
               return (

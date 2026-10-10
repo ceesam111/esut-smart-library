@@ -143,6 +143,12 @@ const AdminCatalogueAdopt = lazy(() => import('@/pages/admin/CatalogueAdopt'));
 const AdminTeam           = lazy(() => import('@/pages/admin/Team'));
 const AdminAccounts       = lazy(() => import('@/pages/admin/Accounts'));
 const AdminLibraryManual  = lazy(() => import('@/pages/admin/LibraryManual'));
+const AccessDashboardPage = lazy(() => import('@/pages/admin/AccessDashboard'));
+const AccessScanner       = lazy(() => import('@/pages/admin/AccessScanner'));
+const AccessBranches      = lazy(() => import('@/pages/admin/AccessBranches'));
+const AccessVisitors      = lazy(() => import('@/pages/admin/AccessVisitors'));
+const AccessVisits        = lazy(() => import('@/pages/admin/AccessVisits'));
+const AccessHistory       = lazy(() => import('@/pages/dashboard/AccessHistory'));
 const LecturerReadingLists = lazy(() => import('@/pages/lecturer/ReadingLists'));
 const AITools              = lazy(() => import('@/pages/AITools'));
 const AcademicIntegrity    = lazy(() => import('@/pages/AcademicIntegrity'));
@@ -247,6 +253,7 @@ export default function App() {
             <Route path="/dashboard/workflows/:id" element={<WorkflowDashboard />} />
             <Route path="/dashboard/course-reserves" element={<FeatureRoute feature="courseReserves"><DashboardCourseReserves /></FeatureRoute>} />
             <Route path="/dashboard/settings" element={<DashboardSettings />} />
+            <Route path="/dashboard/access" element={<AccessHistory />} />
             <Route path="/dashboard/lecturer-profile" element={<LecturerProfile />} />
             <Route path="/supervisor/theses" element={<SupervisorTheses />} />
             <Route path="/lecturer/reading-lists" element={<LecturerReadingLists />} />
@@ -314,6 +321,11 @@ export default function App() {
             <Route path="/admin/team" element={<AdminTeam />} />
             <Route path="/admin/accounts" element={<AdminAccounts />} />
             <Route path="/admin/library-manual" element={<AdminLibraryManual />} />
+            <Route path="/admin/access" element={<AccessDashboardPage />} />
+            <Route path="/admin/access/scanner" element={<AccessScanner />} />
+            <Route path="/admin/access/branches" element={<AccessBranches />} />
+            <Route path="/admin/access/visitors" element={<AccessVisitors />} />
+            <Route path="/admin/access/visits" element={<AccessVisits />} />
           </Route>
 
           {/* Standalone */}
