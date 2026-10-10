@@ -107,7 +107,7 @@ export default function AccessDashboard() {
           <h1 className="text-2xl font-serif font-semibold text-primary-800">{t('slaas.dashboard')}</h1>
           <p className="text-sm text-neutral-500">{t('slaas.analyticsTitle')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link to="/admin/access/scanner" className="btn-primary text-sm">{t('slaas.scanner')}</Link>
           <Link to="/admin/access/visitors" className="btn-outline text-sm">{t('slaas.visitors')}</Link>
           <Link to="/admin/access/branches" className="btn-outline text-sm">{t('slaas.branches')}</Link>

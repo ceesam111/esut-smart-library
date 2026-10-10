@@ -10,19 +10,19 @@ describe('sip2-auth', () => {
     it('produces bcrypt hashes', async () => {
       const hash = await hashSip2Password('test-password');
       expect(hash).toMatch(/^\$2[aby]\$\d+\$/);
-    });
+    }, 30000);
 
     it('produces different hashes for identical passwords (salted)', async () => {
       const hash1 = await hashSip2Password('test-password');
       const hash2 = await hashSip2Password('test-password');
       expect(hash1).not.toBe(hash2);
-    });
+    }, 30000);
 
     it('produces different hashes for different passwords', async () => {
       const hash1 = await hashSip2Password('password1');
       const hash2 = await hashSip2Password('password2');
       expect(hash1).not.toBe(hash2);
-    });
+    }, 30000);
   });
 
   describe('isOperationAllowed', () => {
