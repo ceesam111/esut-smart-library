@@ -2,12 +2,14 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/lib/i18n';
 
 const GREEN = '#6B1D2A';
 
 function PasswordInput({
   id, value, onChange, label, placeholder,
 }: { id: string; value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
+  const { t } = useI18n();
   const [show, setShow] = useState(false);
   return (
     <div>
@@ -29,7 +31,7 @@ function PasswordInput({
           tabIndex={-1}
           onClick={() => setShow((s) => !s)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-          aria-label={show ? 'Hide' : 'Show'}
+          aria-label={show ? t('auth.hidePassword') : t('auth.showPassword')}
         >
           {show ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,6 +54,7 @@ function PasswordInput({
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [password, setPassword]     = useState('');
   const [confirm, setConfirm]       = useState('');
   const [loading, setLoading]       = useState(false);
@@ -61,8 +64,8 @@ export default function ResetPassword() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    if (password !== confirm) { setError('Passwords do not match.'); return; }
+    if (password.length < 8) { setError(t('auth.passwordTooShort')); return; }
+    if (password !== confirm) { setError(t('auth.passwordMismatch')); return; }
 
     setLoading(true);
     const { error: err } = await supabase.auth.updateUser({ password });
@@ -79,7 +82,7 @@ export default function ResetPassword() {
         {/* Wordmark */}
         <div className="text-center mb-8">
           <img src="/assets/esut-logo.png" alt="ESUT Logo" className="w-14 h-14 mx-auto mb-3 rounded-lg object-contain" />
-          <h1 className="text-2xl font-serif font-semibold text-neutral-900">Set New Password</h1>
+          <h1 className="text-2xl font-serif font-semibold text-neutral-900">{t('auth.setNewPassword')}</h1>
           <p className="text-sm text-neutral-500 mt-1">{institutionConfig.name}</p>
         </div>
 
@@ -95,8 +98,8 @@ export default function ResetPassword() {
                 </svg>
               </div>
               <div>
-                <h2 className="font-semibold text-neutral-900">Password updated.</h2>
-                <p className="text-sm text-neutral-500 mt-1">Redirecting to sign in…</p>
+                <h2 className="font-semibold text-neutral-900">{t('auth.passwordUpdated')}</h2>
+                <p className="text-sm text-neutral-500 mt-1">{t('auth.redirectingToSignIn')}</p>
               </div>
             </div>
           ) : (
@@ -111,15 +114,15 @@ export default function ResetPassword() {
                   id="newPassword"
                   value={password}
                   onChange={setPassword}
-                  label="New Password"
-                  placeholder="Min 8 characters"
+                  label={t('auth.newPassword')}
+                  placeholder={t('auth.minCharsPlaceholder')}
                 />
                 <PasswordInput
                   id="confirmPassword"
                   value={confirm}
                   onChange={setConfirm}
-                  label="Confirm Password"
-                  placeholder="Re-enter new password"
+                  label={t('auth.confirmPassword')}
+                  placeholder={t('auth.reenterPassword')}
                 />
                 <button
                   type="submit"
@@ -127,12 +130,12 @@ export default function ResetPassword() {
                   className="w-full py-3 rounded-lg text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 mt-2"
                   style={{ background: GREEN }}
                 >
-                  {loading ? 'Updating…' : 'Set New Password'}
+                  {loading ? t('auth.updating') : t('auth.setNewPassword')}
                 </button>
               </form>
               <p className="text-sm text-neutral-500 text-center mt-5">
                 <Link to="/login" className="hover:underline font-medium" style={{ color: GREEN }}>
-                  ← Back to Sign In
+                  {t('auth.backToSignIn')}
                 </Link>
               </p>
             </>

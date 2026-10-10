@@ -2,6 +2,7 @@ import { useState, FormEvent, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/lib/i18n';
 import { getDashboardPath, type AppRole } from '@/config/roles.config';
 
 const GREEN = '#6B1D2A';
@@ -30,13 +31,14 @@ function PasswordInput({
   id, value, onChange, label,
 }: { id: string; value: string; onChange: (v: string) => void; label: string }) {
   const [show, setShow] = useState(false);
+  const { t } = useI18n();
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <label htmlFor={id} className="label mb-0">{label}</label>
         {id === 'password' && (
           <Link to="/forgot-password" className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
-            Forgot your password?
+            {t('auth.forgotPasswordLink')}
           </Link>
         )}
       </div>
@@ -56,7 +58,7 @@ function PasswordInput({
           tabIndex={-1}
           onClick={() => setShow((s) => !s)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-          aria-label={show ? 'Hide' : 'Show'}
+          aria-label={show ? t('auth.hidePassword') : t('auth.showPassword')}
         >
           {show ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -80,6 +82,7 @@ function PasswordInput({
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useI18n();
   const registrationStatus = new URLSearchParams(location.search).get('registration');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -108,7 +111,7 @@ export default function Login() {
     const { locked, secondsLeft } = getLockoutState();
     if (locked) {
       const mins = Math.ceil(secondsLeft / 60);
-      setError(`Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`);
+      setError(t('auth.lockoutRetry', { minutes: mins }));
       setLockoutRemaining(secondsLeft);
       return;
     }
@@ -138,12 +141,12 @@ export default function Login() {
       const newCount = record.count + 1;
       if (newCount >= MAX_ATTEMPTS) {
         setAttempts(email, { count: newCount, lockedUntil: Date.now() + LOCKOUT_MS });
-        setError('Too many failed attempts. Account locked for 15 minutes.');
+        setError(t('auth.lockout', { minutes: Math.ceil(LOCKOUT_MS / 60000) }));
         setLockoutRemaining(LOCKOUT_MS / 1000);
       } else {
         setAttempts(email, { count: newCount, lockedUntil: null });
         const rem = MAX_ATTEMPTS - newCount;
-        setError(`${err.message}${rem <= 2 ? ` (${rem} attempt${rem !== 1 ? 's' : ''} remaining)` : ''}`);
+        setError(`${err.message}${rem <= 2 ? ` ${t('auth.attemptsRemaining', { count: rem })}` : ''}`);
       }
       return;
     }
@@ -180,7 +183,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <img src="/assets/esut-logo.png" alt="ESUT Logo" className="w-14 h-14 mx-auto mb-3 rounded-lg object-contain" />
           <h1 className="text-2xl font-serif font-semibold text-neutral-900">
-            Sign In to ESUT Library
+            {t('auth.loginTitle')}
           </h1>
           <p className="text-sm text-neutral-500 mt-1">{institutionConfig.name}</p>
         </div>
@@ -188,17 +191,17 @@ export default function Login() {
         <div className="bg-white rounded-xl shadow-lg border border-neutral-100 p-10">
           {registrationStatus === 'verified' && (
             <div className="mb-4 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
-              Your email has been verified. Sign in to access your library dashboard.
+              {t('auth.statusVerified')}
             </div>
           )}
           {registrationStatus === 'expired' && (
             <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-              This verification link has expired. Sign in and request a new verification email from your dashboard.
+              {t('auth.statusExpired')}
             </div>
           )}
           {registrationStatus === 'invalid' && (
             <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-              That verification link is invalid or has already been used. Sign in to continue.
+              {t('auth.statusInvalid')}
             </div>
           )}
           {error && (
@@ -208,13 +211,13 @@ export default function Login() {
           )}
           {locked && lockoutRemaining > 0 && (
             <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm">
-              Account locked — {Math.floor(lockoutRemaining / 60)}:{String(lockoutRemaining % 60).padStart(2, '0')} remaining
+              {t('auth.lockedRemaining', { time: `${Math.floor(lockoutRemaining / 60)}:${String(lockoutRemaining % 60).padStart(2, '0')}` })}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="label">Email Address</label>
+              <label htmlFor="email" className="label">{t('auth.email')}</label>
               <input
                 id="email"
                 type="email"
@@ -227,7 +230,7 @@ export default function Login() {
               />
             </div>
 
-            <PasswordInput id="password" value={password} onChange={setPassword} label="Password" />
+            <PasswordInput id="password" value={password} onChange={setPassword} label={t('auth.password')} />
 
             <button
               type="submit"
@@ -235,20 +238,20 @@ export default function Login() {
               className="w-full py-3 rounded-lg text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               style={{ background: GREEN }}
             >
-              {loading ? 'Signing in…' : locked ? 'Account Locked' : 'Sign In'}
+              {loading ? t('auth.signingIn') : locked ? t('auth.accountLocked') : t('auth.signIn')}
             </button>
           </form>
 
           <p className="text-sm text-neutral-500 text-center mt-5">
-            Don't have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="font-semibold hover:underline" style={{ color: GOLD }}>
-              Sign Up
+              {t('nav.signUp')}
             </Link>
           </p>
         </div>
 
         <p className="text-neutral-400 text-xs text-center italic mt-4">
-          One account gives you access to all ESUT Library branches and faculty libraries.
+          {t('auth.loginFootnote')}
         </p>
       </div>
     </div>

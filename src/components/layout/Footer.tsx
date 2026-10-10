@@ -2,30 +2,30 @@ import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import ShareButtons from '@/components/ShareButtons';
 import { OPAC_URL } from '@/config/libraryResources.config';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 const GOLD = '#D4A017';
 
-const QUICK_LINKS = [
-  { label: 'Home',                    href: '/' },
-  { label: 'Search Catalogue',        href: '/catalogue' },
-  { label: 'Browse Repository',       href: '/repository' },
-  { label: 'Ask Lexis (AI Assistant)',href: '/ai-librarian' },
-  { label: 'Newspapers',              href: '/newspapers' },
-  { label: 'Events & Workshops',      href: '/events' },
-  { label: 'Newsletter',              href: '/newsletter' },
-  { label: 'Contact Us',              href: '/contact' },
+const QUICK_LINKS: { label: TranslationKey; href: string }[] = [
+  { label: 'footer.searchCatalogue', href: '/catalogue' },
+  { label: 'footer.browseRepository', href: '/repository' },
+  { label: 'footer.askLexis', href: '/ai-librarian' },
+  { label: 'footer.newspapers', href: '/newspapers' },
+  { label: 'footer.eventsWorkshops', href: '/events' },
+  { label: 'footer.newsletter', href: '/newsletter' },
+  { label: 'footer.contactUs', href: '/contact' },
 ];
 
-const SERVICES_LINKS = [
-  { label: 'Borrow & Return',     href: '/catalogue' },
-  { label: 'Request a Resource',  href: '/dashboard/requests' },
-  { label: 'Research Guides',     href: '/blog?category=research-guide' },
-  { label: 'Subscribed Databases', href: '/subscribed-databases' },
-  { label: 'Open Access Databases', href: '/open-access-databases' },
-  { label: 'Database Access',     href: '/databases' },
-  { label: 'Tutorial Guides',     href: '/tutorial' },
-  { label: 'Privacy Policy',      href: '/privacy' },
-  { label: 'Terms',               href: '/terms' },
+const SERVICES_LINKS: { label: TranslationKey; href: string }[] = [
+  { label: 'footer.borrowReturn', href: '/catalogue' },
+  { label: 'footer.requestResource', href: '/dashboard/requests' },
+  { label: 'footer.researchGuides', href: '/blog?category=research-guide' },
+  { label: 'footer.subscribedDatabases', href: '/subscribed-databases' },
+  { label: 'footer.openAccessDatabases', href: '/open-access-databases' },
+  { label: 'footer.databaseAccess', href: '/databases' },
+  { label: 'footer.tutorialGuides', href: '/tutorial' },
+  { label: 'footer.privacyPolicy', href: '/privacy' },
+  { label: 'footer.terms', href: '/terms' },
 ];
 
 const colStyle: React.CSSProperties = {
@@ -48,6 +48,7 @@ const headingStyle: React.CSSProperties = {
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { t } = useI18n();
 
   return (
     <footer style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'static', zIndex: 1 }}>
@@ -106,7 +107,7 @@ export default function Footer() {
 
             {/* Col 2 — Quick Links */}
             <div style={colStyle}>
-              <span style={headingStyle}>Quick Links</span>
+              <span style={headingStyle}>{t('footer.quickLinks')}</span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {QUICK_LINKS.map((l) => (
                   <Link key={l.href} to={l.href}
@@ -114,7 +115,7 @@ export default function Footer() {
                     onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = GOLD)}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)')}
                   >
-                    {l.label}
+                    {t(l.label)}
                   </Link>
                 ))}
               </div>
@@ -122,7 +123,7 @@ export default function Footer() {
 
             {/* Col 3 — Our Libraries */}
             <div style={{ ...colStyle, overflow: 'visible', maxHeight: 'none' }}>
-              <span style={headingStyle}>Our Libraries</span>
+              <span style={headingStyle}>{t('footer.ourLibraries')}</span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <FooterLibLink href={`/library/${institutionConfig.mainLibrary.slug}`}>
                   {institutionConfig.mainLibrary.name}
@@ -152,7 +153,7 @@ export default function Footer() {
 
             {/* Col 4 — Services + Contact */}
             <div style={{ ...colStyle, overflow: 'visible' }}>
-              <span style={headingStyle}>Services</span>
+              <span style={headingStyle}>{t('footer.services')}</span>
               <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 28 }}>
                 {SERVICES_LINKS.map((l) => (
                   <Link key={l.href} to={l.href}
@@ -160,7 +161,7 @@ export default function Footer() {
                     onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = GOLD)}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)')}
                   >
-                    {l.label}
+                    {t(l.label)}
                   </Link>
                 ))}
                 <a
@@ -171,11 +172,11 @@ export default function Footer() {
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = GOLD)}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)')}
                 >
-                  OPAC ↗
+                  {t('nav.opac')} ↗
                 </a>
               </div>
 
-              <span style={headingStyle}>Contact</span>
+              <span style={headingStyle}>{t('footer.contact')}</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 1.6 }}>
                    📍 Enugu State University of Science and Technology
@@ -221,7 +222,7 @@ export default function Footer() {
         boxSizing: 'border-box',
       }} className="flex flex-wrap items-center justify-center gap-3">
         <span style={{ color: GOLD, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Share this site
+          {t('footer.shareThisSite')}
         </span>
         <ShareButtons
           title="ESUT Library — Enugu State University of Science and Technology"
@@ -249,17 +250,17 @@ export default function Footer() {
         clear: 'both',
       }} className="flex flex-wrap items-center justify-between gap-2">
         <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>
-          &copy; {year} ESUT Library. Enugu State University of Science and Technology. All rights reserved.
+          {t('footer.copyright', { year })}
         </span>
         <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-          Powered by{' '}
+          {t('footer.poweredBy')}{' '}
           <a
             href="mailto:scholarsuite25@gmail.com"
             style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}
             onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.textDecoration = 'underline')}
             onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.textDecoration = 'none')}
           >
-            Scholar Suite
+            {t('footer.scholarSuite')}
           </a>
         </span>
       </div>

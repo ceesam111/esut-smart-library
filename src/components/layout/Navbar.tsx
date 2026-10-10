@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 import NotificationBell from '@/components/NotificationBell';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDashboardLabel, getDashboardPath, type AppRole } from '@/config/roles.config';
 import { OPAC_URL } from '@/config/libraryResources.config';
 
@@ -26,100 +28,102 @@ const LIBRARIES_MENU = {
   })),
 };
 
-const NAV_ITEMS = [
-  {
-    label: 'Libraries',
-    dropdown: 'libraries',
-  },
-  {
-    label: 'Library Catalog',
-    dropdown: 'catalogue',
-    links: [
-      { label: 'Search Books & Journals', href: '/catalog' },
-      { label: 'New Arrivals',           href: '/catalogue?filter=new' },
-      { label: 'Browse by Subject',      href: '/categories' },
-      { label: 'OPAC',                   href: OPAC_URL, external: true },
-      { label: 'Reference Services',      href: '/course-reserves' },
-      { label: 'Request a Resource',     href: '/dashboard/requests' },
-    ],
-  },
-  {
-    label: 'Institutional Repository',
-    dropdown: 'repository',
-    links: [
-      { label: 'Search Research & Theses', href: '/repository' },
-      { label: 'Submit a Work',          href: '/repository/submit' },
-      { label: 'Theses & Dissertations', href: '/theses' },
-      { label: 'Projects & Reports',     href: '/theses' },
-      { label: 'Open Access Databases',  href: '/open-access-databases' },
-    ],
-  },
-  {
-    label: 'Research',
-    dropdown: 'research',
-    links: [
-      { label: 'Ask Lexis — AI Reference Librarian', href: '/ai-librarian' },
-      { label: 'AI Tools Directory',          href: '/ai-tools' },
-      { label: 'Federated Search',          href: '/search/global' },
-      { label: 'Subscribed Databases',      href: '/subscribed-databases' },
-      { label: 'Open Access Databases',     href: '/open-access-databases' },
-      { label: 'Licensed Databases',        href: '/databases' },
-      { label: 'OPAC',                      href: OPAC_URL, external: true },
-      { label: 'Newspapers',                href: '/newspapers' },
-      { label: 'Theses & Projects',         href: '/theses' },
-      { label: 'Our Researchers',           href: '/lecturers' },
-    ],
-  },
-  {
-    label: 'Events',
-    dropdown: 'events',
-    links: [
-      { label: 'Events & Workshops',     href: '/events' },
-      { label: 'Media Centre',           href: '/media' },
-      { label: 'Library Blog',           href: '/blog' },
-      { label: 'Newsletter',             href: '/newsletter' },
-    ],
-  },
-  {
-    label: 'Community',
-    dropdown: 'community',
-    links: [
-      { label: 'Community & Wellbeing',  href: '/community' },
-      { label: 'Community Feed',         href: '/feed' },
-      { label: 'Wellbeing Corner',       href: '/wellbeing' },
-      { label: 'Discussion Forum',       href: '/forum' },
-      { label: 'Book Clubs',             href: '/book-clubs' },
-    ],
-  },
-  {
-    label: 'Services',
-    dropdown: 'services',
-    links: [
-      { label: 'Borrow & Return',        href: '/catalogue' },
-      { label: 'Request a Resource',     href: '/dashboard/requests' },
-      { label: 'Academic Integrity',     href: '/academic-integrity' },
-      { label: 'Events & Workshops',     href: '/events' },
-      { label: 'Community Forum',        href: '/forum' },
-      { label: 'Library Blog',           href: '/blog' },
-      { label: 'Newsletter',             href: '/newsletter' },
-      { label: 'Tutorial Guides',        href: '/tutorial' },
-      { label: 'Contact Library',        href: '/contact' },
-    ],
-  },
-  {
-    label: 'About',
-    dropdown: 'about',
-    links: [
-      { label: 'About ESUT Library',   href: '/about' },
-      { label: 'Our Team',              href: '/team' },
-      { label: 'Contact Us',            href: '/contact' },
-      { label: 'FAQ',                   href: '/faq' },
-      { label: 'Accessibility',         href: '/accessibility' },
-      { label: 'Privacy Policy',        href: '/privacy' },
-      { label: 'Terms of Use',          href: '/terms' },
-    ],
-  },
-];
+function getNavItems(t: (key: TranslationKey) => string) {
+  return [
+    {
+      label: t('nav.libraries'),
+      dropdown: 'libraries',
+    },
+    {
+      label: t('nav.libraryCatalog'),
+      dropdown: 'catalogue',
+      links: [
+        { label: t('nav.searchBooksJournals'), href: '/catalog' },
+        { label: t('nav.newArrivals'),           href: '/catalogue?filter=new' },
+        { label: t('nav.browseBySubject'),      href: '/categories' },
+        { label: t('nav.opac'),                   href: OPAC_URL, external: true },
+        { label: t('nav.referenceServices'),      href: '/course-reserves' },
+        { label: t('nav.requestResource'),     href: '/dashboard/requests' },
+      ],
+    },
+    {
+      label: t('nav.institutionalRepository'),
+      dropdown: 'repository',
+      links: [
+        { label: t('nav.searchResearchTheses'), href: '/repository' },
+        { label: t('nav.submitWork'),          href: '/repository/submit' },
+        { label: t('nav.thesesDissertations'), href: '/theses' },
+        { label: t('nav.projectsReports'),     href: '/theses' },
+        { label: t('nav.openAccessDatabases'),  href: '/open-access-databases' },
+      ],
+    },
+    {
+      label: t('nav.research'),
+      dropdown: 'research',
+      links: [
+        { label: t('nav.askLexis'),            href: '/ai-librarian' },
+        { label: t('nav.aiToolsDirectory'),    href: '/ai-tools' },
+        { label: t('nav.federatedSearch'),    href: '/search/global' },
+        { label: t('nav.subscribedDatabases'), href: '/subscribed-databases' },
+        { label: t('nav.openAccessDatabases'), href: '/open-access-databases' },
+        { label: t('nav.licensedDatabases'),   href: '/databases' },
+        { label: t('nav.opac'),               href: OPAC_URL, external: true },
+        { label: t('nav.newspapers'),          href: '/newspapers' },
+        { label: t('nav.thesesProjects'),      href: '/theses' },
+        { label: t('nav.ourResearchers'),      href: '/lecturers' },
+      ],
+    },
+    {
+      label: t('nav.events'),
+      dropdown: 'events',
+      links: [
+        { label: t('nav.eventsWorkshops'), href: '/events' },
+        { label: t('nav.mediaCentre'),     href: '/media' },
+        { label: t('nav.libraryBlog'),     href: '/blog' },
+        { label: t('nav.newsletter'),      href: '/newsletter' },
+      ],
+    },
+    {
+      label: t('nav.community'),
+      dropdown: 'community',
+      links: [
+        { label: t('nav.communityWellbeing'), href: '/community' },
+        { label: t('nav.communityFeed'),     href: '/feed' },
+        { label: t('nav.wellbeingCorner'),   href: '/wellbeing' },
+        { label: t('nav.discussionForum'),   href: '/forum' },
+        { label: t('nav.bookClubs'),         href: '/book-clubs' },
+      ],
+    },
+    {
+      label: t('nav.services'),
+      dropdown: 'services',
+      links: [
+        { label: t('nav.borrowReturn'),      href: '/catalogue' },
+        { label: t('nav.requestResource'),   href: '/dashboard/requests' },
+        { label: t('nav.academicIntegrity'),  href: '/academic-integrity' },
+        { label: t('nav.eventsWorkshops'),   href: '/events' },
+        { label: t('nav.communityForum'),    href: '/forum' },
+        { label: t('nav.libraryBlog'),        href: '/blog' },
+        { label: t('nav.newsletter'),         href: '/newsletter' },
+        { label: t('nav.tutorialGuides'),     href: '/tutorial' },
+        { label: t('nav.contactLibrary'),     href: '/contact' },
+      ],
+    },
+    {
+      label: t('nav.about'),
+      dropdown: 'about',
+      links: [
+        { label: t('nav.aboutLibrary'),  href: '/about' },
+        { label: t('nav.ourTeam'),       href: '/team' },
+        { label: t('nav.contactUs'),     href: '/contact' },
+        { label: t('nav.faq'),           href: '/faq' },
+        { label: t('nav.accessibility'),  href: '/accessibility' },
+        { label: t('nav.privacyPolicy'), href: '/privacy' },
+        { label: t('nav.termsOfUse'),    href: '/terms' },
+      ],
+    },
+  ];
+}
 
 // ── Colour constants ──────────────────────────────────────────────────────────
 const GREEN = '#6B1D2A';
@@ -284,6 +288,8 @@ export default function Navbar() {
   const [userDropOpen, setUserDropOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const navItems = useMemo(() => getNavItems(t), [t]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Close everything on route change
@@ -336,14 +342,15 @@ export default function Navbar() {
   };
 
   const dashboardPath = getDashboardPath(role);
-  const dashboardLabel = getDashboardLabel(role);
+  const rawDashboardLabel = getDashboardLabel(role);
+  const dashboardLabel = rawDashboardLabel === 'Dashboard' ? t('nav.dashboard') : rawDashboardLabel === 'Admin' ? t('nav.admin') : rawDashboardLabel;
   const accountMenuItems = [
     { label: dashboardLabel, href: dashboardPath },
     ...(dashboardPath === '/admin' ? [] : [
-      { label: 'My Library Card', href: '/dashboard/library-card' },
-      { label: 'My Profile', href: '/dashboard/my-profile' },
-      { label: 'My Loans', href: '/dashboard/loans' },
-      { label: 'My Requests', href: '/dashboard/requests' },
+      { label: t('nav.myLibraryCard'), href: '/dashboard/library-card' },
+      { label: t('nav.myProfile'), href: '/dashboard/my-profile' },
+      { label: t('nav.myLoans'), href: '/dashboard/loans' },
+      { label: t('nav.myRequests'), href: '/dashboard/requests' },
     ]),
   ];
 
@@ -394,7 +401,7 @@ export default function Navbar() {
                   onMouseLeave={scheduleClose}
                   className="flex items-center gap-1 px-2 2xl:px-3 py-2 rounded-md text-[13px] 2xl:text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 transition-colors duration-100 whitespace-nowrap"
                 >
-                  Libraries
+                  {t('nav.libraries')}
                   <svg className="w-3.5 h-3.5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -404,22 +411,22 @@ export default function Navbar() {
                   onEnter={keepOpen}
                   onLeave={scheduleClose}
                 >
-                  <SectionLabel>Our Libraries</SectionLabel>
+                  <SectionLabel>{t('nav.ourLibraries')}</SectionLabel>
                   <DropdownItem href={LIBRARIES_MENU.main.href}>
                     {LIBRARIES_MENU.main.label}
                   </DropdownItem>
                   {hasBranches && (
                     <>
                       <Divider />
-                      <SectionLabel>Branch Libraries</SectionLabel>
+                      <SectionLabel>{t('nav.branchLibraries')}</SectionLabel>
                       {LIBRARIES_MENU.branch.map((l) => (
                         <DropdownItem key={l.href} href={l.href}>{l.label}</DropdownItem>
                       ))}
                     </>
                   )}
                   <Divider />
-                  <SectionLabel>Faculty Libraries</SectionLabel>
-                  <DropdownItem href="/faculty-libraries">All Faculty Libraries</DropdownItem>
+                  <SectionLabel>{t('nav.facultyLibraries')}</SectionLabel>
+                  <DropdownItem href="/faculty-libraries">{t('nav.allFacultyLibraries')}</DropdownItem>
                   {LIBRARIES_MENU.faculty.map((l) => (
                     <DropdownItem key={l.href} href={l.href}>{l.label}</DropdownItem>
                   ))}
@@ -428,7 +435,7 @@ export default function Navbar() {
               </div>
 
               {/* Other menu items */}
-              {NAV_ITEMS.filter((n) => n.dropdown !== 'libraries').map((item) => (
+              {navItems.filter((n) => n.dropdown !== 'libraries').map((item) => (
                 <div key={item.label} className="relative">
                   <button
                     onMouseEnter={() => openDropdown(item.dropdown)}
@@ -466,11 +473,14 @@ export default function Navbar() {
 
             {/* ── Right actions ────────────────────────────────────── */}
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* Language switcher */}
+              <LanguageSwitcher id="lang-switcher-desktop" />
+
               {/* Search */}
               <Link
                 to="/search/global"
                 className="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="Search"
+                aria-label={t('a11y.search')}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -487,7 +497,7 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                <span className="hidden 2xl:inline">Ask Lexis</span>
+                <span className="hidden 2xl:inline">{t('nav.askLexis')}</span>
               </Link>
 
               {user ? (
@@ -498,7 +508,7 @@ export default function Navbar() {
                   <button
                     onClick={() => setUserDropOpen(!userDropOpen)}
                     className="flex items-center gap-2 focus:outline-none"
-                    aria-label="User menu"
+                    aria-label={t('a11y.userMenu')}
                   >
                     {patron?.profile_photo_url ? (
                       <img src={patron.profile_photo_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white/30" />
@@ -538,7 +548,7 @@ export default function Navbar() {
                         onClick={handleSignOut}
                         className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-100"
                       >
-                        Sign Out
+                        {t('nav.signOut')}
                       </button>
                     </div>
                   )}
@@ -550,14 +560,14 @@ export default function Navbar() {
                     to="/login"
                     className="hidden xl:block px-3 2xl:px-4 py-1.5 rounded-md text-xs font-semibold border border-white/50 text-white hover:bg-white/10 transition-all duration-150 whitespace-nowrap"
                   >
-                    Login
+                    {t('nav.login')}
                   </Link>
                   <Link
                     to="/register"
                     className="hidden xl:block px-3 2xl:px-4 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 text-neutral-900 hover:opacity-90 whitespace-nowrap"
                     style={{ background: GOLD }}
                   >
-                    Sign Up
+                    {t('nav.signUp')}
                   </Link>
                 </>
               )}
@@ -566,7 +576,7 @@ export default function Navbar() {
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="xl:hidden p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="Toggle menu"
+                aria-label={t('a11y.toggleMenu')}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {mobileOpen
@@ -596,7 +606,7 @@ export default function Navbar() {
           >
             {/* Drawer header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-              <span className="text-white font-bold text-base">ESUT Library</span>
+              <span className="text-white font-bold text-base">{t('nav.esutLibrary')}</span>
               <button
                 onClick={() => setMobileOpen(false)}
                 className="text-white/70 hover:text-white p-1"
@@ -611,31 +621,31 @@ export default function Navbar() {
             <div className="flex-1 py-3">
               {/* Libraries section */}
               <MobileSection
-                label="Libraries"
+                label={t('nav.libraries')}
                 open={mobileSection === 'libraries'}
                 onToggle={() => setMobileSection(mobileSection === 'libraries' ? null : 'libraries')}
               >
                 <div className="px-5 py-1 text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>
-                  Our Libraries
+                  {t('nav.ourLibraries')}
                 </div>
                 <MobileLink href={LIBRARIES_MENU.main.href}>{LIBRARIES_MENU.main.label}</MobileLink>
                 {hasBranches && (
                   <>
-                    <div className="px-5 py-1 text-xs text-white/40 font-semibold mt-1">Branch Libraries</div>
+                    <div className="px-5 py-1 text-xs text-white/40 font-semibold mt-1">{t('nav.branchLibraries')}</div>
                     {LIBRARIES_MENU.branch.map((l) => (
                       <MobileLink key={l.href} href={l.href}>{l.label}</MobileLink>
                     ))}
                   </>
                 )}
-                <div className="px-5 py-1 text-xs text-white/40 font-semibold mt-1">Faculty Libraries</div>
-                <MobileLink href="/faculty-libraries">All Faculty Libraries</MobileLink>
+                <div className="px-5 py-1 text-xs text-white/40 font-semibold mt-1">{t('nav.facultyLibraries')}</div>
+                <MobileLink href="/faculty-libraries">{t('nav.allFacultyLibraries')}</MobileLink>
                 {LIBRARIES_MENU.faculty.map((l) => (
                   <MobileLink key={l.href} href={l.href}>{l.label}</MobileLink>
                 ))}
 
               </MobileSection>
 
-              {NAV_ITEMS.filter((n) => n.dropdown !== 'libraries').map((item) => (
+              {navItems.filter((n) => n.dropdown !== 'libraries').map((item) => (
                 <MobileSection
                   key={item.label}
                   label={item.label}
@@ -672,17 +682,20 @@ export default function Navbar() {
                       to="/login"
                       className="flex-1 text-center py-2 rounded-md text-sm font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors"
                     >
-                      Login
+                      {t('nav.login')}
                     </Link>
                     <Link
                       to="/register"
                       className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-neutral-900 hover:opacity-90 transition-opacity"
                       style={{ background: GOLD }}
                     >
-                      Sign Up
+                      {t('nav.signUp')}
                     </Link>
                   </>
                 )}
+              </div>
+              <div>
+                <LanguageSwitcher id="lang-switcher-mobile" className="w-full justify-center" />
               </div>
               <div className="flex items-center gap-4 pt-1">
                 <a

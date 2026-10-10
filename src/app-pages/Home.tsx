@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Animated counter hook                                              */
@@ -28,6 +29,7 @@ function useCountUp(target: number, duration = 1500): number {
 /*  Stats strip                                                        */
 /* ------------------------------------------------------------------ */
 function StatsStrip() {
+  const { t, formatNumber } = useI18n();
   const [stats] = useState({
     resources: 12_450,
     downloads: 58_300,
@@ -41,10 +43,10 @@ function StatsStrip() {
   const memCount  = useCountUp(stats.members);
 
   const items = [
-    { label: 'Faculties',          value: facCount.toLocaleString() },
-    { label: 'Total Resources',    value: resCount.toLocaleString() },
-    { label: 'Downloads This Year',value: dlCount.toLocaleString() },
-    { label: 'Registered Patrons', value: memCount.toLocaleString() },
+    { label: t('home.statFaculties'),      value: formatNumber(facCount) },
+    { label: t('home.statTotalResources'), value: formatNumber(resCount) },
+    { label: t('home.statDownloads'),      value: formatNumber(dlCount) },
+    { label: t('home.statPatrons'),        value: formatNumber(memCount) },
   ];
 
   return (
@@ -71,6 +73,7 @@ function StatsStrip() {
 interface Faculty { name: string; slug: string; code: string; }
 
 function FacultyCard({ faculty }: { faculty: Faculty }) {
+  const { t } = useI18n();
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -98,12 +101,12 @@ function FacultyCard({ faculty }: { faculty: Faculty }) {
         </h3>
         {count !== null && (
           <p className="text-xs text-neutral-400 mt-0.5">
-            {count.toLocaleString()} resource{count !== 1 ? 's' : ''}
+            {t('home.resources', { count })}
           </p>
         )}
       </div>
       <div className="mt-auto flex items-center text-xs text-primary-600 font-medium gap-1">
-        Browse library
+        {t('home.browseLibrary')}
         <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
@@ -115,30 +118,37 @@ function FacultyCard({ faculty }: { faculty: Faculty }) {
 /* ------------------------------------------------------------------ */
 /*  Quick-access tiles                                                 */
 /* ------------------------------------------------------------------ */
-const quickLinks = [
-  { label: 'Search Catalogue',    href: '/catalogue',       icon: '📚', desc: 'Browse 12,000+ titles' },
-  { label: 'Repository',          href: '/repository',      icon: '🗄️',  desc: 'Theses, papers & more' },
-  { label: 'Global Search',       href: '/search/global',   icon: '🔍', desc: '250M+ academic works' },
-  { label: 'Reference Services',  href: '/course-reserves', icon: '📖', desc: 'Reference & reader services', show: institutionConfig.features.courseReserves },
-  { label: 'Researcher Profiles', href: '/researchers',     icon: '🔬', desc: 'Our academic staff', show: institutionConfig.features.researcherProfiles },
-  { label: 'Webometrics',         href: '/webometrics',     icon: '🌐', desc: 'Global ranking dashboard', show: institutionConfig.features.webometrics },
+const quickLinks: {
+  labelKey: TranslationKey;
+  descKey: TranslationKey;
+  href: string;
+  icon: string;
+  show?: boolean;
+}[] = [
+  { labelKey: 'home.cardCatalogue',    descKey: 'home.cardCatalogueDesc',    href: '/catalogue',       icon: '📚' },
+  { labelKey: 'home.cardRepository',   descKey: 'home.cardRepositoryDesc',   href: '/repository',      icon: '🗄️',  },
+  { labelKey: 'home.cardGlobalSearch', descKey: 'home.cardGlobalSearchDesc', href: '/search/global',   icon: '🔍', },
+  { labelKey: 'home.cardReference',    descKey: 'home.cardReferenceDesc',    href: '/course-reserves', icon: '📖', show: institutionConfig.features.courseReserves },
+  { labelKey: 'home.cardResearchers',  descKey: 'home.cardResearchersDesc',  href: '/researchers',     icon: '🔬', show: institutionConfig.features.researcherProfiles },
+  { labelKey: 'home.cardWebometrics',  descKey: 'home.cardWebometricsDesc',  href: '/webometrics',     icon: '🌐', show: institutionConfig.features.webometrics },
 ];
 
 /* ------------------------------------------------------------------ */
 /*  Hero orbit card data                                               */
 /* ------------------------------------------------------------------ */
-const ORBIT_CARDS = [
-  { label: 'Global Search',     icon: '🔍', href: '/search/global' },
-  { label: 'AI Reference Librarian',      icon: '🤖', href: '/ai-librarian' },
-  { label: 'Newspapers',        icon: '🗞️', href: '/newspapers' },
-  { label: 'Theses',            icon: '🎓', href: '/thesis' },
-  { label: 'Open Repository',   icon: '📂', href: '/repository' },
+const ORBIT_CARDS: { labelKey: TranslationKey; icon: string; href: string }[] = [
+  { labelKey: 'home.exploreGlobalSearch',  icon: '🔍', href: '/search/global' },
+  { labelKey: 'home.exploreAiLibrarian',   icon: '🤖', href: '/ai-librarian' },
+  { labelKey: 'home.exploreNewspapers',    icon: '🗞️', href: '/newspapers' },
+  { labelKey: 'home.exploreTheses',        icon: '🎓', href: '/thesis' },
+  { labelKey: 'home.exploreOpenRepository', icon: '📂', href: '/repository' },
 ];
 
 /* ------------------------------------------------------------------ */
 /*  Hero section                                                       */
 /* ------------------------------------------------------------------ */
 function Hero() {
+  const { t, formatNumber } = useI18n();
   const [query, setQuery] = useState('');
   const [searchTarget, setSearchTarget] = useState<'catalog' | 'repository'>('catalog');
   const [catCount, setCatCount]       = useState(0);
@@ -196,24 +206,24 @@ function Hero() {
           Enugu State University of Science and Technology
         </p>
         <h1 className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-serif font-semibold text-white mb-3 leading-tight">
-          ESUT Library
+          {t('home.heroTitle')}
         </h1>
         <p className="text-white/60 text-base lg:text-lg mb-8 font-light">
-          Smart Library &amp; Knowledge Centre
+          {t('home.heroSubtitle')}
         </p>
 
         {/* Search */}
         <div className="max-w-lg mb-8 space-y-2">
           <div className="grid grid-cols-2 rounded-xl bg-white/10 p-1 text-sm">
-            <button onClick={() => setSearchTarget('catalog')} className={`rounded-lg px-3 py-2 font-semibold ${searchTarget === 'catalog' ? 'bg-white text-primary-900' : 'text-white/75'}`}>Search Books & Journals</button>
-            <button onClick={() => setSearchTarget('repository')} className={`rounded-lg px-3 py-2 font-semibold ${searchTarget === 'repository' ? 'bg-white text-primary-900' : 'text-white/75'}`}>Search Research & Theses</button>
+            <button onClick={() => setSearchTarget('catalog')} className={`rounded-lg px-3 py-2 font-semibold ${searchTarget === 'catalog' ? 'bg-white text-primary-900' : 'text-white/75'}`}>{t('home.searchBooksJournals')}</button>
+            <button onClick={() => setSearchTarget('repository')} className={`rounded-lg px-3 py-2 font-semibold ${searchTarget === 'repository' ? 'bg-white text-primary-900' : 'text-white/75'}`}>{t('home.searchResearchTheses')}</button>
           </div>
           <div className="relative">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={searchTarget === 'catalog' ? 'Search OPAC by title, author, ISBN...' : 'Search theses, papers, datasets...'}
+            placeholder={searchTarget === 'catalog' ? t('home.searchPlaceholderCatalogue') : t('home.searchPlaceholderTheses')}
             className="w-full pl-5 pr-28 py-4 rounded-2xl text-sm text-neutral-800 placeholder:text-neutral-400 bg-white shadow-lg focus:outline-none focus:ring-2"
             style={{ '--tw-ring-color': '#D4A017' } as React.CSSProperties}
             onKeyDown={(e) => e.key === 'Enter' && query && (window.location.href = `/${searchTarget === 'catalog' ? 'catalog' : 'repository'}?q=${encodeURIComponent(query)}`)}
@@ -227,7 +237,7 @@ function Hero() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
             </svg>
-            Search
+            {t('home.search')}
           </Link>
           </div>
         </div>
@@ -239,22 +249,22 @@ function Hero() {
             className="px-6 py-2.5 rounded-xl text-sm font-semibold text-neutral-900 transition-opacity hover:opacity-90"
             style={{ background: '#D4A017' }}
           >
-            Register as Patron
+            {t('home.registerAsPatron')}
           </Link>
           <Link
             to="/ai-librarian"
             className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-white/40 text-white hover:bg-white/10 transition-colors"
           >
-            Ask Lexis, AI Reference Librarian
+            {t('home.askLexis')}
           </Link>
         </div>
 
         {/* Stats row */}
         <div className="flex gap-8">
           {[
-            { value: dispCat.toLocaleString(),    label: 'Catalogue Items' },
-            { value: dispMember.toLocaleString(), label: 'Active Patrons' },
-            { value: dispOpen.toLocaleString(),   label: 'Open Access Works' },
+            { value: formatNumber(dispCat),    label: 'Catalogue Items' },
+            { value: formatNumber(dispMember), label: 'Active Patrons' },
+            { value: formatNumber(dispOpen),   label: 'Open Access Works' },
           ].map((s) => (
             <div key={s.label}>
               <div className="text-2xl font-bold font-mono" style={{ color: '#D4A017' }}>{s.value}</div>
@@ -314,7 +324,7 @@ function Hero() {
                   }}
                 >
                   <span className="text-lg leading-none">{card.icon}</span>
-                  <span className="text-white text-[10px] font-medium mt-1 text-center leading-tight px-1">{card.label}</span>
+                  <span className="text-white text-[10px] font-medium mt-1 text-center leading-tight px-1">{t(card.labelKey)}</span>
                 </Link>
               );
             })}
@@ -337,28 +347,29 @@ function Hero() {
 /*  AI Reference Librarian promo                                       */
 /* ------------------------------------------------------------------ */
 function AIPromo() {
+  const { t } = useI18n();
+  const tagKeys: TranslationKey[] = ['home.apaCitations', 'home.bookRecommendations', 'home.researchGuidance', 'home.illRequests'];
   return (
     <section className="bg-gradient-to-br from-primary-900 to-primary-700 text-white py-16">
       <div className="section">
         <div className="flex flex-col lg:flex-row items-center gap-8">
           <div className="flex-1">
-            <div className="badge badge-gold inline-flex mb-4">AI-Powered</div>
+            <div className="badge badge-gold inline-flex mb-4">{t('home.aiPowered')}</div>
             <h2 className="text-3xl font-serif font-semibold mb-4">
-              Lexis — Your ESUT AI Reference Librarian
+              {t('home.lexisTitle')}
             </h2>
             <p className="text-primary-200 leading-relaxed mb-6 max-w-lg">
-              {institutionConfig.librarianPersonality}. Available 24/7 to help you find
-              resources, generate citations, and navigate our collections.
+              {t('home.lexisDescription', { personality: institutionConfig.librarianPersonality })}
             </p>
             <div className="flex flex-wrap gap-2 mb-6">
-              {['APA Citations', 'Book Recommendations', 'Research Guidance', 'ILL Requests'].map((tag) => (
+              {tagKeys.map((tag) => (
                 <span key={tag} className="badge bg-white/10 text-white/80 border border-white/20">
-                  {tag}
+                  {t(tag)}
                 </span>
               ))}
             </div>
             <Link to="/ai-librarian" className="btn-primary bg-gold-500 hover:bg-gold-600">
-              Start a Conversation →
+              {t('home.startConversation')}
             </Link>
           </div>
 
@@ -371,12 +382,12 @@ function AIPromo() {
             </div>
             <div className="flex justify-end">
               <div className="bg-primary-500 text-white rounded-xl rounded-br-sm px-4 py-3 text-sm max-w-[85%]">
-                Find me recent papers on contract law in Nigeria
+                {t('home.sampleQuery')}
               </div>
             </div>
             <div className="flex justify-start">
               <div className="bg-white text-neutral-700 rounded-xl rounded-bl-sm px-4 py-3 text-sm max-w-[85%] shadow-sm">
-                I found 47 relevant resources on Nigerian contract law published between 2020–2026. Shall I format the top 5 in APA?
+                {t('home.sampleResponse')}
               </div>
             </div>
           </div>
@@ -422,6 +433,7 @@ interface SearchResultItem {
 }
 
 function FreeEbooksStrip() {
+  const { t } = useI18n();
   const [books, setBooks] = useState<DoabBook[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [subject, setSubject] = useState('');
@@ -468,10 +480,10 @@ function FreeEbooksStrip() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-2xl font-serif font-semibold text-primary-800">
-              Free Academic Ebooks — Available Now
+              {t('home.ebooksTitle')}
             </h2>
             <p className="text-sm text-neutral-500 mt-0.5">
-              Peer-reviewed open-access books published 2020–present · No registration required
+              {t('home.ebooksSubtitle')}
             </p>
           </div>
           {subjects.length > 0 && (
@@ -480,7 +492,7 @@ function FreeEbooksStrip() {
               onChange={e => { setSubject(e.target.value); setPage(0); }}
               className="border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 max-w-[16rem]"
             >
-              <option value="">All Subjects</option>
+              <option value="">{t('home.allSubjects')}</option>
               {subjects.map(s => <option key={s} value={s}>{s.length > 50 ? s.slice(0, 50) + '…' : s}</option>)}
             </select>
           )}
@@ -539,7 +551,7 @@ function FreeEbooksStrip() {
                     className="mt-auto text-center text-xs font-medium py-2 rounded-lg text-white transition-opacity hover:opacity-90"
                     style={{ background: '#6B1D2A' }}
                   >
-                    Access Book →
+                    {t('home.accessBook')}
                   </a>
                 </div>
               ))}
@@ -552,15 +564,15 @@ function FreeEbooksStrip() {
                   disabled={current === 0}
                   className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-600 disabled:opacity-40 hover:bg-neutral-50"
                 >
-                  ← Prev
+                  {t('home.prev')}
                 </button>
-                <span className="text-sm text-neutral-500">Page {current + 1} of {totalPages}</span>
+                <span className="text-sm text-neutral-500">{t('home.pageOf', { current: current + 1, total: totalPages })}</span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={current >= totalPages - 1}
                   className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-600 disabled:opacity-40 hover:bg-neutral-50"
                 >
-                  Next →
+                  {t('home.next')}
                 </button>
               </div>
             )}
@@ -568,11 +580,11 @@ function FreeEbooksStrip() {
         )}
 
         <p className="text-xs text-neutral-400 mt-6 text-center">
-          Powered by{' '}
+          {t('home.poweredBy')}{' '}
           <a href="https://www.doabooks.org" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-            DOAB
+            {t('home.doab')}
           </a>{' '}
-          — Directory of Open Access Books · Peer-reviewed scholarly books, freely available
+          {t('home.doabDescription')}
         </p>
       </div>
     </section>
@@ -584,6 +596,7 @@ function FreeEbooksStrip() {
 /*  Main Home component                                                */
 /* ------------------------------------------------------------------ */
 export default function Home() {
+  const { t } = useI18n();
   return (
     <>
       <Hero />
@@ -595,10 +608,10 @@ export default function Home() {
         <div className="section">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-serif font-semibold text-primary-800">
-              Library Services
+              {t('home.libraryServices')}
             </h2>
             <Link to="/catalogue" className="text-sm text-primary-600 hover:text-primary-800 font-medium">
-              View all →
+              {t('home.viewAll')}
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -612,9 +625,9 @@ export default function Home() {
                 >
                   <span className="text-2xl">{l.icon}</span>
                   <span className="text-sm font-semibold text-neutral-800 group-hover:text-primary-700 transition-colors leading-tight">
-                    {l.label}
+                    {t(l.labelKey)}
                   </span>
-                  <span className="text-xs text-neutral-400 line-clamp-2">{l.desc}</span>
+                  <span className="text-xs text-neutral-400 line-clamp-2">{t(l.descKey)}</span>
                 </Link>
               ))}
           </div>
@@ -627,10 +640,10 @@ export default function Home() {
         <div className="section">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-serif font-semibold text-primary-800">
-              Faculty Libraries
+              {t('home.facultyLibraries')}
             </h2>
             <Link to="/faculty-libraries" className="text-sm text-primary-600 hover:text-primary-800 font-medium">
-              View all →
+              {t('home.viewAll')}
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -646,7 +659,7 @@ export default function Home() {
       <section className="py-14 bg-white">
         <div className="section">
           <h2 className="text-2xl font-serif font-semibold text-primary-800 mb-8">
-            Borrowing Privileges
+            {t('home.borrowingPrivileges')}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {Object.entries(institutionConfig.loanRules).map(([category, rules]) => (
@@ -656,15 +669,15 @@ export default function Home() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-neutral-500">Items</span>
+                    <span className="text-neutral-500">{t('home.items')}</span>
                     <span className="font-semibold text-primary-700">{rules.maxItems}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-neutral-500">Duration</span>
-                    <span className="font-semibold text-primary-700">{rules.durationDays} days</span>
+                    <span className="text-neutral-500">{t('home.duration')}</span>
+                    <span className="font-semibold text-primary-700">{t('home.days', { count: rules.durationDays })}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-neutral-500">Renewals</span>
+                    <span className="text-neutral-500">{t('home.renewals')}</span>
                     <span className="font-semibold text-primary-700">{rules.renewals}×</span>
                   </div>
                 </div>
@@ -683,17 +696,17 @@ export default function Home() {
       >
         <div className="section text-center text-white">
           <h2 className="text-3xl font-serif font-semibold mb-4">
-            Join {institutionConfig.name} Smart Library
+            {t('home.joinTitle', { name: institutionConfig.name })}
           </h2>
           <p className="text-primary-200 mb-8 max-w-md mx-auto">
-            Register with your matric number or staff ID to access all services including loans, ILL, thesis submission, and AI research support.
+            {t('home.joinDescription')}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/register" className="btn-primary bg-gold-500 hover:bg-gold-600">
-              Register Now
+              {t('home.registerNow')}
             </Link>
             <Link to="/login" className="btn-outline !border-white !text-white hover:!bg-white hover:!text-primary-800">
-              Already a Member? Sign In
+              {t('home.alreadyMemberSignIn')}
             </Link>
           </div>
         </div>

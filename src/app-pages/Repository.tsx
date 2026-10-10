@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 import { Resource3DBookCard, Resource3DBookCardSkeleton, Resource3DBookGrid } from '@/components/resource/Resource3DBookCard';
 
 interface Community { id: string; name: string; slug: string; faculty_code: string | null; parent_id: string | null; }
@@ -44,8 +45,14 @@ const ITEM_TYPES = [
   'Book Chapter', 'Government Publication', 'Learning Material', 'Historical Document',
 ];
 
+const ITEM_TYPE_KEYS: TranslationKey[] = [
+  'repository.ugLongEssay', 'repository.finalYearProject', 'repository.researchPaper', 'repository.conferencePaper',
+  'repository.bookChapter', 'repository.governmentPublication', 'repository.learningMaterial', 'repository.historicalDocument',
+];
+
 export default function Repository() {
-  usePageTitle('Repository');
+  const { t } = useI18n();
+  usePageTitle(t('repository.title'));
   const [searchParams] = useSearchParams();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -107,7 +114,7 @@ export default function Repository() {
 
       const response = await fetch(`/api/repository?${params.toString()}`);
       const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error ?? 'Failed to load repository items.');
+      if (!response.ok || !json.success) throw new Error(json.error ?? t('repository.failedToLoad'));
 
       const data = json.data;
       setItems((data.items ?? []) as RepoItem[]);
@@ -117,7 +124,7 @@ export default function Repository() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterAccess, communities, collections, search, sort]);
+  }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterAccess, communities, collections, search, sort, t]);
 
   useEffect(() => { setPage(0); }, [selectedCommunity, selectedCollection, filterType, filterDept, filterYear, filterLang, filterAccess]);
   useEffect(() => { void fetchItems(page); }, [fetchItems, page]);
@@ -140,7 +147,7 @@ export default function Repository() {
   const authorDisplay = (authors: AuthorEntry[]) =>
     (Array.isArray(authors) ? authors : [])
       .map((a: AuthorEntry) => (typeof a === 'string' ? a : (a.name ?? ''))).slice(0, 2).join(', ')
-      + (authors.length > 2 ? ' et al.' : '');
+      + (authors.length > 2 ? t('repository.etAl') : '');
 
   const clearFilters = () => {
     setFilterType(''); setFilterDept(''); setFilterYear('');
@@ -156,19 +163,19 @@ export default function Repository() {
         <div className="section flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-white opacity-100" style={{ color: 'white' }}>
-              Digital Repository
+              {t('repository.title')}
             </h1>
             <p className="text-lg mt-2 opacity-100" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-              Browse scholarly works from {institutionConfig.name ?? 'ESUT'}
+              {t('repository.subtitle', { name: institutionConfig.name ?? 'ESUT' })}
             </p>
-            {search && <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,.82)' }}>Search results for “{search}”</p>}
+            {search && <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,.82)' }}>{t('repository.searchResultsFor', { query: search })}</p>}
           </div>
           <div className="flex flex-wrap gap-2 self-start md:self-auto">
             <Link to="/repository/stats" className="btn-outline text-white border-white hover:bg-white/10 text-sm" style={{ color: 'white', borderColor: 'white' }}>
-              View Statistics
+              {t('repository.viewStatistics')}
             </Link>
             <Link to="/repository/submit" className="btn-primary">
-              Submit Work
+              {t('repository.submitWork')}
             </Link>
           </div>
         </div>
@@ -182,7 +189,7 @@ export default function Repository() {
             {/* Tree */}
             <div className="card p-4">
               <h3 className="font-bold text-sm uppercase tracking-wide mb-3" style={{ color: 'var(--color-primary)' }}>
-                Collections
+                {t('repository.collections')}
               </h3>
 
               {/* ESUT root */}
@@ -250,31 +257,31 @@ export default function Repository() {
             <div className="card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-sm uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>
-                  Filters
+                  {t('repository.filters')}
                 </h3>
                 {hasFilters && (
                   <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700">
-                    Clear all
+                    {t('repository.clearAll')}
                   </button>
                 )}
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">Item Type</label>
+                <label className="label text-xs mb-1 block">{t('repository.itemType')}</label>
                 <select value={filterType} onChange={e => setFilterType(e.target.value)} className="input text-sm">
-                  <option value="">All Types</option>
-                  {(facets?.resourceType?.length ? facets.resourceType.map(f => f.value) : ITEM_TYPES).map(t => (
-                    <option key={t} value={t}>
-                      {t} {facetCount(facets?.resourceType, t) > 0 ? `(${facetCount(facets?.resourceType, t)})` : ''}
+                  <option value="">{t('repository.allTypes')}</option>
+                  {(facets?.resourceType?.length ? facets.resourceType.map(f => f.value) : ITEM_TYPES).map((typeValue, idx) => (
+                    <option key={typeValue} value={typeValue}>
+                      {facets?.resourceType?.length ? typeValue : t(ITEM_TYPE_KEYS[idx])} {facetCount(facets?.resourceType, typeValue) > 0 ? `(${facetCount(facets?.resourceType, typeValue)})` : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">Department</label>
+                <label className="label text-xs mb-1 block">{t('repository.department')}</label>
                 <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="input text-sm">
-                  <option value="">All Departments</option>
+                  <option value="">{t('repository.allDepartments')}</option>
                   {institutionConfig.faculties.map(f => (
                     <option key={f.code} value={f.slug}>{f.name}</option>
                   ))}
@@ -282,31 +289,31 @@ export default function Repository() {
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">Year</label>
+                <label className="label text-xs mb-1 block">{t('repository.year')}</label>
                 <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="input text-sm">
-                  <option value="">All Years</option>
+                  <option value="">{t('repository.allYears')}</option>
                   {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                  <option value="before2020">Before 2020</option>
+                  <option value="before2020">{t('repository.before2020')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">Language</label>
+                <label className="label text-xs mb-1 block">{t('repository.language')}</label>
                 <select value={filterLang} onChange={e => setFilterLang(e.target.value)} className="input text-sm">
-                  <option value="">All Languages</option>
-                  <option value="English">English</option>
-                  <option value="Yoruba">Yoruba</option>
-                  <option value="French">French</option>
-                  <option value="Other">Other</option>
+                  <option value="">{t('repository.allLanguages')}</option>
+                  <option value="English">{t('repository.english')}</option>
+                  <option value="Yoruba">{t('repository.yoruba')}</option>
+                  <option value="French">{t('repository.french')}</option>
+                  <option value="Other">{t('repository.other')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">Access</label>
+                <label className="label text-xs mb-1 block">{t('repository.access')}</label>
                 <select value={filterAccess} onChange={e => setFilterAccess(e.target.value)} className="input text-sm">
-                  <option value="">All Access Levels</option>
-                  <option value="global">Open Access</option>
-                  <option value="faculty">ESUT Members Only</option>
+                  <option value="">{t('repository.allAccessLevels')}</option>
+                  <option value="global">{t('repository.openAccess')}</option>
+                  <option value="faculty">{t('repository.membersOnly')}</option>
                 </select>
               </div>
             </div>
@@ -316,7 +323,7 @@ export default function Repository() {
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-neutral-500">
-                {loading ? 'Loading…' : `${total.toLocaleString()} item${total !== 1 ? 's' : ''} found`}
+                {loading ? t('common.loading') : t('repository.itemsFound', { count: total })}
               </p>
             </div>
 
@@ -327,17 +334,17 @@ export default function Repository() {
             ) : items.length === 0 ? (
               <div className="card p-12 text-center text-neutral-500">
                 <p className="text-4xl mb-3">📂</p>
-                <p className="font-semibold mb-2">No items found</p>
-                <p className="text-sm mb-4">Try adjusting your filters or browsing a different collection.</p>
+                <p className="font-semibold mb-2">{t('repository.noItemsFound')}</p>
+                <p className="text-sm mb-4">{t('repository.tryAdjustingFilters')}</p>
                 {hasFilters && (
-                  <button onClick={clearFilters} className="btn-outline">Clear Filters</button>
+                  <button onClick={clearFilters} className="btn-outline">{t('repository.clearFilters')}</button>
                 )}
               </div>
             ) : (
               <>
                 <Resource3DBookGrid className="lg:grid-cols-3 xl:grid-cols-4">
                   {items.map(item => {
-                    const typeLabel = item.resourceType || 'Document';
+                    const typeLabel = item.resourceType || t('repository.document');
                     const authors = Array.isArray(item.authors) ? item.authors : [];
 
                     return (
@@ -352,16 +359,16 @@ export default function Repository() {
                         subjects={Array.isArray(item.subjects) ? item.subjects : []}
                         spineText={item.doi || typeLabel}
                         href={`/repository/${item.id}`}
-                        status={item.file?.accessLevel === 'PUBLIC' ? 'Open access' : 'Members only'}
+                        status={item.file?.accessLevel === 'PUBLIC' ? t('repository.openAccess') : t('repository.membersOnly')}
                         actions={(
                           <>
                             <span className="badge badge-primary text-xs">{typeLabel}</span>
                             {item.facultyCode && <span className="badge badge-secondary text-xs">{item.facultyCode}</span>}
                             {item.doi && (
-                              <span className="badge text-xs" style={{ background: '#fef3c7', color: '#92400e' }}>DOI</span>
+                              <span className="badge text-xs" style={{ background: '#fef3c7', color: '#92400e' }}>{t('repository.doi')}</span>
                             )}
                             {item.file?.accessLevel === 'PUBLIC' && (
-                              <span className="badge text-xs" style={{ background: '#d1fae5', color: '#065f46' }}>Open</span>
+                              <span className="badge text-xs" style={{ background: '#d1fae5', color: '#065f46' }}>{t('repository.open')}</span>
                             )}
                             {item.snippet && (
                               <span className="text-xs text-neutral-500 line-clamp-2">{item.snippet}</span>
@@ -381,17 +388,17 @@ export default function Repository() {
                       disabled={page === 0}
                       className="btn-outline text-sm disabled:opacity-40"
                     >
-                      Previous
+                      {t('repository.previous')}
                     </button>
                     <span className="text-sm text-neutral-600">
-                      Page {page + 1} of {totalPages || 1}
+                      {t('repository.pageOf', { current: page + 1, total: totalPages || 1 })}
                     </span>
                     <button
                       onClick={() => setPage(p => p + 1)}
                       disabled={(page + 1) * PAGE_SIZE >= total}
                       className="btn-outline text-sm disabled:opacity-40"
                     >
-                      Next
+                      {t('repository.next')}
                     </button>
                   </div>
                 )}

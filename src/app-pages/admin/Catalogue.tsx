@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
+import { useI18n } from '@/lib/i18n';
 
 interface CatalogueItem {
   id: string;
@@ -38,13 +39,22 @@ const ALL_LIBRARIES = [
   ...institutionConfig.facultyLibraries.map(l => ({ code: l.code, name: l.name })),
 ];
 
+const FLOOR_KEYS = [
+  'adminCatalogue.groundFloor',
+  'adminCatalogue.floor1',
+  'adminCatalogue.floor2',
+  'adminCatalogue.floor3',
+  'adminCatalogue.basement',
+  'adminCatalogue.mezzanine',
+] as const;
+
 const FLOORS = [
-  { value: 'GF', label: 'Ground Floor (GF)' },
-  { value: 'F1', label: 'Floor 1 (F1)' },
-  { value: 'F2', label: 'Floor 2 (F2)' },
-  { value: 'F3', label: 'Floor 3 (F3)' },
-  { value: 'B',  label: 'Basement (B)' },
-  { value: 'M',  label: 'Mezzanine (M)' },
+  { value: 'GF', labelKey: FLOOR_KEYS[0] },
+  { value: 'F1', labelKey: FLOOR_KEYS[1] },
+  { value: 'F2', labelKey: FLOOR_KEYS[2] },
+  { value: 'F3', labelKey: FLOOR_KEYS[3] },
+  { value: 'B',  labelKey: FLOOR_KEYS[4] },
+  { value: 'M',  labelKey: FLOOR_KEYS[5] },
 ];
 
 function formatShelfLocation(lib: string, floor: string, bay: string, shelf: string) {
@@ -68,6 +78,7 @@ function parseShelfLocation(loc: string) {
 // ── Copy Management Modal ─────────────────────────────────────────────────────
 
 function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: () => void; onSaved: () => void }) {
+  const { t, formatDate } = useI18n();
   const [copies, setCopies]           = useState<CatalogueCopy[]>([]);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
@@ -126,7 +137,7 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
   }
 
   async function deleteCopy(copyId: string) {
-    if (!confirm('Remove this copy from the catalogue?')) return;
+    if (!confirm(t('adminCatalogue.removeCopyConfirm'))) return;
     await supabase.from('catalogue_copies').delete().eq('id', copyId);
     const remaining = copies.filter(c => c.id !== copyId);
     const avail = remaining.filter(c => c.status === 'available').length;
@@ -166,7 +177,7 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 sticky top-0 bg-white z-10">
           <div>
-            <h2 className="font-bold text-neutral-900">Manage Copies</h2>
+            <h2 className="font-bold text-neutral-900">{t('adminCatalogue.manageCopies')}</h2>
             <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1">{item.title}</p>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 transition-colors">
@@ -177,21 +188,21 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
         <div className="p-6 space-y-6">
           {/* Add new copy */}
           <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
-            <h3 className="font-semibold text-sm text-neutral-800">Add New Copy</h3>
+            <h3 className="font-semibold text-sm text-neutral-800">{t('adminCatalogue.addNewCopy')}</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label text-xs">Barcode *</label>
+                <label className="label text-xs">{t('adminCatalogue.barcode')}</label>
                 <input value={newBarcode} onChange={e => setNewBarcode(e.target.value)}
-                  placeholder="e.g. BFL-2026-001" className="input w-full text-sm" />
+                  placeholder={t('adminCatalogue.barcodePlaceholder')} className="input w-full text-sm" />
               </div>
               <div>
-                <label className="label text-xs">Status</label>
+                <label className="label text-xs">{t('adminCatalogue.status')}</label>
                 <select value={newStatus} onChange={e => setNewStatus(e.target.value)} className="input w-full text-sm">
-                  <option value="available">Available</option>
-                  <option value="on_loan">On Loan</option>
-                  <option value="reserved">Reserved</option>
-                  <option value="lost">Lost</option>
-                  <option value="withdrawn">Withdrawn</option>
+                  <option value="available">{t('adminCatalogue.available')}</option>
+                  <option value="on_loan">{t('adminCatalogue.onLoan')}</option>
+                  <option value="reserved">{t('adminCatalogue.reserved')}</option>
+                  <option value="lost">{t('adminCatalogue.lost')}</option>
+                  <option value="withdrawn">{t('adminCatalogue.withdrawn')}</option>
                 </select>
               </div>
             </div>
@@ -199,53 +210,53 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
             {/* Shelf location builder */}
             <div className="border border-neutral-200 rounded-lg p-3 bg-white space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-neutral-600">Shelf Location</span>
+                <span className="text-xs font-semibold text-neutral-600">{t('adminCatalogue.shelfLocation')}</span>
                 {newShelfPreview && (
                   <span className="font-mono text-xs font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded">{newShelfPreview}</span>
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
-                  <label className="label text-xs">Library</label>
+                  <label className="label text-xs">{t('adminCatalogue.library')}</label>
                   <select value={newLib} onChange={e => setNewLib(e.target.value)} className="input w-full text-sm">
                     {ALL_LIBRARIES.map(l => <option key={l.code} value={l.code}>{l.code} — {l.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="label text-xs">Floor / Room</label>
+                  <label className="label text-xs">{t('adminCatalogue.floorRoom')}</label>
                   <select value={newFloor} onChange={e => setNewFloor(e.target.value)} className="input w-full text-sm">
-                    {FLOORS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                    {FLOORS.map(f => <option key={f.value} value={f.value}>{t(f.labelKey)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="label text-xs">Bay</label>
+                  <label className="label text-xs">{t('adminCatalogue.bay')}</label>
                   <input value={newBay} onChange={e => setNewBay(e.target.value.replace(/\D/g, ''))}
-                    placeholder="e.g. 3" maxLength={2} className="input w-full text-sm" />
+                    placeholder={t('adminCatalogue.bayPlaceholder')} maxLength={2} className="input w-full text-sm" />
                 </div>
                 <div>
-                  <label className="label text-xs">Shelf</label>
+                  <label className="label text-xs">{t('adminCatalogue.shelf')}</label>
                   <input value={newShelf} onChange={e => setNewShelf(e.target.value.replace(/\D/g, ''))}
-                    placeholder="e.g. 7" maxLength={2} className="input w-full text-sm" />
+                    placeholder={t('adminCatalogue.shelfPlaceholder')} maxLength={2} className="input w-full text-sm" />
                 </div>
               </div>
-              <p className="text-xs text-neutral-400">Format: {institutionConfig.mainLibrary.code}/F1/B03/SH07 (Library / Floor / Bay / Shelf)</p>
+              <p className="text-xs text-neutral-400">{t('adminCatalogue.formatHint', { example: `${institutionConfig.mainLibrary.code}/F1/B03/SH07` })}</p>
             </div>
 
             <button onClick={addCopy} disabled={!newBarcode.trim() || addingNew}
               className="btn-primary text-sm px-4 py-2 disabled:opacity-50">
-              {addingNew ? 'Adding…' : 'Add Copy'}
+              {addingNew ? t('adminCatalogue.adding') : t('adminCatalogue.addCopy')}
             </button>
           </div>
 
           {/* Existing copies */}
           <div>
             <h3 className="font-semibold text-sm text-neutral-800 mb-3">
-              Existing Copies <span className="text-neutral-400 font-normal">({copies.length})</span>
+              {t('adminCatalogue.existingCopies', { count: copies.length })}
             </h3>
             {loading ? (
               <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-12 bg-neutral-100 rounded-lg animate-pulse" />)}</div>
             ) : copies.length === 0 ? (
-              <p className="text-sm text-neutral-400 py-4 text-center">No copies registered yet.</p>
+              <p className="text-sm text-neutral-400 py-4 text-center">{t('adminCatalogue.noCopiesRegistered')}</p>
             ) : (
               <div className="space-y-2">
                 {copies.map(copy => (
@@ -254,23 +265,23 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
                       <div className="p-4 bg-neutral-50 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="label text-xs">Barcode</label>
+                            <label className="label text-xs">{t('adminCatalogue.barcode')}</label>
                             <input value={copy.barcode} disabled className="input w-full text-sm bg-neutral-100" />
                           </div>
                           <div>
-                            <label className="label text-xs">Status</label>
+                            <label className="label text-xs">{t('adminCatalogue.status')}</label>
                             <select value={editStatus} onChange={e => setEditStatus(e.target.value)} className="input w-full text-sm">
-                              <option value="available">Available</option>
-                              <option value="on_loan">On Loan</option>
-                              <option value="reserved">Reserved</option>
-                              <option value="lost">Lost</option>
-                              <option value="withdrawn">Withdrawn</option>
+                              <option value="available">{t('adminCatalogue.available')}</option>
+                              <option value="on_loan">{t('adminCatalogue.onLoan')}</option>
+                              <option value="reserved">{t('adminCatalogue.reserved')}</option>
+                              <option value="lost">{t('adminCatalogue.lost')}</option>
+                              <option value="withdrawn">{t('adminCatalogue.withdrawn')}</option>
                             </select>
                           </div>
                         </div>
                         <div className="border border-neutral-200 rounded-lg p-3 bg-white space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-neutral-600">Shelf Location</span>
+                            <span className="text-xs font-semibold text-neutral-600">{t('adminCatalogue.shelfLocation')}</span>
                             {formatShelfLocation(editLib, editFloor, editBay, editShelf) && (
                               <span className="font-mono text-xs font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
                                 {formatShelfLocation(editLib, editFloor, editBay, editShelf)}
@@ -279,34 +290,34 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <div>
-                              <label className="label text-xs">Library</label>
+                              <label className="label text-xs">{t('adminCatalogue.library')}</label>
                               <select value={editLib} onChange={e => setEditLib(e.target.value)} className="input w-full text-sm">
                                 {ALL_LIBRARIES.map(l => <option key={l.code} value={l.code}>{l.code} — {l.name}</option>)}
                               </select>
                             </div>
                             <div>
-                              <label className="label text-xs">Floor</label>
+                              <label className="label text-xs">{t('adminCatalogue.floorRoom')}</label>
                               <select value={editFloor} onChange={e => setEditFloor(e.target.value)} className="input w-full text-sm">
-                                {FLOORS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                                {FLOORS.map(f => <option key={f.value} value={f.value}>{t(f.labelKey)}</option>)}
                               </select>
                             </div>
                             <div>
-                              <label className="label text-xs">Bay</label>
+                              <label className="label text-xs">{t('adminCatalogue.bay')}</label>
                               <input value={editBay} onChange={e => setEditBay(e.target.value.replace(/\D/g, ''))}
-                                placeholder="e.g. 3" maxLength={2} className="input w-full text-sm" />
+                                placeholder={t('adminCatalogue.bayPlaceholder')} maxLength={2} className="input w-full text-sm" />
                             </div>
                             <div>
-                              <label className="label text-xs">Shelf</label>
+                              <label className="label text-xs">{t('adminCatalogue.shelf')}</label>
                               <input value={editShelf} onChange={e => setEditShelf(e.target.value.replace(/\D/g, ''))}
-                                placeholder="e.g. 7" maxLength={2} className="input w-full text-sm" />
+                                placeholder={t('adminCatalogue.shelfPlaceholder')} maxLength={2} className="input w-full text-sm" />
                             </div>
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => saveEdit(copy)} disabled={saving}
-                            className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+                            className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50">{saving ? t('adminCatalogue.saving') : t('adminCatalogue.save')}</button>
                           <button onClick={() => setEditId(null)}
-                            className="btn-outline text-xs px-3 py-1.5">Cancel</button>
+                            className="btn-outline text-xs px-3 py-1.5">{t('adminCatalogue.cancel')}</button>
                         </div>
                       </div>
                     ) : (
@@ -326,12 +337,12 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
                             )}
                           </div>
                           {copy.due_date && copy.status === 'on_loan' && (
-                            <p className="text-xs text-neutral-400 mt-0.5">Due: {new Date(copy.due_date).toLocaleDateString('en-GB')}</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{t('adminCatalogue.dueDate', { date: formatDate(copy.due_date) })}</p>
                           )}
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <button onClick={() => startEdit(copy)} className="btn-outline text-xs py-1 px-2">Edit</button>
-                          <button onClick={() => deleteCopy(copy.id)} className="text-xs text-red-500 hover:text-red-700 transition-colors px-2">Remove</button>
+                          <button onClick={() => startEdit(copy)} className="btn-outline text-xs py-1 px-2">{t('adminCatalogue.edit')}</button>
+                          <button onClick={() => deleteCopy(copy.id)} className="text-xs text-red-500 hover:text-red-700 transition-colors px-2">{t('adminCatalogue.remove')}</button>
                         </div>
                       </div>
                     )}
@@ -346,8 +357,7 @@ function CopyModal({ item, onClose, onSaved }: { item: CatalogueItem; onClose: (
   );
 }
 
-function downloadCSV(items: CatalogueItem[]) {
-  const header = ['Title', 'Authors', 'ISBN', 'Format', 'Year', 'Call Number', 'Faculty', 'Subjects', 'Available', 'Total', 'Status'];
+function downloadCSV(items: CatalogueItem[], headers: string[]) {
   const rows = items.map((i) => [
     `"${(i.title || '').replace(/"/g, '""')}"`,
     `"${(i.authors || '').replace(/"/g, '""')}"`,
@@ -361,7 +371,7 @@ function downloadCSV(items: CatalogueItem[]) {
     i.total_copies ?? '',
     i.status || '',
   ].join(','));
-  const csv = [header.join(','), ...rows].join('\n');
+  const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -407,6 +417,7 @@ function downloadMARCXML(items: CatalogueItem[]) {
 }
 
 export default function Catalogue() {
+  const { t } = useI18n();
   const [items, setItems]             = useState<CatalogueItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<CatalogueItem[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -470,7 +481,7 @@ export default function Catalogue() {
   };
 
   const withdrawItem = async (id: string) => {
-    if (!confirm('Withdraw this item from circulation? It will no longer be available for checkout.')) return;
+    if (!confirm(t('adminCatalogue.withdrawItemConfirm'))) return;
     try {
       const { error } = await supabase.from('catalogue_items').update({
         status: 'withdrawn',
@@ -493,7 +504,22 @@ export default function Catalogue() {
         .order('title');
       const all = (data ?? []) as CatalogueItem[];
       const target = filteredItems.length < items.length ? filteredItems : all;
-      if (type === 'csv') downloadCSV(target);
+      if (type === 'csv') {
+        const headers = [
+          t('adminCatalogue.csvTitle'),
+          t('adminCatalogue.csvAuthors'),
+          t('adminCatalogue.csvIsbn'),
+          t('adminCatalogue.csvFormat'),
+          t('adminCatalogue.csvYear'),
+          t('adminCatalogue.csvCallNumber'),
+          t('adminCatalogue.csvFaculty'),
+          t('adminCatalogue.csvSubjects'),
+          t('adminCatalogue.csvAvailable'),
+          t('adminCatalogue.csvTotal'),
+          t('adminCatalogue.csvStatus'),
+        ];
+        downloadCSV(target, headers);
+      }
       else downloadMARCXML(target);
     } finally {
       setExporting(false);
@@ -503,7 +529,7 @@ export default function Catalogue() {
   const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const totalPages = Math.ceil(filteredItems.length / pageSize);
 
-  if (loading) return <div className="p-8">Loading catalogue…</div>;
+  if (loading) return <div className="p-8">{t('adminCatalogue.loadingCatalogue')}</div>;
 
   return (
     <div className="p-8 space-y-6">
@@ -517,21 +543,21 @@ export default function Catalogue() {
       {/* Header */}
       <div className="flex justify-between items-start flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Catalogue Management</h1>
-          <p className="text-gray-600 mt-2">Manage library catalogue items</p>
+          <h1 className="text-3xl font-bold">{t('adminCatalogue.catalogueManagement')}</h1>
+          <p className="text-gray-600 mt-2">{t('adminCatalogue.manageCatalogueItems')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/admin/catalogue/authorities" className="btn-outline text-sm">
-            Authorities
+            {t('adminCatalogue.authorities')}
           </Link>
           <Link to="/admin/catalogue/stats" className="btn-outline text-sm">
-            Statistics
+            {t('adminCatalogue.statistics')}
           </Link>
           <Link to="/admin/circulation" className="btn-outline text-sm">
-            Circulation
+            {t('adminCatalogue.circulation')}
           </Link>
           <Link to="/admin/catalogue/scan" className="btn-outline text-sm">
-            📱 Scan Items
+            📱 {t('adminCatalogue.scanItems')}
           </Link>
           {/* Export dropdown */}
           <div className="relative">
@@ -540,7 +566,7 @@ export default function Catalogue() {
               className="btn-outline text-sm"
               disabled={exporting}
             >
-              {exporting ? 'Exporting…' : 'Export ▾'}
+              {exporting ? t('adminCatalogue.exporting') : t('adminCatalogue.export')}
             </button>
             {showExportMenu && (
               <div className="absolute right-0 mt-1 bg-white border rounded-lg shadow-xl z-20 w-44">
@@ -554,7 +580,7 @@ export default function Catalogue() {
             )}
           </div>
           <Link to="/admin/catalogue/new" className="btn-primary text-sm">
-            + Add New Item
+            + {t('adminCatalogue.addNewItem')}
           </Link>
         </div>
       </div>
@@ -562,10 +588,10 @@ export default function Catalogue() {
       {/* Quick nav cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Authority Control', desc: 'Controlled vocabulary', href: '/admin/catalogue/authorities', icon: '🏷️' },
-          { label: 'Statistics',        desc: 'Usage analytics',       href: '/admin/catalogue/stats',       icon: '📊' },
-          { label: 'Circulation',       desc: 'Check out / check in',  href: '/admin/circulation',           icon: '🔄' },
-          { label: 'Barcode Scan',      desc: 'Add via camera',        href: '/admin/catalogue/scan',        icon: '📱' },
+          { label: t('adminCatalogue.authorityControl'), desc: t('adminCatalogue.controlledVocabulary'), href: '/admin/catalogue/authorities', icon: '🏷️' },
+          { label: t('adminCatalogue.statistics'),        desc: t('adminCatalogue.usageAnalytics'),       href: '/admin/catalogue/stats',       icon: '📊' },
+          { label: t('adminCatalogue.circulation'),       desc: t('adminCatalogue.checkOutCheckIn'),      href: '/admin/circulation',           icon: '🔄' },
+          { label: t('adminCatalogue.scanItems'),         desc: t('adminCatalogue.addViaCamera'),         href: '/admin/catalogue/scan',        icon: '📱' },
         ].map((c) => (
           <Link key={c.href} to={c.href} className="card hover:shadow-md transition-shadow flex items-center gap-3 no-underline">
             <span className="text-2xl">{c.icon}</span>
@@ -581,36 +607,36 @@ export default function Catalogue() {
       <div className="card space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <label className="label">Search</label>
+            <label className="label">{t('adminCatalogue.search')}</label>
             <input
               type="text"
-              placeholder="Search by title or author…"
+              placeholder={t('adminCatalogue.searchPlaceholder')}
               className="input w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="w-full md:w-40">
-            <label className="label">Format</label>
+            <label className="label">{t('adminCatalogue.format')}</label>
             <select className="input w-full" value={filterFormat} onChange={(e) => setFilterFormat(e.target.value)}>
-              <option value="">All Formats</option>
+              <option value="">{t('adminCatalogue.allFormats')}</option>
               {['book', 'journal', 'ebook', 'media', 'thesis', 'dvd', 'map', 'manuscript', 'digital'].map((f) => (
                 <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
               ))}
             </select>
           </div>
           <div className="w-full md:w-40">
-            <label className="label">Status</label>
+            <label className="label">{t('adminCatalogue.status')}</label>
             <select className="input w-full" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="">{t('adminCatalogue.allStatus')}</option>
+              <option value="active">{t('adminCatalogue.active')}</option>
+              <option value="inactive">{t('adminCatalogue.inactive')}</option>
             </select>
           </div>
         </div>
         <div className="text-xs text-gray-500">
-          {filteredItems.length} of {items.length} items
-          {(searchTerm || filterFormat || filterStatus) && ' (filtered)'}
+          {t('adminCatalogue.itemsOfItems', { filtered: filteredItems.length, total: items.length })}
+          {(searchTerm || filterFormat || filterStatus) && ` ${t('adminCatalogue.filtered')}`}
         </div>
       </div>
 
@@ -619,21 +645,21 @@ export default function Catalogue() {
         <table className="w-full text-sm">
           <thead className="border-b">
             <tr>
-              <th className="text-left p-3 font-semibold">Title</th>
-              <th className="text-left p-3 font-semibold">Authors</th>
-              <th className="text-left p-3 font-semibold">Format</th>
-              <th className="text-left p-3 font-semibold">Year</th>
-              <th className="text-left p-3 font-semibold">Faculty</th>
-              <th className="text-left p-3 font-semibold">Copies</th>
-              <th className="text-left p-3 font-semibold">Status</th>
-              <th className="text-left p-3 font-semibold">Actions</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colTitle')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colAuthors')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colFormat')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colYear')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colFaculty')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colCopies')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colStatus')}</th>
+              <th className="text-left p-3 font-semibold">{t('adminCatalogue.colActions')}</th>
             </tr>
           </thead>
           <tbody>
             {paginatedItems.length === 0 ? (
               <tr>
                 <td colSpan={8} className="p-8 text-center text-gray-400">
-                  {searchTerm || filterFormat || filterStatus ? 'No items match your filters.' : 'No catalogue items yet.'}
+                  {searchTerm || filterFormat || filterStatus ? t('adminCatalogue.noItemsMatch') : t('adminCatalogue.noCatalogueItems')}
                 </td>
               </tr>
             ) : paginatedItems.map((item) => (
@@ -668,13 +694,13 @@ export default function Catalogue() {
                     to={`/catalogue/${item.id}`}
                     className="btn-outline text-xs py-1 px-2 block text-center"
                   >
-                    View/Edit
+                    {t('adminCatalogue.viewEdit')}
                   </Link>
                   <button
                     onClick={() => setCopyModalItem(item)}
                     className="btn-outline text-xs py-1 px-2 w-full"
                   >
-                    Copies / Shelving
+                    {t('adminCatalogue.copiesShelving')}
                   </button>
                   {item.status !== 'withdrawn' ? (
                     <>
@@ -682,13 +708,13 @@ export default function Catalogue() {
                         onClick={() => toggleStatus(item.id, item.status)}
                         className="btn-outline text-xs py-1 px-2 w-full"
                       >
-                        {item.status === 'active' ? 'Deactivate' : 'Activate'}
+                        {item.status === 'active' ? t('adminCatalogue.deactivate') : t('adminCatalogue.activate')}
                       </button>
                       <button
                         onClick={() => withdrawItem(item.id)}
                         className="text-xs py-1 px-2 w-full rounded border border-red-300 text-red-600 hover:bg-red-50"
                       >
-                        Withdraw
+                        {t('adminCatalogue.withdraw')}
                       </button>
                     </>
                   ) : (
@@ -696,7 +722,7 @@ export default function Catalogue() {
                       onClick={() => toggleStatus(item.id, item.status)}
                       className="btn-primary text-xs py-1 px-2 w-full"
                     >
-                      Reinstate
+                      {t('adminCatalogue.reinstate')}
                     </button>
                   )}
                 </td>
@@ -709,12 +735,15 @@ export default function Catalogue() {
       {/* Pagination */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded">
         <div className="text-sm text-gray-600">
-          Showing {paginatedItems.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}–
-          {Math.min(currentPage * pageSize, filteredItems.length)} of {filteredItems.length}
+          {t('adminCatalogue.showingItems', {
+            from: paginatedItems.length > 0 ? (currentPage - 1) * pageSize + 1 : 0,
+            to: Math.min(currentPage * pageSize, filteredItems.length),
+            total: filteredItems.length,
+          })}
         </div>
         <div className="flex gap-2">
           <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="btn-outline disabled:opacity-50">
-            Previous
+            {t('adminCatalogue.previous')}
           </button>
           <div className="flex items-center gap-1">
             {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
@@ -732,7 +761,7 @@ export default function Catalogue() {
             })}
           </div>
           <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="btn-outline disabled:opacity-50">
-            Next
+            {t('adminCatalogue.next')}
           </button>
         </div>
       </div>

@@ -7,9 +7,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { institutionConfig } from '@config/institution.config';
 import BackButton from '@/components/BackButton';
 import HandbookSection from '@/components/dashboard/HandbookSection';
+import { useI18n } from '@/lib/i18n';
 
 export default function LibraryCard() {
   const { loading, profile } = useAuth();
+  const { t, formatDate } = useI18n();
   const cardRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -26,9 +28,9 @@ export default function LibraryCard() {
     return (
       <div className="max-w-md mx-auto card p-8 text-center mt-10">
         <div className="text-5xl mb-4">📇</div>
-        <h2 className="text-xl font-semibold text-neutral-800 mb-2">Library Card Not Found</h2>
-        <p className="text-neutral-500 text-sm mb-6">Please complete registration first.</p>
-        <Link to="/register" className="btn-primary">Register Now</Link>
+        <h2 className="text-xl font-semibold text-neutral-800 mb-2">{t('libraryCard.cardNotFound')}</h2>
+        <p className="text-neutral-500 text-sm mb-6">{t('libraryCard.completeRegistration')}</p>
+        <Link to="/register" className="btn-primary">{t('libraryCard.registerNow')}</Link>
       </div>
     );
   }
@@ -37,7 +39,7 @@ export default function LibraryCard() {
   const cardCode = profile.library_number || profile.patron_id;
   const cardName = formatCardName(profile);
   const validUntil = profile.membership_expires_at
-    ? new Date(profile.membership_expires_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    ? formatDate(profile.membership_expires_at, 'long')
     : '—';
 
   async function renderCanvas(): Promise<HTMLCanvasElement | null> {
@@ -87,8 +89,12 @@ export default function LibraryCard() {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 22px monospace';
     ctx.fillText(cardCode, 40, 285);
     ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '14px Inter, sans-serif';
-    ctx.fillText(`Valid until ${validUntil}`, 40, 318);
-    const sub = profile.matric_number ? `Matric: ${profile.matric_number}` : profile.staff_id ? `Staff ID: ${profile.staff_id}` : '';
+    ctx.fillText(t('libraryCard.validUntil', { date: validUntil }), 40, 318);
+    const sub = profile.matric_number
+      ? t('libraryCard.matric', { id: profile.matric_number })
+      : profile.staff_id
+        ? t('libraryCard.staffIdLabel', { id: profile.staff_id })
+        : '';
     if (sub) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '12px monospace'; ctx.fillText(sub, 40, 348); }
     return canvas;
   }
@@ -120,7 +126,7 @@ export default function LibraryCard() {
     if (!c) return;
     const w = window.open('', '_blank');
     if (!w) return;
-    w.document.write(`<html><head><title>Library Card</title></head><body style="margin:0;display:flex;justify-content:center;padding:40px"><img src="${c.toDataURL('image/png')}" style="max-width:100%"/></body></html>`);
+    w.document.write(`<html><head><title>${t('libraryCard.libraryCardTitle')}</title></head><body style="margin:0;display:flex;justify-content:center;padding:40px"><img src="${c.toDataURL('image/png')}" style="max-width:100%"/></body></html>`);
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 300);
@@ -151,11 +157,11 @@ export default function LibraryCard() {
         </div>
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-xs text-white/60 mb-1">{profile.library_number ? 'Library Number' : 'Reference'}</p>
+            <p className="text-xs text-white/60 mb-1">{profile.library_number ? t('libraryCard.libraryNumber') : t('libraryCard.reference')}</p>
             <p className="font-mono font-bold text-lg tracking-wide">{cardCode}</p>
-            <p className="text-xs text-white/60 mt-2">Valid until {validUntil}</p>
-            {profile.matric_number && <p className="text-xs text-white/50 mt-1 font-mono">Matric: {profile.matric_number}</p>}
-            {profile.staff_id && <p className="text-xs text-white/50 mt-1 font-mono">Staff: {profile.staff_id}</p>}
+            <p className="text-xs text-white/60 mt-2">{t('libraryCard.validUntil', { date: validUntil })}</p>
+            {profile.matric_number && <p className="text-xs text-white/50 mt-1 font-mono">{t('libraryCard.matric', { id: profile.matric_number })}</p>}
+            {profile.staff_id && <p className="text-xs text-white/50 mt-1 font-mono">{t('libraryCard.staffIdLabel', { id: profile.staff_id })}</p>}
           </div>
           <div className="bg-white p-2 rounded-xl shadow-lg">
             <QRCodeSVG value={cardCode} size={80 * scale} level="H" bgColor="#ffffff" fgColor={institutionConfig.primaryColour} />
@@ -169,36 +175,36 @@ export default function LibraryCard() {
     <div className="py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <BackButton />
-          <h1 className="text-3xl font-serif font-semibold text-primary-800 mb-2">Digital Library Card</h1>
-          <p className="text-neutral-500 text-sm">Present this card at the library desk for quick identification</p>
+          <BackButton label={t('common.back')} />
+          <h1 className="text-3xl font-serif font-semibold text-primary-800 mb-2">{t('libraryCard.digitalLibraryCard')}</h1>
+          <p className="text-neutral-500 text-sm">{t('libraryCard.presentCard')}</p>
         </div>
 
         {!issued && (
           <div className="mb-6 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm text-center">
-            Your card is not active yet. Your Library Number will be assigned once your registration is approved.
+            {t('libraryCard.cardNotActive')}
           </div>
         )}
 
         <div className="flex justify-center mb-8"><CardVisual /></div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-          <button onClick={() => setShowModal(true)} className="btn-outline flex items-center justify-center gap-2">👁️ View</button>
-          <button onClick={downloadPNG} disabled={busy} className="btn-primary flex items-center justify-center gap-2">{busy ? '…' : '⬇️ PNG'}</button>
-          <button onClick={downloadPDF} disabled={busy} className="btn-outline flex items-center justify-center gap-2">{busy ? '…' : '📄 PDF'}</button>
-          <button onClick={printCard} className="btn-outline flex items-center justify-center gap-2">🖨️ Print</button>
+          <button onClick={() => setShowModal(true)} className="btn-outline flex items-center justify-center gap-2">{t('libraryCard.view')}</button>
+          <button onClick={downloadPNG} disabled={busy} className="btn-primary flex items-center justify-center gap-2">{busy ? t('libraryCard.moreOptions') : t('libraryCard.downloadPng')}</button>
+          <button onClick={downloadPDF} disabled={busy} className="btn-outline flex items-center justify-center gap-2">{busy ? t('libraryCard.moreOptions') : t('libraryCard.downloadPdf')}</button>
+          <button onClick={printCard} className="btn-outline flex items-center justify-center gap-2">{t('libraryCard.print')}</button>
         </div>
 
         <div className="card p-6 mb-4">
-          <h3 className="font-semibold text-neutral-800 mb-4">Card Details</h3>
+          <h3 className="font-semibold text-neutral-800 mb-4">{t('libraryCard.cardDetails')}</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <Detail label="Library Number" value={profile.library_number || 'Issued on approval'} mono />
-            <Detail label="Category" value={profile.patron_category} />
-            <Detail label="Faculty" value={profile.faculty_name || '—'} />
-            {profile.department && <Detail label="Department" value={profile.department} />}
-            {profile.current_level && <Detail label="Level" value={profile.current_level} />}
-            {profile.institution && <Detail label="Institution" value={profile.institution} />}
-            <Detail label="Valid Until" value={validUntil} />
+            <Detail label={t('libraryCard.libraryNumber')} value={profile.library_number || t('libraryCard.issuedOnApproval')} mono />
+            <Detail label={t('libraryCard.category')} value={profile.patron_category} />
+            <Detail label={t('libraryCard.faculty')} value={profile.faculty_name || '—'} />
+            {profile.department && <Detail label={t('libraryCard.department')} value={profile.department} />}
+            {profile.current_level && <Detail label={t('libraryCard.level')} value={profile.current_level} />}
+            {profile.institution && <Detail label={t('libraryCard.institution')} value={profile.institution} />}
+            <Detail label={t('libraryCard.validUntilLabel')} value={validUntil} />
           </div>
         </div>
 
@@ -209,7 +215,7 @@ export default function LibraryCard() {
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
           <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center gap-6">
             <CardVisual scale={1.6} />
-            <button onClick={() => setShowModal(false)} className="px-6 py-2 rounded-lg bg-white text-neutral-800 font-semibold">Close</button>
+            <button onClick={() => setShowModal(false)} className="px-6 py-2 rounded-lg bg-white text-neutral-800 font-semibold">{t('libraryCard.close')}</button>
           </div>
         </div>
       )}

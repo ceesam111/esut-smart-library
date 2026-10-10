@@ -6,9 +6,11 @@ import { institutionConfig } from '@config/institution.config';
 import ProfilePhotoInput from '@/components/auth/ProfilePhotoInput';
 import { GENDERS } from '@/config/roles.config';
 import BackButton from '@/components/BackButton';
+import { useI18n } from '@/lib/i18n';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [patron, setPatron] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -116,7 +118,7 @@ export default function Settings() {
 
   const requestDeletion = async () => {
     if (deleteInput.trim().toUpperCase() !== 'DELETE') {
-      setDeleteError('Please type DELETE to confirm.');
+      setDeleteError(t('settings.deleteConfirm'));
       return;
     }
     setDeleteError('');
@@ -146,7 +148,7 @@ export default function Settings() {
       setDeleteState('done');
     } catch {
       setDeleteState('confirm');
-      setDeleteError('An error occurred. Please try again or contact support.');
+      setDeleteError(t('settings.genericError'));
     }
   };
 
@@ -156,7 +158,7 @@ export default function Settings() {
       .from('patrons')
       .update({ newsletter_opt_out: newsletterOptOut })
       .eq('id', (patron as { id: string }).id);
-    setSaveMsg('Preferences saved.');
+    setSaveMsg(t('settings.preferencesSaved'));
     setTimeout(() => setSaveMsg(''), 3000);
   };
 
@@ -165,7 +167,7 @@ export default function Settings() {
     setProfileError('');
     setProfileMsg('');
     if (!accountForm.full_name.trim()) {
-      setProfileError('Full name is required.');
+      setProfileError(t('settings.fullNameRequired'));
       return;
     }
 
@@ -200,10 +202,10 @@ export default function Settings() {
         .single();
       if (error) throw error;
       setPatron(data);
-      setProfileMsg('Profile updated.');
+      setProfileMsg(t('settings.profileUpdated'));
       setTimeout(() => setProfileMsg(''), 3000);
     } catch (error) {
-      setProfileError(error instanceof Error ? error.message : 'Could not update your profile.');
+      setProfileError(error instanceof Error ? error.message : t('settings.profileUpdateFailed'));
     } finally {
       setSavingProfile(false);
     }
@@ -215,22 +217,22 @@ export default function Settings() {
     setSecurityMsg('');
     const email = accountForm.email.trim();
     if (!email) {
-      setSecurityError('Email address is required.');
+      setSecurityError(t('settings.emailRequired'));
       return;
     }
     if (passwordForm.password && passwordForm.password.length < 8) {
-      setSecurityError('Password must be at least 8 characters.');
+      setSecurityError(t('settings.passwordTooShort'));
       return;
     }
     if (passwordForm.password !== passwordForm.confirm) {
-      setSecurityError('Password confirmation does not match.');
+      setSecurityError(t('settings.passwordMismatch'));
       return;
     }
 
     setSavingSecurity(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Please sign in again to update account security.');
+      if (!user) throw new Error(t('settings.signInAgain'));
       const authUpdate: { email?: string; password?: string } = {};
       if (email !== user.email) authUpdate.email = email;
       if (passwordForm.password) authUpdate.password = passwordForm.password;
@@ -243,10 +245,10 @@ export default function Settings() {
         setPatron((prev) => prev ? { ...prev, email } : prev);
       }
       setPasswordForm({ password: '', confirm: '' });
-      setSecurityMsg(authUpdate.email ? 'Account updated. Check the new email address for a confirmation link if requested.' : 'Account security updated.');
+      setSecurityMsg(authUpdate.email ? t('settings.accountUpdated') : t('settings.accountSecurityUpdated'));
       setTimeout(() => setSecurityMsg(''), 5000);
     } catch (error) {
-      setSecurityError(error instanceof Error ? error.message : 'Could not update account security.');
+      setSecurityError(error instanceof Error ? error.message : t('settings.accountUpdateFailed'));
     } finally {
       setSavingSecurity(false);
     }
@@ -263,33 +265,33 @@ export default function Settings() {
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
       <div>
-        <BackButton />
-        <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-        <p className="text-gray-500 mt-1 text-sm">Manage your data, privacy preferences, and account actions.</p>
+        <BackButton label={t('common.back')} />
+        <h1 className="text-3xl font-bold text-gray-900">{t('settings.accountSettings')}</h1>
+        <p className="text-gray-500 mt-1 text-sm">{t('settings.accountSettingsSubtitle')}</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 mb-1">Email & Password</h2>
-        <p className="text-xs text-neutral-500 mb-5">Update your sign-in email or set a new password.</p>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('settings.emailPassword')}</h2>
+        <p className="text-xs text-neutral-500 mb-5">{t('settings.emailPasswordHint')}</p>
         {securityError && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{securityError}</div>}
         <div className="space-y-4">
           <div>
-            <label className="label">Email Address</label>
+            <label className="label">{t('settings.emailAddress')}</label>
             <input className="input" type="email" value={accountForm.email} onChange={(e) => setAccountForm((prev) => ({ ...prev, email: e.target.value }))} />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">New Password</label>
-              <input className="input" type="password" value={passwordForm.password} onChange={(e) => setPasswordForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Leave blank to keep current password" />
+              <label className="label">{t('settings.newPassword')}</label>
+              <input className="input" type="password" value={passwordForm.password} onChange={(e) => setPasswordForm((prev) => ({ ...prev, password: e.target.value }))} placeholder={t('settings.newPasswordPlaceholder')} />
             </div>
             <div>
-              <label className="label">Confirm New Password</label>
+              <label className="label">{t('settings.confirmNewPassword')}</label>
               <input className="input" type="password" value={passwordForm.confirm} onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirm: e.target.value }))} />
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={saveSecurity} disabled={savingSecurity} className="btn-primary px-4 py-2 text-sm rounded">
-              {savingSecurity ? 'Saving...' : 'Save Email / Password'}
+              {savingSecurity ? t('settings.saving') : t('settings.saveEmailPassword')}
             </button>
             {securityMsg && <span className="text-sm text-green-600">{securityMsg}</span>}
           </div>
@@ -297,8 +299,8 @@ export default function Settings() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 mb-1">Basic Account Information</h2>
-        <p className="text-xs text-neutral-500 mb-5">Update your visible profile details and library photo.</p>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('settings.basicAccountInfo')}</h2>
+        <p className="text-xs text-neutral-500 mb-5">{t('settings.basicAccountInfoHint')}</p>
         {profileError && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{profileError}</div>}
         <div className="space-y-4">
           <ProfilePhotoInput
@@ -308,94 +310,94 @@ export default function Settings() {
           />
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Full Name <span className="text-red-500">*</span></label>
+              <label className="label">{t('settings.fullNameRequiredLabel')}</label>
               <input className="input" value={accountForm.full_name} onChange={(e) => setAccountForm((prev) => ({ ...prev, full_name: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Surname</label>
+              <label className="label">{t('settings.surname')}</label>
               <input className="input" value={accountForm.surname} onChange={(e) => setAccountForm((prev) => ({ ...prev, surname: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Other Names</label>
+              <label className="label">{t('settings.otherNames')}</label>
               <input className="input" value={accountForm.other_names} onChange={(e) => setAccountForm((prev) => ({ ...prev, other_names: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Phone</label>
+              <label className="label">{t('settings.phone')}</label>
               <input className="input" type="tel" value={accountForm.phone} onChange={(e) => setAccountForm((prev) => ({ ...prev, phone: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Gender</label>
+              <label className="label">{t('settings.gender')}</label>
               <select className="input" value={accountForm.gender} onChange={(e) => setAccountForm((prev) => ({ ...prev, gender: e.target.value }))}>
-                <option value="">Select...</option>
+                <option value="">{t('settings.selectPlaceholder')}</option>
                 {GENDERS.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
               </select>
             </div>
             <div>
-              <label className="label">Date of Birth</label>
+              <label className="label">{t('settings.dateOfBirth')}</label>
               <input className="input" type="date" value={accountForm.date_of_birth} onChange={(e) => setAccountForm((prev) => ({ ...prev, date_of_birth: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Institution</label>
+              <label className="label">{t('settings.institution')}</label>
               <input className="input" value={accountForm.institution} onChange={(e) => setAccountForm((prev) => ({ ...prev, institution: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Faculty Code</label>
+              <label className="label">{t('settings.facultyCode')}</label>
               <input className="input" value={accountForm.faculty_code} onChange={(e) => setAccountForm((prev) => ({ ...prev, faculty_code: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Faculty Name</label>
+              <label className="label">{t('settings.facultyName')}</label>
               <input className="input" value={accountForm.faculty_name} onChange={(e) => setAccountForm((prev) => ({ ...prev, faculty_name: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Department</label>
+              <label className="label">{t('settings.department')}</label>
               <input className="input" value={accountForm.department} onChange={(e) => setAccountForm((prev) => ({ ...prev, department: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Programme</label>
+              <label className="label">{t('settings.programme')}</label>
               <input className="input" value={accountForm.programme} onChange={(e) => setAccountForm((prev) => ({ ...prev, programme: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Current Level</label>
+              <label className="label">{t('settings.currentLevel')}</label>
               <input className="input" value={accountForm.current_level} onChange={(e) => setAccountForm((prev) => ({ ...prev, current_level: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Matric Number</label>
+              <label className="label">{t('settings.matricNumber')}</label>
               <input className="input" value={accountForm.matric_number} onChange={(e) => setAccountForm((prev) => ({ ...prev, matric_number: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Staff ID</label>
+              <label className="label">{t('settings.staffId')}</label>
               <input className="input" value={accountForm.staff_id} onChange={(e) => setAccountForm((prev) => ({ ...prev, staff_id: e.target.value }))} />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Rank / Academic Rank</label>
+              <label className="label">{t('settings.rank')}</label>
               <input className="input" value={accountForm.rank} onChange={(e) => setAccountForm((prev) => ({ ...prev, rank: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Preferred Branch</label>
+              <label className="label">{t('settings.preferredBranch')}</label>
               <input className="input" value={accountForm.preferred_branch} onChange={(e) => setAccountForm((prev) => ({ ...prev, preferred_branch: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="label">Short Bio</label>
+            <label className="label">{t('settings.shortBio')}</label>
             <textarea className="input" rows={3} value={accountForm.short_bio} onChange={(e) => setAccountForm((prev) => ({ ...prev, short_bio: e.target.value }))} />
           </div>
           <div className="flex items-center gap-3">
             <button onClick={saveProfile} disabled={savingProfile} className="btn-primary px-4 py-2 text-sm rounded">
-              {savingProfile ? 'Saving...' : 'Save Profile'}
+              {savingProfile ? t('settings.saving') : t('settings.saveProfile')}
             </button>
             {profileMsg && <span className="text-sm text-green-600">{profileMsg}</span>}
           </div>
@@ -404,7 +406,7 @@ export default function Settings() {
 
       {/* Communication preferences */}
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 mb-4">Communication Preferences</h2>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-4">{t('settings.communicationPreferences')}</h2>
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -413,13 +415,13 @@ export default function Settings() {
             className="w-4 h-4 rounded border-neutral-300 text-primary-600"
           />
           <div>
-            <div className="text-sm font-medium text-neutral-800">Opt out of newsletter emails</div>
-            <div className="text-xs text-neutral-500">You will still receive transactional emails (loan reminders, overdue notices).</div>
+            <div className="text-sm font-medium text-neutral-800">{t('settings.optOutNewsletter')}</div>
+            <div className="text-xs text-neutral-500">{t('settings.transactionalNote')}</div>
           </div>
         </label>
         <div className="mt-4 flex items-center gap-3">
           <button onClick={savePreferences} className="btn-primary px-4 py-2 text-sm rounded">
-            Save Preferences
+            {t('settings.savePreferences')}
           </button>
           {saveMsg && <span className="text-sm text-green-600">{saveMsg}</span>}
         </div>
@@ -427,22 +429,21 @@ export default function Settings() {
 
       {/* My Data — NDPA 2023 */}
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 mb-1">My Data</h2>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('settings.myData')}</h2>
         <p className="text-xs text-neutral-500 mb-5">
-          Your rights under the <strong>Nigerian Data Protection Act 2023</strong>.
-          Download a machine-readable copy of all data we hold about you, or request permanent deletion.
+          {t('settings.ndpaIntro')}
         </p>
 
         <div className="grid sm:grid-cols-2 gap-4 mb-5">
-          {[
-            { right: 'Right of Access (s.34)', desc: 'Download a JSON export of your profile, loans, ILL requests, reading lists, thesis and repository submissions, and event registrations.' },
-            { right: 'Right to Erasure (s.36)', desc: 'Request permanent deletion of your account and personal data. We will complete this within 30 days.' },
-            { right: 'Right to Portability (s.38)', desc: 'Your data is provided in open JSON format, readable by any standard text editor or data tool.' },
-            { right: 'Right to Rectification (s.35)', desc: 'Update your personal details at any time via Dashboard → My Profile.' },
-          ].map((item) => (
+          {([
+            { right: 'settings.rightOfAccess', desc: 'settings.rightOfAccessDesc' },
+            { right: 'settings.rightToErasure', desc: 'settings.rightToErasureDesc' },
+            { right: 'settings.rightToPortability', desc: 'settings.rightToPortabilityDesc' },
+            { right: 'settings.rightToRectification', desc: 'settings.rightToRectificationDesc' },
+          ] as const).map((item) => (
             <div key={item.right} className="bg-neutral-50 rounded-lg p-4 border border-neutral-100">
-              <div className="text-xs font-semibold text-primary-700 mb-1">{item.right}</div>
-              <div className="text-xs text-neutral-600 leading-relaxed">{item.desc}</div>
+              <div className="text-xs font-semibold text-primary-700 mb-1">{t(item.right)}</div>
+              <div className="text-xs text-neutral-600 leading-relaxed">{t(item.desc)}</div>
             </div>
           ))}
         </div>
@@ -454,24 +455,22 @@ export default function Settings() {
             className="btn-outline w-full sm:w-auto px-6 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2"
           >
             {downloading ? (
-              <><span className="animate-spin h-4 w-4 border-b-2 border-primary-700 rounded-full inline-block" /> Preparing export…</>
+              <><span className="animate-spin h-4 w-4 border-b-2 border-primary-700 rounded-full inline-block" /> {t('settings.preparingExport')}</>
             ) : (
-              <>Download My Data (JSON)</>
+              <>{t('settings.downloadData')}</>
             )}
           </button>
           <p className="text-xs text-neutral-400">
-            Includes: profile, loans, ILL requests, reading lists, theses, repository submissions, event registrations.
+            {t('settings.downloadDataHint')}
           </p>
         </div>
       </div>
 
       {/* Delete Account */}
       <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-        <h2 className="text-lg font-semibold text-red-700 mb-1">Delete My Account</h2>
+        <h2 className="text-lg font-semibold text-red-700 mb-1">{t('settings.deleteAccount')}</h2>
         <p className="text-xs text-neutral-500 mb-4">
-          This will permanently delete your personal data within 30 days (NDPA 2023, s.36). Academic records
-          (thesis, repository items) held as institutional records may be retained under s.25(1)(e).
-          This action cannot be undone.
+          {t('settings.deleteAccountWarning')}
         </p>
 
         {deleteState === 'idle' && (
@@ -479,26 +478,25 @@ export default function Settings() {
             onClick={() => setDeleteState('confirm')}
             className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
           >
-            Request Account Deletion
+            {t('settings.requestDeletion')}
           </button>
         )}
 
         {deleteState === 'confirm' && (
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
-              You are about to request permanent deletion of your account. A confirmation email will be sent and
-              your data will be deleted within 30 days.
+              {t('settings.deletionConfirmIntro')}
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Type <strong>DELETE</strong> to confirm:
+                {t('settings.typeToDelete')}
               </label>
               <input
                 type="text"
                 value={deleteInput}
                 onChange={(e) => setDeleteInput(e.target.value)}
                 className="input max-w-xs"
-                placeholder="DELETE"
+                placeholder={t('settings.deletePlaceholder')}
               />
               {deleteError && <p className="text-xs text-red-600 mt-1">{deleteError}</p>}
             </div>
@@ -507,13 +505,13 @@ export default function Settings() {
                 onClick={requestDeletion}
                 className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
               >
-                Confirm Deletion Request
+                {t('settings.confirmDeletion')}
               </button>
               <button
                 onClick={() => { setDeleteState('idle'); setDeleteInput(''); setDeleteError(''); }}
                 className="px-5 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-semibold rounded-lg transition-colors"
               >
-                Cancel
+                {t('settings.cancel')}
               </button>
             </div>
           </div>
@@ -522,25 +520,24 @@ export default function Settings() {
         {deleteState === 'sending' && (
           <div className="flex items-center gap-3 text-sm text-neutral-600">
             <span className="animate-spin h-4 w-4 border-b-2 border-red-600 rounded-full inline-block" />
-            Processing your request…
+            {t('settings.processingDeletion')}
           </div>
         )}
 
         {deleteState === 'done' && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
-            Your deletion request has been received. You will receive a confirmation email. Your personal data
-            will be permanently deleted within 30 days in accordance with NDPA 2023.
+            {t('settings.deletionConfirmed')}
           </div>
         )}
       </div>
 
       <div className="text-xs text-neutral-400 text-center pb-4">
-        For any data rights enquiries:{' '}
+        {t('settings.dataRightsEnquiries')}{' '}
         <a href={`mailto:${institutionConfig.supportEmail}`} className="text-primary-600 hover:underline">
           {institutionConfig.supportEmail}
         </a>
         {' '}&bull;{' '}
-        <a href="/privacy" className="text-primary-600 hover:underline">Privacy Policy</a>
+        <a href="/privacy" className="text-primary-600 hover:underline">{t('settings.privacyPolicy')}</a>
       </div>
     </div>
   );

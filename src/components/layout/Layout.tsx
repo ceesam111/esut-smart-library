@@ -4,10 +4,12 @@ import Footer from './Footer';
 import AILibrarianWidget from '@/components/ai/AILibrarianWidget';
 import CookieConsent from '@/components/CookieConsent';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
+import { useI18n } from '@/lib/i18n';
 
 export default function Layout() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const { t } = useI18n();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -15,7 +17,7 @@ export default function Layout() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[10000] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-800 focus:shadow-lg"
       >
-        Skip to main content
+        {t('a11y.skipToMainContent')}
       </a>
       <Navbar />
       <main
@@ -34,10 +36,10 @@ export default function Layout() {
       {/* Floating click-to-call — mobile only */}
       <a
         href="tel:+2348039473344"
-        aria-label="Call Us"
+        aria-label={t('a11y.callUs')}
         className="md:hidden fixed right-6 flex items-center justify-center w-13 h-13 rounded-full shadow-lg transition-opacity hover:opacity-90"
         style={{ bottom: '80px', zIndex: 39, background: '#6B1D2A', width: '52px', height: '52px' }}
-        title="Call Us"
+        title={t('a11y.callUs')}
       >
         <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

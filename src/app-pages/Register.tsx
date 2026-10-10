@@ -7,20 +7,22 @@ import AdminStaffForm from '@/components/auth/AdminStaffForm';
 import LibrarianForm from '@/components/auth/LibrarianForm';
 import RegistrationSuccessModal from '@/components/auth/RegistrationSuccessModal';
 import type { RegisterResult } from '@/lib/registration';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 
 const GOLD = '#D4A017';
 
 type Kind = 'student' | 'researcher' | 'admin_staff' | 'librarian';
 
-const ACCOUNT_TYPES: { kind: Kind; title: string; desc: string; icon: string }[] = [
-  { kind: 'student', title: 'Student', desc: 'Undergraduate, Postgraduate or PostDoc', icon: '🎓' },
-  { kind: 'researcher', title: 'Researcher / Lecturer', desc: 'Academic & research staff', icon: '🔬' },
-  { kind: 'admin_staff', title: 'Administrative Staff', desc: 'Non-academic university staff', icon: '🗂️' },
-  { kind: 'librarian', title: 'Librarian', desc: 'Library professional (approval required)', icon: '📚' },
+const ACCOUNT_TYPES: { kind: Kind; titleKey: TranslationKey; descKey: TranslationKey; icon: string }[] = [
+  { kind: 'student', titleKey: 'auth.typeStudent', descKey: 'auth.typeStudentDesc', icon: '🎓' },
+  { kind: 'researcher', titleKey: 'auth.typeResearcher', descKey: 'auth.typeResearcherDesc', icon: '🔬' },
+  { kind: 'admin_staff', titleKey: 'auth.typeAdminStaff', descKey: 'auth.typeAdminStaffDesc', icon: '🗂️' },
+  { kind: 'librarian', titleKey: 'auth.typeLibrarian', descKey: 'auth.typeLibrarianDesc', icon: '📚' },
 ];
 
 export default function Register() {
+  const { t } = useI18n();
   const [kind, setKind] = useState<Kind | null>(null);
   const [done, setDone] = useState<RegisterResult | null>(null);
 
@@ -29,26 +31,26 @@ export default function Register() {
       <div className="max-w-[560px] mx-auto">
         <div className="text-center mb-8">
           <img src="/assets/esut-logo.png" alt="ESUT Logo" className="w-14 h-14 mx-auto mb-3 rounded-lg object-contain" />
-          <h1 className="text-2xl font-serif font-semibold text-neutral-900">Join ESUT Smart Library</h1>
+          <h1 className="text-2xl font-serif font-semibold text-neutral-900">{t('auth.joinTitle')}</h1>
           <p className="text-sm text-neutral-500 mt-1">{institutionConfig.name}</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg border border-neutral-100 p-8 sm:p-10">
           {!kind ? (
             <>
-              <h2 className="text-lg font-semibold text-neutral-800 mb-1">Choose your account type</h2>
-              <p className="text-sm text-neutral-500 mb-5">This determines your registration form and library access.</p>
+              <h2 className="text-lg font-semibold text-neutral-800 mb-1">{t('auth.chooseAccountType')}</h2>
+              <p className="text-sm text-neutral-500 mb-5">{t('auth.accountTypeHint')}</p>
               <div className="grid gap-3">
-                {ACCOUNT_TYPES.map((t) => (
+                {ACCOUNT_TYPES.map((a) => (
                   <button
-                    key={t.kind}
-                    onClick={() => setKind(t.kind)}
+                    key={a.kind}
+                    onClick={() => setKind(a.kind)}
                     className="flex items-center gap-4 p-4 rounded-xl border border-neutral-200 hover:border-primary-400 hover:bg-primary-50/40 transition-colors text-left"
                   >
-                    <span className="text-2xl">{t.icon}</span>
+                    <span className="text-2xl">{a.icon}</span>
                     <span className="flex-1">
-                      <span className="block font-semibold text-neutral-800">{t.title}</span>
-                      <span className="block text-sm text-neutral-500">{t.desc}</span>
+                      <span className="block font-semibold text-neutral-800">{t(a.titleKey)}</span>
+                      <span className="block text-sm text-neutral-500">{t(a.descKey)}</span>
                     </span>
                     <span className="text-neutral-300">→</span>
                   </button>
@@ -57,9 +59,9 @@ export default function Register() {
             </>
           ) : (
             <>
-              <button onClick={() => setKind(null)} className="text-sm text-neutral-500 hover:text-neutral-800 mb-4">← Change account type</button>
+              <button onClick={() => setKind(null)} className="text-sm text-neutral-500 hover:text-neutral-800 mb-4">{t('auth.changeAccountType')}</button>
               <h2 className="text-lg font-semibold text-neutral-800 mb-5">
-                {ACCOUNT_TYPES.find((t) => t.kind === kind)?.title} Registration
+                {t('auth.registrationHeading', { type: t(ACCOUNT_TYPES.find((a) => a.kind === kind)?.titleKey ?? 'auth.typeStudent') })}
               </h2>
               {kind === 'student' && <StudentForm onSuccess={setDone} />}
               {kind === 'researcher' && <ResearcherForm onSuccess={setDone} />}
@@ -69,8 +71,8 @@ export default function Register() {
           )}
 
           <p className="text-sm text-neutral-500 text-center mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="font-semibold hover:underline" style={{ color: GOLD }}>Sign In</Link>
+            {t('auth.alreadyAccount')}{' '}
+            <Link to="/login" className="font-semibold hover:underline" style={{ color: GOLD }}>{t('auth.signIn')}</Link>
           </p>
         </div>
       </div>

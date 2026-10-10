@@ -3,81 +3,84 @@ import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDashboardLabel, roleCan, type Feature } from '@/config/roles.config';
 
 const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
 
-type NavItem = { label: string; href: string; icon: string; show?: boolean; accountManager?: boolean; module?: 'catalog' | 'ir'; feature?: Feature };
-const adminNav: { group: string; items: NavItem[] }[] = [
-  { group: 'Overview',  items: [
-    { label: 'Dashboard',          href: '/admin',                       icon: '⊞' },
-    { label: 'Analytics',          href: '/admin/analytics',             icon: '📊', show: institutionConfig.features.analytics },
+type NavItem = { labelKey: TranslationKey; href: string; icon: string; show?: boolean; accountManager?: boolean; module?: 'catalog' | 'ir'; feature?: Feature };
+const adminNav: { groupKey: TranslationKey; items: NavItem[] }[] = [
+  { groupKey: 'admin.overview',  items: [
+    { labelKey: 'admin.dashboard',          href: '/admin',                       icon: '⊞' },
+    { labelKey: 'admin.analytics',          href: '/admin/analytics',             icon: '📊', show: institutionConfig.features.analytics },
   ]},
-  { group: 'Patrons', items: [
-    { label: 'Patron Directory',   href: '/admin/patrons',               icon: '👥' },
-    { label: 'Approvals',          href: '/admin/approvals',             icon: '✅', feature: 'approvals' },
-    { label: 'Bulk Import',        href: '/admin/patrons/import',        icon: '📥' },
+  { groupKey: 'admin.patrons', items: [
+    { labelKey: 'admin.patronDirectory',   href: '/admin/patrons',               icon: '👥' },
+    { labelKey: 'admin.approvals',          href: '/admin/approvals',             icon: '✅', feature: 'approvals' },
+    { labelKey: 'admin.bulkImport',        href: '/admin/patrons/import',        icon: '📥' },
   ]},
-  { group: 'Collections', items: [
-    { label: 'Library Catalog',    href: '/admin/catalogue',             icon: '📚', module: 'catalog' },
-    { label: 'Add Catalog Item',   href: '/admin/catalog/add',           icon: '➕', module: 'catalog' },
-    { label: 'CSV Import',         href: '/admin/catalogue/import',      icon: '📥', module: 'catalog' },
-    { label: 'Import Staging',     href: '/admin/catalogue/staging',     icon: '✅', module: 'catalog' },
-    { label: 'Adopt (Union)',      href: '/admin/catalogue/adopt',       icon: '🔁', module: 'catalog' },
-    { label: 'Camera Scan',        href: '/admin/catalogue/scan',        icon: '📷', module: 'catalog' },
-    { label: 'Barcodes',           href: '/admin/barcodes',              icon: '▌▌', module: 'catalog' },
-    { label: 'Shelf Registry',     href: '/admin/shelves',               icon: '🗂️', module: 'catalog' },
-    { label: 'IR Review Queue',    href: '/admin/repository',            icon: '🗄️', module: 'ir' },
-    { label: 'Deposit to IR',      href: '/admin/ir/deposit',            icon: '⬆️', module: 'ir' },
-    { label: 'Licensed Databases', href: '/admin/databases',             icon: '🔗' },
-    { label: 'Open Access Databases', href: '/admin/open-access-databases', icon: '🌐' },
-    { label: 'Subscribed Databases',  href: '/admin/subscribed-databases',  icon: '💳' },
-    { label: 'Acquisitions',       href: '/admin/acquisitions',          icon: '🛒' },
-    { label: 'Serials',            href: '/admin/serials',               icon: '📰' },
-    { label: 'Newspaper Index',    href: '/admin/newspaper-index',       icon: '🗞️' },
+  { groupKey: 'admin.collections', items: [
+    { labelKey: 'admin.libraryCatalog',    href: '/admin/catalogue',             icon: '📚', module: 'catalog' },
+    { labelKey: 'admin.addCatalogItemNav',   href: '/admin/catalog/add',           icon: '➕', module: 'catalog' },
+    { labelKey: 'admin.csvImport',         href: '/admin/catalogue/import',      icon: '📥', module: 'catalog' },
+    { labelKey: 'admin.importStaging',     href: '/admin/catalogue/staging',     icon: '✅', module: 'catalog' },
+    { labelKey: 'admin.adoptUnion',      href: '/admin/catalogue/adopt',       icon: '🔁', module: 'catalog' },
+    { labelKey: 'admin.cameraScan',        href: '/admin/catalogue/scan',        icon: '📷', module: 'catalog' },
+    { labelKey: 'admin.barcodes',           href: '/admin/barcodes',              icon: '▌▌', module: 'catalog' },
+    { labelKey: 'admin.shelfRegistry',     href: '/admin/shelves',               icon: '🗂️', module: 'catalog' },
+    { labelKey: 'admin.irReviewQueue',    href: '/admin/repository',            icon: '🗄️', module: 'ir' },
+    { labelKey: 'admin.depositToIr',      href: '/admin/ir/deposit',            icon: '⬆️', module: 'ir' },
+    { labelKey: 'admin.licensedDatabases', href: '/admin/databases',             icon: '🔗' },
+    { labelKey: 'admin.openAccessDatabases', href: '/admin/open-access-databases', icon: '🌐' },
+    { labelKey: 'admin.subscribedDatabases',  href: '/admin/subscribed-databases',  icon: '💳' },
+    { labelKey: 'admin.acquisitions',       href: '/admin/acquisitions',          icon: '🛒' },
+    { labelKey: 'admin.serials',            href: '/admin/serials',               icon: '📰' },
+    { labelKey: 'admin.newspaperIndex',    href: '/admin/newspaper-index',       icon: '🗞️' },
   ]},
-  { group: 'Academic', items: [
-    { label: 'Course Reserves',    href: '/admin/course-reserves',       icon: '📖', show: institutionConfig.features.courseReserves },
-    { label: 'ILL Management',     href: '/admin/ill',                   icon: '📦' },
-    { label: 'Submission Workflows', href: '/admin/workflows',           icon: '✅' },
-    { label: 'Book Requests',      href: '/admin/requests',              icon: '🔖' },
-    { label: 'Researchers',        href: '/admin/researchers',           icon: '🔬', show: institutionConfig.features.researcherProfiles },
-    { label: 'Academic Calendar',  href: '/admin/calendar',              icon: '📅' },
+  { groupKey: 'admin.academic', items: [
+    { labelKey: 'admin.courseReserves',    href: '/admin/course-reserves',       icon: '📖', show: institutionConfig.features.courseReserves },
+    { labelKey: 'admin.illManagement',     href: '/admin/ill',                   icon: '📦' },
+    { labelKey: 'admin.submissionWorkflows', href: '/admin/workflows',           icon: '✅' },
+    { labelKey: 'admin.bookRequests',      href: '/admin/requests',              icon: '🔖' },
+    { labelKey: 'admin.researchers',        href: '/admin/researchers',           icon: '🔬', show: institutionConfig.features.researcherProfiles },
+    { labelKey: 'admin.academicCalendar',  href: '/admin/calendar',              icon: '📅' },
   ]},
-  { group: 'Content', items: [
-    { label: 'Blog',               href: '/admin/blog',                  icon: '✍️' },
-    { label: 'Newsletter',         href: '/admin/newsletter',            icon: '📧' },
-    { label: 'Events',             href: '/admin/events',                icon: '🎪' },
-    { label: 'CMS Pages',          href: '/admin/cms',                   icon: '📄' },
-    { label: 'Library Manual',     href: '/admin/library-manual',        icon: '📘' },
-    { label: 'Team Members',       href: '/admin/team',                  icon: '🧑‍💼' },
-    { label: 'AI Content Engine',  href: '/admin/content-engine',        icon: '🤖' },
-    { label: 'AI Agent Workers',   href: '/admin/agents',                icon: '⚙️' },
-    { label: 'Notice Templates',   href: '/admin/notices',               icon: '🔔' },
-    { label: 'Delivery History',   href: '/admin/notices/delivery',      icon: '📨' },
+  { groupKey: 'admin.content', items: [
+    { labelKey: 'admin.blog',               href: '/admin/blog',                  icon: '✍️' },
+    { labelKey: 'admin.newsletter',         href: '/admin/newsletter',            icon: '📧' },
+    { labelKey: 'admin.events',             href: '/admin/events',                icon: '🎪' },
+    { labelKey: 'admin.cmsPages',          href: '/admin/cms',                   icon: '📄' },
+    { labelKey: 'admin.libraryManual',     href: '/admin/library-manual',        icon: '📘' },
+    { labelKey: 'admin.teamMembers',       href: '/admin/team',                  icon: '🧑‍💼' },
+    { labelKey: 'admin.aiContentEngine',  href: '/admin/content-engine',        icon: '🤖' },
+    { labelKey: 'admin.aiAgentWorkers',   href: '/admin/agents',                icon: '⚙️' },
+    { labelKey: 'admin.noticeTemplates',   href: '/admin/notices',               icon: '🔔' },
+    { labelKey: 'admin.deliveryHistory',   href: '/admin/notices/delivery',      icon: '📨' },
   ]},
-  { group: 'Reporting', items: [
-    { label: 'Reports',            href: '/admin/reports',               icon: '📋' },
-    { label: 'Webometrics',        href: '/admin/webometrics',           icon: '🌐', show: institutionConfig.features.webometrics },
-    { label: 'Data Migration',     href: '/admin/migration',             icon: '🔄' },
+  { groupKey: 'admin.reporting', items: [
+    { labelKey: 'admin.reports',            href: '/admin/reports',               icon: '📋' },
+    { labelKey: 'admin.webometrics',        href: '/admin/webometrics',           icon: '🌐', show: institutionConfig.features.webometrics },
+    { labelKey: 'admin.dataMigration',     href: '/admin/migration',             icon: '🔄' },
   ]},
-  { group: 'Consortium', items: [
-    { label: 'Consortium Partners', href: '/admin/consortium',           icon: '🤝' },
+  { groupKey: 'admin.consortium', items: [
+    { labelKey: 'admin.consortiumPartners', href: '/admin/consortium',           icon: '🤝' },
   ]},
-  { group: 'Circulation', items: [
-    { label: 'Circulation Desk',    href: '/admin/circulation',           icon: '🧾' },
-    { label: 'Offline Sync',        href: '/admin/offline-sync',          icon: '📶' },
-    { label: 'SIP2 Terminals',      href: '/admin/sip2-terminals',        icon: '📟' },
+  { groupKey: 'admin.circulation', items: [
+    { labelKey: 'admin.circulationDeskNav',    href: '/admin/circulation',           icon: '🧾' },
+    { labelKey: 'admin.offlineSync',        href: '/admin/offline-sync',          icon: '📶' },
+    { labelKey: 'admin.sip2Terminals',      href: '/admin/sip2-terminals',        icon: '📟' },
   ]},
-  { group: 'System', items: [
-    { label: 'Account Management', href: '/admin/accounts',              icon: '🔐', accountManager: true },
-    { label: 'Preservation',        href: '/admin/preservation',           icon: '◆' },
+  { groupKey: 'admin.system', items: [
+    { labelKey: 'admin.accountManagement', href: '/admin/accounts',              icon: '🔐', accountManager: true },
+    { labelKey: 'admin.preservation',        href: '/admin/preservation',           icon: '◆' },
   ]},
 ];
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const { loading, role, isApproved } = useAuth();
+  const { t } = useI18n();
   const isSuper = role === 'super_admin';
   const isAccountManager = isSuper || role === 'librarian';
   const canSeeCatalog = isSuper || role === 'catalog_admin' || role === 'librarian' || role === 'faculty_librarian';
@@ -102,15 +105,15 @@ export default function AdminLayout() {
     };
   }, [resetTimer]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-sm text-neutral-500">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-sm text-neutral-500">{t('dashboard.loading')}</div>;
 
   if (!isApproved || !roleCan(role, 'adminPanel')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-100 p-6">
         <div className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-lg font-semibold text-primary-900 mb-2">Admin Access Restricted</h1>
-          <p className="text-sm text-neutral-600 mb-4">Your account must be approved and assigned a staff role before using the admin area.</p>
-          <Link to="/dashboard" className="btn-primary text-sm">Back to Dashboard</Link>
+          <h1 className="text-lg font-semibold text-primary-900 mb-2">{t('admin.accessRestricted')}</h1>
+          <p className="text-sm text-neutral-600 mb-4">{t('admin.accessRestrictedDesc')}</p>
+          <Link to="/dashboard" className="btn-primary text-sm">{t('admin.backToDashboard')}</Link>
         </div>
       </div>
     );
@@ -141,11 +144,12 @@ export default function AdminLayout() {
         </Link>
         <div className="ml-auto flex items-center gap-3">
           <Link to="/" className="text-primary-300 hover:text-white text-xs transition-colors">
-            ← Public Site
+            ← {t('admin.publicSite')}
           </Link>
           <div className="w-7 h-7 rounded-full bg-primary-700 flex items-center justify-center text-white text-xs font-bold">
             A
           </div>
+          <LanguageSwitcher id="lang-switcher-admin" />
         </div>
       </div>
 
@@ -163,9 +167,9 @@ export default function AdminLayout() {
               );
               if (!visibleItems.length) return null;
               return (
-              <div key={group.group}>
+              <div key={group.groupKey}>
                 <div className="text-[10px] font-semibold text-primary-400 uppercase tracking-widest px-3 pb-1.5">
-                  {group.group}
+                  {t(group.groupKey)}
                 </div>
                 {visibleItems.map((item) => (
                     <NavLink
@@ -180,7 +184,7 @@ export default function AdminLayout() {
                       }
                     >
                       <span className="text-sm">{item.icon}</span>
-                      {item.label}
+                      {t(item.labelKey)}
                     </NavLink>
                   ))}
               </div>

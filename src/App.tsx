@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { applyTheme } from '@/lib/theme';
 import { registerServiceWorker } from '@/lib/register-sw';
+import { I18nProvider } from '@/lib/i18n';
 
 import Layout from '@/components/layout/Layout';
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -166,8 +167,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
+      <I18nProvider>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
           {/* Public routes */}
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
@@ -317,8 +319,9 @@ export default function App() {
           {/* Standalone */}
           <Route path="/offline" element={<Offline />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+          </Routes>
+        </Suspense>
+      </I18nProvider>
     </BrowserRouter>
   );
 }

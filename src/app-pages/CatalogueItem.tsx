@@ -7,10 +7,26 @@ import { institutionConfig } from '@config/institution.config';
 import QRCode from 'qrcode';
 import BackButton from '@/components/BackButton';
 import BookCover from '@/components/BookCover';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 type CitationStyle = 'APA' | 'Harvard' | 'MLA' | 'Chicago';
 type ActiveTab = 'details' | 'reviews' | 'citations' | 'discussion';
 type CatalogueAction = 'reserve' | 'borrow' | 'return';
+
+const RATING_KEYS: TranslationKey[] = [
+  'catalogueItem.ratingPoor',
+  'catalogueItem.ratingFair',
+  'catalogueItem.ratingGood',
+  'catalogueItem.ratingVeryGood',
+  'catalogueItem.ratingExcellent',
+];
+
+const CITATION_KEYS: Record<CitationStyle, TranslationKey> = {
+  APA: 'catalogueItem.apa',
+  Harvard: 'catalogueItem.harvard',
+  MLA: 'catalogueItem.mla',
+  Chicago: 'catalogueItem.chicago',
+};
 
 interface CatalogueItemData {
   id: string;
@@ -103,11 +119,6 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
-function formatDate(date: Date | string | null | undefined) {
-  if (!date) return 'Not available';
-  return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 function buildCitation(item: CatalogueItemData, style: CitationStyle): string {
   const authors: string[] = Array.isArray(item.authors) ? item.authors : [item.authors ?? 'Unknown'];
   const year = item.year ?? 'n.d.';
@@ -149,6 +160,7 @@ function Stars({ rating, size = 'md', onClick }: { rating: number; size?: 'sm' |
 }
 
 export default function CatalogueItem() {
+  const { t, formatDate, formatNumber, formatCurrency } = useI18n();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [item, setItem] = useState<CatalogueItemData | null>(null);
@@ -272,13 +284,13 @@ export default function CatalogueItem() {
     const { data, error } = await supabase.rpc('create_catalogue_item_request', { item_id: id, request_action: actionModal });
     setSubmittingAction(false);
     if (error) {
-      setReservationMsg(`Reservation failed: ${error.message}`);
+      setReservationMsg(t('catalogueItem.reservationFailed', { message: error.message }));
       return;
     }
-    const expires = data?.[0]?.expires_at ? new Date(data[0].expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'one week';
-    const label = actionModal === 'reserve' ? 'Reservation' : actionModal === 'borrow' ? 'Borrow request' : 'Return request';
+    const expires = data?.[0]?.expires_at ? formatDate(data[0].expires_at) : t('catalogueItem.oneWeek');
+    const label = actionModal === 'reserve' ? t('catalogueItem.reserveLabel') : actionModal === 'borrow' ? t('catalogueItem.borrowLabel') : t('catalogueItem.returnLabel');
     setActionModal(null);
-    setReservationMsg(`${label} submitted. A librarian will confirm it. Expiry/collection deadline: ${expires}.`);
+    setReservationMsg(t('catalogueItem.submittedMsg', { label, expires }));
   };
 
   const handleCopyDownload = async () => {
@@ -384,8 +396,8 @@ export default function CatalogueItem() {
       <div className="pt-16 min-h-screen flex items-center justify-center">
         <div className="text-center text-neutral-400">
           <p className="text-5xl mb-3">📚</p>
-          <p>Item not found</p>
-          <Link to="/catalogue" className="btn-primary mt-4">Back to Catalogue</Link>
+          <p>{t('catalogueItem.itemNotFound')}</p>
+          <Link to="/catalogue" className="btn-primary mt-4">{t('catalogueItem.backToCatalogue')}</Link>
         </div>
       </div>
     );
@@ -435,7 +447,7 @@ export default function CatalogueItem() {
       locationMap[key] = {
         libraryName: libCode
           ? ([institutionConfig.mainLibrary, ...institutionConfig.branchLibraries, ...institutionConfig.facultyLibraries].find((l) => l.code === libCode)?.name ?? libCode)
-          : (c.faculty_code || c.branch || 'Main Library'),
+          : (c.faculty_code || c.branch || t('catalogueItem.mainLibrary')),
         shelfCode: sc,
         floor,
         bay,
@@ -450,20 +462,20 @@ export default function CatalogueItem() {
     if (c.status === 'available') locationMap[key].available++;
   });
 
-  const TABS: { key: ActiveTab; label: string; count?: number }[] = [
-    { key: 'details', label: 'Details' },
-    { key: 'reviews', label: 'Reviews', count: reviews.length },
-    { key: 'citations', label: 'Citations' },
-    { key: 'discussion', label: 'Discussion', count: discussions.length },
+  const TABS: { key: ActiveTab; labelKey: TranslationKey; count?: number }[] = [
+    { key: 'details', labelKey: 'catalogueItem.details' },
+    { key: 'reviews', labelKey: 'catalogueItem.reviews', count: reviews.length },
+    { key: 'citations', labelKey: 'catalogueItem.citations' },
+    { key: 'discussion', labelKey: 'catalogueItem.discussion', count: discussions.length },
   ];
 
   return (
     <div className="pt-16 bg-neutral-50 min-h-screen">
       <div className="section py-8">
-        <BackButton />
+        <BackButton label={t('common.back')} />
         <Link to="/catalogue" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 mb-6 transition-colors">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-          Back to Catalogue
+          {t('catalogueItem.backToCatalogue')}
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -483,18 +495,18 @@ export default function CatalogueItem() {
 
               <div className="space-y-2 text-sm border-t border-neutral-100 pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-neutral-500">Call No.</span>
-                  <span className="font-mono font-semibold text-primary-700 text-xs bg-primary-50 px-2 py-0.5 rounded">{item.call_number ?? 'TBC'}</span>
+                  <span className="text-neutral-500">{t('catalogueItem.callNo')}</span>
+                  <span className="font-mono font-semibold text-primary-700 text-xs bg-primary-50 px-2 py-0.5 rounded">{item.call_number ?? t('catalogueItem.tbc')}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-neutral-500">Copies</span>
+                  <span className="text-neutral-500">{t('catalogueItem.copies')}</span>
                   <span className={`font-semibold text-sm ${item.available_copies > 0 ? 'text-success-600' : 'text-error-600'}`}>
-                    {item.available_copies} / {item.total_copies} available
+                    {t('catalogueItem.availableOfTotal', { available: item.available_copies, total: item.total_copies })}
                   </span>
                 </div>
                 {item.faculty_code && (
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-500">Faculty</span>
+                    <span className="text-neutral-500">{t('catalogueItem.faculty')}</span>
                     <span className="text-neutral-700 text-xs">{item.faculty_code}</span>
                   </div>
                 )}
@@ -505,30 +517,30 @@ export default function CatalogueItem() {
                   <div className="grid grid-cols-1 gap-2">
                     <button onClick={() => openAction('reserve')} className="btn-primary w-full">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                      Reserve This Item
+                      {t('catalogueItem.reserveThisItem')}
                     </button>
                     <button onClick={() => openAction('borrow')} className="btn-secondary w-full">
-                      Borrow This Item
+                      {t('catalogueItem.borrowThisItem')}
                     </button>
                     <button onClick={() => openAction('return')} className="btn-outline w-full text-sm">
-                      Return This Item
+                      {t('catalogueItem.returnThisItem')}
                     </button>
                   </div>
                 ) : (
                   <button onClick={() => openAction('reserve')} className="btn-primary w-full">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                    Reserve/Borrow/Return This Item
+                    {t('catalogueItem.reserveBorrowReturn')}
                   </button>
                 )}
                 {reservationMsg && (
-                  <p className={`text-xs rounded-lg px-3 py-2 ${reservationMsg.startsWith('Reservation failed') ? 'bg-error-50 text-error-700' : 'bg-success-50 text-success-700'}`}>
+                  <p className={`text-xs rounded-lg px-3 py-2 ${reservationMsg.startsWith(t('catalogueItem.reservationFailed', { message: '' })) ? 'bg-error-50 text-error-700' : 'bg-success-50 text-success-700'}`}>
                     {reservationMsg}
                   </p>
                 )}
                 {item.format === 'E-Book' && (
                   <button onClick={handleCopyDownload} className="btn-secondary w-full">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Download
+                    {t('catalogueItem.download')}
                   </button>
                 )}
 
@@ -539,7 +551,7 @@ export default function CatalogueItem() {
                       disabled={addingToList}
                       className="btn-ghost w-full text-sm border border-neutral-200 disabled:opacity-50">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h10" /></svg>
-                      Add to Reading List
+                      {t('catalogueItem.addReadingList')}
                     </button>
                     {showListMenu && (
                       <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover border border-neutral-100 z-10 overflow-hidden">
@@ -560,16 +572,16 @@ export default function CatalogueItem() {
               <div className="card flex-1 p-3 flex items-center gap-2 text-sm">
                 <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 <div>
-                  <div className="font-semibold text-neutral-800">{((item.view_count ?? 0) + 1).toLocaleString()}</div>
-                  <div className="text-xs text-neutral-400">Views</div>
+                  <div className="font-semibold text-neutral-800">{formatNumber(((item.view_count ?? 0) + 1))}</div>
+                  <div className="text-xs text-neutral-400">{t('catalogueItem.views')}</div>
                 </div>
               </div>
               {(item.download_count ?? 0) > 0 && (
                 <div className="card flex-1 p-3 flex items-center gap-2 text-sm">
                   <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <div>
-                    <div className="font-semibold text-neutral-800">{item.download_count.toLocaleString()}</div>
-                    <div className="text-xs text-neutral-400">Downloads</div>
+                    <div className="font-semibold text-neutral-800">{formatNumber(item.download_count)}</div>
+                    <div className="text-xs text-neutral-400">{t('catalogueItem.downloads')}</div>
                   </div>
                 </div>
               )}
@@ -578,7 +590,7 @@ export default function CatalogueItem() {
             {qrUrl && (
               <div className="card p-4 flex flex-col items-center gap-2">
                 <img src={qrUrl} alt="QR Code" className="w-24 h-24" />
-                <p className="text-xs text-neutral-400 text-center">Scan to share this item</p>
+                <p className="text-xs text-neutral-400 text-center">{t('catalogueItem.scanToShare')}</p>
               </div>
             )}
           </div>
@@ -608,7 +620,7 @@ export default function CatalogueItem() {
                 <div className="flex items-center gap-2 mt-3">
                   <Stars rating={Math.round(avgRating)} size="sm" />
                   <span className="text-sm font-semibold text-neutral-700">{avgRating}</span>
-                  <span className="text-xs text-neutral-400">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
+                  <span className="text-xs text-neutral-400">{t('catalogueItem.reviewCount', { count: reviews.length })}</span>
                 </div>
               )}
 
@@ -634,7 +646,7 @@ export default function CatalogueItem() {
                       d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <h3 className="font-semibold text-neutral-800 text-sm">Where to Find This Item</h3>
+                  <h3 className="font-semibold text-neutral-800 text-sm">{t('catalogueItem.whereToFind')}</h3>
                 </div>
 
                 {item.format === 'E-Book' ? (
@@ -643,7 +655,7 @@ export default function CatalogueItem() {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
                       </svg>
-                      Available Online — no physical copy required
+                      {t('catalogueItem.availableOnline')}
                     </div>
                   </div>
                 ) : locationGroups.length > 0 ? (
@@ -657,7 +669,7 @@ export default function CatalogueItem() {
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-semibold text-sm" style={{ color: '#6B1D2A' }}>{loc.libraryName}</p>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${loc.available > 0 ? 'bg-success-100 text-success-700' : 'bg-error-100 text-error-600'}`}>
-                            {loc.available > 0 ? `${loc.available} available` : 'On loan'}
+                            {loc.available > 0 ? t('catalogue.availableCount', { count: loc.available }) : t('catalogueItem.onLoan')}
                           </span>
                         </div>
 
@@ -672,17 +684,17 @@ export default function CatalogueItem() {
                               <div className="flex items-center gap-1.5 text-xs text-neutral-600 flex-wrap">
                                 {loc.floor && (
                                   <span className="bg-white/60 border border-white px-2 py-0.5 rounded">
-                                    Floor: <strong>{loc.floor}</strong>
+                                    {t('catalogueItem.floor', { floor: loc.floor })}
                                   </span>
                                 )}
                                 {loc.bay && (
                                   <span className="bg-white/60 border border-white px-2 py-0.5 rounded">
-                                    Bay: <strong>{loc.bay}</strong>
+                                    {t('catalogueItem.bay', { bay: loc.bay })}
                                   </span>
                                 )}
                                 {loc.shelf && (
                                   <span className="bg-white/60 border border-white px-2 py-0.5 rounded">
-                                    Shelf: <strong>{loc.shelf}</strong>
+                                    {t('catalogueItem.shelf', { shelf: loc.shelf })}
                                   </span>
                                 )}
                               </div>
@@ -694,9 +706,9 @@ export default function CatalogueItem() {
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
-                          Call No.: <span className="font-mono font-medium text-neutral-700">{item.call_number ?? 'TBC'}</span>
+                          {t('catalogueItem.callNumber', { number: item.call_number ?? t('catalogueItem.tbc') })}
                           <span className="mx-1 text-neutral-300">·</span>
-                          {loc.total} cop{loc.total !== 1 ? 'ies' : 'y'}
+                          {t('catalogueItem.copiesCount', { count: loc.total })}
                         </div>
                       </div>
                     ))}
@@ -708,15 +720,15 @@ export default function CatalogueItem() {
                       className="rounded-xl border p-4 space-y-2"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-sm" style={{ color: '#6B1D2A' }}>Main Library</p>
+                        <p className="font-semibold text-sm" style={{ color: '#6B1D2A' }}>{t('catalogueItem.mainLibrary')}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${item.available_copies > 0 ? 'bg-success-100 text-success-700' : 'bg-error-100 text-error-600'}`}>
-                          {item.available_copies > 0 ? `${item.available_copies} available` : 'On loan'}
+                          {item.available_copies > 0 ? t('catalogue.availableCount', { count: item.available_copies }) : t('catalogueItem.onLoan')}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-neutral-500">
-                        Call No.: <span className="font-mono font-medium text-neutral-700">{item.call_number ?? 'TBC'}</span>
+                        {t('catalogueItem.callNumber', { number: item.call_number ?? t('catalogueItem.tbc') })}
                         <span className="mx-1 text-neutral-300">·</span>
-                        {item.total_copies} cop{item.total_copies !== 1 ? 'ies' : 'y'}
+                        {t('catalogueItem.copiesCount', { count: item.total_copies })}
                       </div>
                     </div>
                   </div>
@@ -727,15 +739,15 @@ export default function CatalogueItem() {
             {/* Tabs */}
             <div className="card overflow-hidden">
               <div className="flex border-b border-neutral-100 overflow-x-auto">
-                {TABS.map(t => (
-                  <button key={t.key} onClick={() => setTab(t.key)}
+                {TABS.map(entry => (
+                  <button key={entry.key} onClick={() => setTab(entry.key)}
                     className={`flex-1 min-w-max px-4 py-3 text-sm font-medium capitalize transition-colors relative whitespace-nowrap
-                      ${tab === t.key ? 'text-primary-700' : 'text-neutral-500 hover:text-neutral-700'}`}>
-                    {t.label}
-                    {t.count != null && t.count > 0 && (
-                      <span className="ml-1.5 bg-primary-100 text-primary-700 text-xs px-1.5 py-0.5 rounded-full">{t.count}</span>
+                      ${tab === entry.key ? 'text-primary-700' : 'text-neutral-500 hover:text-neutral-700'}`}>
+                    {t(entry.labelKey)}
+                    {entry.count != null && entry.count > 0 && (
+                      <span className="ml-1.5 bg-primary-100 text-primary-700 text-xs px-1.5 py-0.5 rounded-full">{entry.count}</span>
                     )}
-                    {tab === t.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 rounded-t" />}
+                    {tab === entry.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 rounded-t" />}
                   </button>
                 ))}
               </div>
@@ -745,15 +757,21 @@ export default function CatalogueItem() {
                 {tab === 'details' && (
                   <div className="text-sm space-y-3">
                     {[
-                      ['ISBN', item.isbn], ['Call Number', item.call_number], ['Publisher', item.publisher],
-                      ['Place', item.place_of_publication], ['Year', item.year], ['Edition', item.edition],
-                      ['Series', item.series], ['Language', item.language],
-                      ['Faculty', item.faculty_code ? institutionConfig.faculties.find((f) => f.code === item.faculty_code)?.name ?? item.faculty_code : null],
-                      ['Physical Desc.', item.physical_description], ['Notes', item.notes],
-                    ].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
-                      <div key={k as string} className="flex gap-4">
-                        <span className="w-28 shrink-0 text-neutral-400 font-medium">{k}</span>
-                        <span className="text-neutral-800">{v}</span>
+                      { label: 'catalogueItem.isbn' as TranslationKey, value: item.isbn },
+                      { label: 'catalogueItem.callNumberLabel' as TranslationKey, value: item.call_number },
+                      { label: 'catalogueItem.publisher' as TranslationKey, value: item.publisher },
+                      { label: 'catalogueItem.place' as TranslationKey, value: item.place_of_publication },
+                      { label: 'catalogueItem.year' as TranslationKey, value: item.year },
+                      { label: 'catalogueItem.edition' as TranslationKey, value: item.edition },
+                      { label: 'catalogueItem.series' as TranslationKey, value: item.series },
+                      { label: 'catalogueItem.language' as TranslationKey, value: item.language },
+                      { label: 'catalogueItem.faculty' as TranslationKey, value: item.faculty_code ? institutionConfig.faculties.find((f) => f.code === item.faculty_code)?.name ?? item.faculty_code : null },
+                      { label: 'catalogueItem.physicalDesc' as TranslationKey, value: item.physical_description },
+                      { label: 'catalogueItem.notes' as TranslationKey, value: item.notes },
+                    ].filter(r => r.value != null && r.value !== '').map(r => (
+                      <div key={r.label} className="flex gap-4">
+                        <span className="w-28 shrink-0 text-neutral-400 font-medium">{t(r.label)}</span>
+                        <span className="text-neutral-800">{r.value}</span>
                       </div>
                     ))}
                   </div>
@@ -765,32 +783,32 @@ export default function CatalogueItem() {
                     {/* Submit / edit review */}
                     {user ? (
                       <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
-                        <h4 className="font-semibold text-sm text-neutral-700">{myReview ? 'Your Review' : 'Write a Review'}</h4>
+                        <h4 className="font-semibold text-sm text-neutral-700">{myReview ? t('catalogueItem.yourReview') : t('catalogueItem.writeReview')}</h4>
                         <div className="flex items-center gap-2">
                           <Stars rating={reviewRating} onClick={setReviewRating} />
                           {reviewRating > 0 && (
-                            <span className="text-xs text-neutral-500">{['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewRating]}</span>
+                            <span className="text-xs text-neutral-500">{t(RATING_KEYS[reviewRating - 1])}</span>
                           )}
                         </div>
                         <textarea value={reviewBody} onChange={e => setReviewBody(e.target.value)}
-                          placeholder="Share your thoughts (optional)…"
+                          placeholder={t('catalogueItem.shareThoughts')}
                           rows={3} className="input w-full resize-none text-sm" />
                         <div className="flex justify-end">
                           <button onClick={submitReview} disabled={!reviewRating || submittingReview}
                             className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50">
-                            {submittingReview ? 'Saving…' : myReview ? 'Update Review' : 'Submit Review'}
+                            {submittingReview ? t('catalogueItem.saving') : myReview ? t('catalogueItem.updateReview') : t('catalogueItem.submitReview')}
                           </button>
                         </div>
                       </div>
                     ) : (
                       <div className="bg-neutral-50 rounded-xl p-4">
-                        <Link to="/login" className="btn-outline text-sm">Sign in to write a review</Link>
+                        <Link to="/login" className="btn-outline text-sm">{t('catalogueItem.signInToReview')}</Link>
                       </div>
                     )}
 
                     {/* Review list */}
                     {reviews.length === 0 ? (
-                      <p className="text-neutral-400 text-sm text-center py-4">No reviews yet. Be the first to review this item.</p>
+                      <p className="text-neutral-400 text-sm text-center py-4">{t('catalogueItem.noReviewsYet')}</p>
                     ) : (
                       <div className="space-y-4">
                         {reviews.map((r) => (
@@ -800,9 +818,9 @@ export default function CatalogueItem() {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-semibold text-neutral-700">{r.patron_name ?? 'Anonymous'}</span>
+                                <span className="text-sm font-semibold text-neutral-700">{r.patron_name ?? t('catalogueItem.anonymous')}</span>
                                 <Stars rating={r.rating} size="sm" />
-                                <span className="text-xs text-neutral-400">{new Date(r.created_at).toLocaleDateString()}</span>
+                                <span className="text-xs text-neutral-400">{formatDate(r.created_at)}</span>
                               </div>
                               {r.body && <p className="text-sm text-neutral-600 mt-1 leading-relaxed">{r.body}</p>}
                             </div>
@@ -821,7 +839,7 @@ export default function CatalogueItem() {
                         <button key={c} onClick={() => setCitationStyle(c)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
                             ${citationStyle === c ? 'bg-primary-700 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
-                          {c}
+                          {t(CITATION_KEYS[c])}
                         </button>
                       ))}
                     </div>
@@ -830,8 +848,8 @@ export default function CatalogueItem() {
                     </div>
                     <button onClick={copyCitation} className="btn-ghost text-xs mt-2 flex items-center gap-1">
                       {copied
-                        ? <><svg className="w-3.5 h-3.5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Copied!</>
-                        : <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy citation</>
+                        ? <><svg className="w-3.5 h-3.5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {t('catalogueItem.copied')}</>
+                        : <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> {t('catalogueItem.copyCitation')}</>
                       }
                     </button>
                   </div>
@@ -841,7 +859,7 @@ export default function CatalogueItem() {
                 {tab === 'discussion' && (
                   <div className="space-y-4">
                     {discussions.length === 0 && (
-                      <p className="text-neutral-400 text-sm">No discussion yet. Be the first to comment.</p>
+                      <p className="text-neutral-400 text-sm">{t('catalogueItem.noDiscussionYet')}</p>
                     )}
                     {discussions.map(d => (
                       <div key={d.id} className="flex gap-3">
@@ -851,12 +869,12 @@ export default function CatalogueItem() {
                         <div className="flex-1 bg-neutral-50 rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-1 justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-neutral-700">{d.patron_name ?? 'Anonymous'}</span>
-                              <span className="text-xs text-neutral-400">{new Date(d.created_at).toLocaleDateString()}</span>
+                              <span className="text-xs font-semibold text-neutral-700">{d.patron_name ?? t('catalogueItem.anonymous')}</span>
+                              <span className="text-xs text-neutral-400">{formatDate(d.created_at)}</span>
                             </div>
                             {user && (
                               <button onClick={() => setReplyTo(r => r === d.id ? null : d.id)}
-                                className="text-xs text-primary-600 hover:underline">Reply</button>
+                                className="text-xs text-primary-600 hover:underline">{t('catalogueItem.reply')}</button>
                             )}
                           </div>
                           <p className="text-sm text-neutral-700">{d.body}</p>
@@ -864,9 +882,9 @@ export default function CatalogueItem() {
                             <div className="mt-3 flex gap-2">
                               <input type="text" value={newComment} onChange={e => setNewComment(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && submitComment()}
-                                placeholder="Write a reply…" className="input flex-1 text-xs py-1.5" />
+                                placeholder={t('catalogueItem.writeReply')} className="input flex-1 text-xs py-1.5" />
                               <button onClick={submitComment} disabled={!newComment.trim() || submittingComment}
-                                className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50">Post</button>
+                                className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50">{t('catalogueItem.post')}</button>
                             </div>
                           )}
                         </div>
@@ -880,18 +898,18 @@ export default function CatalogueItem() {
                         </div>
                         <div className="flex-1">
                           <textarea value={newComment} onChange={e => setNewComment(e.target.value)}
-                            placeholder="Share your thoughts about this item…" rows={3} className="input w-full resize-none text-sm" />
+                            placeholder={t('catalogueItem.sharePlaceholder')} rows={3} className="input w-full resize-none text-sm" />
                           <div className="flex justify-end mt-2">
                             <button onClick={submitComment} disabled={!newComment.trim() || submittingComment}
                               className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50">
-                              {submittingComment ? 'Posting…' : 'Post Comment'}
+                              {submittingComment ? t('catalogueItem.posting') : t('catalogueItem.postComment')}
                             </button>
                           </div>
                         </div>
                       </div>
                     ) : !user && (
                       <div className="border-t border-neutral-100 pt-4">
-                        <Link to="/login" className="btn-outline text-sm">Sign in to join the discussion</Link>
+                        <Link to="/login" className="btn-outline text-sm">{t('catalogueItem.signInToDiscussion')}</Link>
                       </div>
                     )}
                   </div>
@@ -907,12 +925,12 @@ export default function CatalogueItem() {
             <div className="bg-primary-800 px-6 py-5 text-white">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Library Transaction Slip</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">{t('catalogueItem.transactionSlip')}</p>
                   <h2 className="mt-1 text-2xl font-serif font-semibold">
-                    {actionModal === 'reserve' ? 'Reserve Item' : actionModal === 'borrow' ? 'Borrow Item' : 'Return Item'}
+                    {actionModal === 'reserve' ? t('catalogueItem.reserveItem') : actionModal === 'borrow' ? t('catalogueItem.borrowItem') : t('catalogueItem.returnItem')}
                   </h2>
                 </div>
-                <button onClick={() => setActionModal(null)} className="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20">Close</button>
+                <button onClick={() => setActionModal(null)} className="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20">{t('catalogueItem.close')}</button>
               </div>
             </div>
             <div className="space-y-5 p-6">
@@ -920,48 +938,57 @@ export default function CatalogueItem() {
                 <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white text-2xl text-neutral-400 sm:row-span-2">
                   {patron?.profile_photo_url ? <img src={patron.profile_photo_url} alt="" className="h-full w-full object-cover" /> : '👤'}
                 </div>
-                <div><p className="text-xs text-neutral-400">Patron Name</p><p className="font-semibold text-neutral-900">{patron?.full_name ?? user?.email ?? 'Signed-in patron'}</p></div>
-                <div><p className="text-xs text-neutral-400">Phone Number</p><p className="font-semibold text-neutral-900">{patron?.phone ?? 'Not supplied'}</p></div>
-                <div><p className="text-xs text-neutral-400">Department</p><p className="font-semibold text-neutral-900">{patron?.department ?? 'Not supplied'}</p></div>
-                <div><p className="text-xs text-neutral-400">Library Card Number</p><p className="font-mono font-semibold text-primary-800">{patron?.library_number ?? patron?.patron_id ?? 'Not issued'}</p></div>
+                <div><p className="text-xs text-neutral-400">{t('catalogueItem.patronName')}</p><p className="font-semibold text-neutral-900">{patron?.full_name ?? user?.email ?? t('catalogueItem.signedInPatron')}</p></div>
+                <div><p className="text-xs text-neutral-400">{t('catalogueItem.phoneNumber')}</p><p className="font-semibold text-neutral-900">{patron?.phone ?? t('catalogueItem.notSupplied')}</p></div>
+                <div><p className="text-xs text-neutral-400">{t('catalogueItem.department')}</p><p className="font-semibold text-neutral-900">{patron?.department ?? t('catalogueItem.notSupplied')}</p></div>
+                <div><p className="text-xs text-neutral-400">{t('catalogueItem.libraryCardNumber')}</p><p className="font-mono font-semibold text-primary-800">{patron?.library_number ?? patron?.patron_id ?? t('catalogueItem.notIssued')}</p></div>
               </div>
 
               <div className="grid gap-4 rounded-2xl border border-primary-100 bg-primary-50 p-4 sm:grid-cols-[96px_1fr_1fr]">
                 <div className="flex h-28 w-20 overflow-hidden rounded-xl bg-white shadow-sm sm:row-span-3">
                   <BookCover coverImage={item.cover_image} isbn={item.isbn} title={item.title} format={item.format} className="h-full w-full" imgClassName="h-full w-full object-cover" variant="card" />
                 </div>
-                <div className="sm:col-span-2"><p className="text-xs text-primary-700/70">Book / Item Title</p><p className="font-serif text-lg font-semibold text-primary-900">{item.title}</p></div>
-                <div><p className="text-xs text-primary-700/70">Author(s)</p><p className="text-sm font-medium text-primary-900">{Array.isArray(item.authors) ? item.authors.join('; ') : item.authors || 'Unknown'}</p></div>
-                <div><p className="text-xs text-primary-700/70">Call Number</p><p className="font-mono text-sm font-semibold text-primary-900">{item.call_number ?? 'TBC'}</p></div>
-                <div><p className="text-xs text-primary-700/70">Available Copies</p><p className="text-sm font-semibold text-primary-900">{item.available_copies} / {item.total_copies}</p></div>
-                <div><p className="text-xs text-primary-700/70">{actionModal === 'return' ? 'Return Date' : 'Request Date'}</p><p className="text-sm font-semibold text-primary-900">{formatDate(today)}</p></div>
-                {actionModal === 'reserve' && <div><p className="text-xs text-primary-700/70">Reservation Expires</p><p className="text-sm font-semibold text-primary-900">{formatDate(reservationExpiryDate)}</p></div>}
-                {actionModal === 'borrow' && <div><p className="text-xs text-primary-700/70">Expected Due Date</p><p className="text-sm font-semibold text-primary-900">{formatDate(borrowDueDate)}</p></div>}
-                {actionModal === 'return' && <div><p className="text-xs text-primary-700/70">Current Due Date</p><p className="text-sm font-semibold text-primary-900">{formatDate(activeLoanDueDate)}</p></div>}
+                <div className="sm:col-span-2"><p className="text-xs text-primary-700/70">{t('catalogueItem.bookItemTitle')}</p><p className="font-serif text-lg font-semibold text-primary-900">{item.title}</p></div>
+                <div><p className="text-xs text-primary-700/70">{t('catalogueItem.authors')}</p><p className="text-sm font-medium text-primary-900">{Array.isArray(item.authors) ? item.authors.join('; ') : item.authors || t('catalogueItem.unknown')}</p></div>
+                <div><p className="text-xs text-primary-700/70">{t('catalogueItem.callNumberLabel')}</p><p className="font-mono text-sm font-semibold text-primary-900">{item.call_number ?? t('catalogueItem.tbc')}</p></div>
+                <div><p className="text-xs text-primary-700/70">{t('catalogueItem.availableCopies')}</p><p className="text-sm font-semibold text-primary-900">{item.available_copies} / {item.total_copies}</p></div>
+                <div><p className="text-xs text-primary-700/70">{actionModal === 'return' ? t('catalogueItem.returnDate') : t('catalogueItem.requestDate')}</p><p className="text-sm font-semibold text-primary-900">{formatDate(today)}</p></div>
+                {actionModal === 'reserve' && <div><p className="text-xs text-primary-700/70">{t('catalogueItem.reservationExpires')}</p><p className="text-sm font-semibold text-primary-900">{formatDate(reservationExpiryDate)}</p></div>}
+                {actionModal === 'borrow' && <div><p className="text-xs text-primary-700/70">{t('catalogueItem.expectedDueDate')}</p><p className="text-sm font-semibold text-primary-900">{formatDate(borrowDueDate)}</p></div>}
+                {actionModal === 'return' && <div><p className="text-xs text-primary-700/70">{t('catalogueItem.currentDueDate')}</p><p className="text-sm font-semibold text-primary-900">{activeLoanDueDate ? formatDate(activeLoanDueDate) : t('catalogueItem.notAvailable')}</p></div>}
               </div>
 
               {actionModal === 'return' && (
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-                  <p className="font-semibold text-neutral-900">Fine estimate</p>
+                  <p className="font-semibold text-neutral-900">{t('catalogueItem.fineEstimate')}</p>
                   {activeLoanDueDate ? (
-                    <p className="mt-1">{overdueDays > 0 ? `${overdueDays} overdue day${overdueDays === 1 ? '' : 's'} x ₦${Number(circulationRules.fine_rate_per_day).toLocaleString()} = ₦${estimatedFine.toLocaleString()}` : 'No overdue fine is currently estimated for this item.'}</p>
+                    <p className="mt-1">{overdueDays > 0 ? t('catalogueItem.overdueCalc', {
+                      days: overdueDays,
+                      plural: overdueDays === 1 ? '' : 's',
+                      rate: formatCurrency(Number(circulationRules.fine_rate_per_day)),
+                      total: formatCurrency(estimatedFine),
+                    }) : t('catalogueItem.noOverdueFine')}</p>
                   ) : (
-                    <p className="mt-1">No active loan record was found in this browser session. The circulation desk will confirm the loan and calculate any fine.</p>
+                    <p className="mt-1">{t('catalogueItem.noActiveLoan')}</p>
                   )}
                 </div>
               )}
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                {actionModal === 'reserve' && `Reservation requests expire on ${formatDate(reservationExpiryDate)} if the item is not collected. A librarian must confirm when the item is ready or loaned out.`}
-                {actionModal === 'borrow' && `Borrow requests are submitted to the circulation desk. If approved today, the expected due date is ${formatDate(borrowDueDate)}. Late returns attract ₦${Number(circulationRules.fine_rate_per_day).toLocaleString()} per day${Number(circulationRules.fine_grace_days) > 0 ? ` after ${circulationRules.fine_grace_days} grace day(s)` : ''}, unless fines are suspended.`}
-                {actionModal === 'return' && 'Return requests notify the circulation desk. A librarian must confirm receipt of the physical item before the loan is closed.'}
+                {actionModal === 'reserve' && t('catalogueItem.reservationExpiryNote', { date: formatDate(reservationExpiryDate) })}
+                {actionModal === 'borrow' && t('catalogueItem.borrowApprovalNote', {
+                  date: formatDate(borrowDueDate),
+                  rate: formatCurrency(Number(circulationRules.fine_rate_per_day)),
+                  plural: Number(circulationRules.fine_grace_days) > 0 ? ` after ${circulationRules.fine_grace_days} grace day(s)` : '',
+                })}
+                {actionModal === 'return' && t('catalogueItem.returnNote')}
               </div>
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button onClick={() => setActionModal(null)} className="btn-outline">Cancel</button>
-                <button onClick={() => window.print()} className="btn-outline">Print Slip</button>
+                <button onClick={() => setActionModal(null)} className="btn-outline">{t('catalogueItem.cancel')}</button>
+                <button onClick={() => window.print()} className="btn-outline">{t('catalogueItem.printSlip')}</button>
                 <button onClick={submitCatalogueAction} disabled={submittingAction} className="btn-primary disabled:opacity-50">
-                  {submittingAction ? 'Submitting...' : `Submit ${actionModal === 'reserve' ? 'Reservation' : actionModal === 'borrow' ? 'Borrow Request' : 'Return Request'}`}
+                  {submittingAction ? t('catalogueItem.submitting') : actionModal === 'reserve' ? t('catalogueItem.submitReservation') : actionModal === 'borrow' ? t('catalogueItem.submitBorrowRequest') : t('catalogueItem.submitReturnRequest')}
                 </button>
               </div>
             </div>

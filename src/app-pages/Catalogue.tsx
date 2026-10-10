@@ -5,18 +5,21 @@ import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
 import { IR_ITEM_TYPES } from '@/lib/moduleSeparation';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 import StudyBreakButton from '@/components/StudyBreakButton';
 import { Resource3DBookCard, Resource3DBookCardSkeleton, Resource3DBookGrid } from '@/components/resource/Resource3DBookCard';
 
 const formats = ['Book', 'Journal', 'E-Book', 'E-Journal', 'Video', 'Map', 'Report', 'Library Item'];
+const FORMAT_KEYS: TranslationKey[] = ['catalogue.book', 'catalogue.journal', 'catalogue.ebook', 'catalogue.ejournal', 'catalogue.video', 'catalogue.map', 'catalogue.report', 'catalogue.libraryItem'];
 const languages = ['English', 'French', 'Arabic', 'Yoruba', 'Igbo', 'Hausa'];
+const LANGUAGE_KEYS: TranslationKey[] = ['catalogue.english', 'catalogue.french', 'catalogue.arabic', 'catalogue.yoruba', 'catalogue.igbo', 'catalogue.hausa'];
 const currentYear = new Date().getFullYear();
-const yearRanges = [
-  { label: 'Last 5 years', min: currentYear - 5, max: currentYear },
-  { label: 'Last 10 years', min: currentYear - 10, max: currentYear },
-  { label: '2000 – 2009', min: 2000, max: 2009 },
-  { label: '1990 – 1999', min: 1990, max: 1999 },
-  { label: 'Before 1990', min: 0, max: 1989 },
+const yearRanges: { label: string; labelKey: TranslationKey; min: number; max: number }[] = [
+  { label: 'Last 5 years', labelKey: 'catalogue.last5Years', min: currentYear - 5, max: currentYear },
+  { label: 'Last 10 years', labelKey: 'catalogue.last10Years', min: currentYear - 10, max: currentYear },
+  { label: '2000 – 2009', labelKey: 'catalogue.2000s', min: 2000, max: 2009 },
+  { label: '1990 – 1999', labelKey: 'catalogue.1990s', min: 1990, max: 1999 },
+  { label: 'Before 1990', labelKey: 'catalogue.before1990', min: 0, max: 1989 },
 ];
 
 // ── Ebook types ───────────────────────────────────────────────────────────────
@@ -92,6 +95,7 @@ interface ResourceSearchData {
 }
 
 const SUBJECT_PILLS = ['Education', 'Science', 'Arts', 'Management', 'General'];
+const SUBJECT_KEYS: TranslationKey[] = ['catalogue.subjectEducation', 'catalogue.subjectScience', 'catalogue.subjectArts', 'catalogue.subjectManagement', 'catalogue.subjectGeneral'];
 
 const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
   gutenberg:   { label: 'Project Gutenberg', cls: 'bg-orange-100 text-orange-800 border border-orange-200' },
@@ -193,6 +197,7 @@ function mapResourceSearchToEbooks(data: ResourceSearchData): EbookResponse {
 
 // ── Free Ebooks tab ───────────────────────────────────────────────────────────
 function FreeEbooksTab() {
+  const { t } = useI18n();
   const [query, setQuery]               = useState('');
   const [inputVal, setInputVal]         = useState('');
   const [loading, setLoading]           = useState(false);
@@ -209,15 +214,15 @@ function FreeEbooksTab() {
     try {
       const response = await fetch(`/api/search/resources?q=${encodeURIComponent(q)}&expand=true`);
       const raw = await response.json();
-      if (!response.ok) throw new Error(raw.error?.message || 'External ebook search failed.');
+      if (!response.ok) throw new Error(raw.error?.message || t('catalogue.externalSearchFailed'));
       setResults(mapResourceSearchToEbooks(raw.data ?? raw));
     } catch (err) {
       console.error('ebook resource search error:', err);
-      setError(err instanceof Error ? err.message : 'External ebook search failed.');
+      setError(err instanceof Error ? err.message : t('catalogue.externalSearchFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); setQuery(inputVal); void doSearch(inputVal); };
   const handlePill   = (pill: string)        => { setInputVal(pill); setQuery(pill); void doSearch(pill); };
@@ -240,20 +245,20 @@ function FreeEbooksTab() {
           </svg>
           <input
             type="text"
-            placeholder="Search free academic ebooks…"
+            placeholder={t('catalogue.freeEbookPlaceholder')}
             value={inputVal}
             onChange={e => setInputVal(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
         <button type="submit" className="btn-primary px-5 text-sm" disabled={loading}>
-          {loading ? 'Searching…' : 'Search'}
+          {loading ? t('catalogue.searching') : t('common.search')}
         </button>
       </form>
 
       {/* Subject pills */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {SUBJECT_PILLS.map(pill => (
+        {SUBJECT_PILLS.map((pill, i) => (
           <button
             key={pill}
             onClick={() => handlePill(pill)}
@@ -263,7 +268,7 @@ function FreeEbooksTab() {
                 : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-700'
             }`}
           >
-            {pill}
+            {t(SUBJECT_KEYS[i])}
           </button>
         ))}
       </div>
@@ -285,7 +290,7 @@ function FreeEbooksTab() {
       {/* Results */}
       {!loading && error && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 mb-4">
-          <p className="font-semibold">Free ebook search is temporarily unavailable</p>
+          <p className="font-semibold">{t('catalogue.freeEbookUnavailable')}</p>
           <p className="mt-1">{error}</p>
         </div>
       )}
@@ -294,7 +299,12 @@ function FreeEbooksTab() {
         <>
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <p className="text-sm text-neutral-500">
-              <span className="font-semibold text-neutral-800">{results.all.length}</span> free ebook{results.all.length !== 1 ? 's' : ''} from <span className="font-semibold text-neutral-800">{totalSources}</span> source{totalSources !== 1 ? 's' : ''}
+              {t('catalogue.ebookResults', {
+                count: results.all.length,
+                plural: results.all.length !== 1 ? 's' : '',
+                sources: totalSources,
+                pluralSources: totalSources !== 1 ? 's' : '',
+              })}
             </p>
             {/* Source filter pills */}
             <div className="flex flex-wrap gap-1.5">
@@ -311,7 +321,7 @@ function FreeEbooksTab() {
                         : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                     }`}
                   >
-                    {sf.label} {count > 0 && <span className="opacity-70">({count})</span>}
+                    {sf.key === 'all' ? t('common.all') : sf.label} {count > 0 && <span className="opacity-70">({count})</span>}
                   </button>
                 );
               })}
@@ -321,7 +331,7 @@ function FreeEbooksTab() {
           {visible.length === 0 ? (
             <div className="text-center py-16 text-neutral-400">
               <p className="text-4xl mb-3">📚</p>
-              <p>No ebooks found from this source.</p>
+              <p>{t('catalogue.noEbooksFromSource')}</p>
             </div>
           ) : (
             <Resource3DBookGrid className="lg:grid-cols-4">
@@ -335,9 +345,9 @@ function FreeEbooksTab() {
       {!loading && !results && (
         <div className="text-center py-20 text-neutral-400">
           <p className="text-5xl mb-4">🌐</p>
-          <p className="font-medium text-neutral-600 mb-1">Search across 5 free ebook sources</p>
-          <p className="text-sm">Project Gutenberg · Open Library · OAPEN · DOAB · Google Books</p>
-          <p className="text-xs mt-3">Try a subject pill above, or type your own query</p>
+          <p className="font-medium text-neutral-600 mb-1">{t('catalogue.searchAcrossSources')}</p>
+          <p className="text-sm">{t('catalogue.sourcesList')}</p>
+          <p className="text-xs mt-3">{t('catalogue.trySubjectOrQuery')}</p>
         </div>
       )}
     </div>
@@ -345,22 +355,25 @@ function FreeEbooksTab() {
 }
 
 function EbookCard({ book }: { book: EbookResult }) {
-  const badge = SOURCE_BADGE[book.source] ?? { label: book.sourceTag, cls: 'bg-neutral-100 text-neutral-700' };
+  const { t } = useI18n();
+  const title = book.title === 'Untitled ebook' ? t('catalogue.untitledEbook') : book.title;
+  const sourceLabel = book.sourceTag === 'Open resource' ? t('catalogue.openResource') : book.sourceTag;
+  const badge = SOURCE_BADGE[book.source] ?? { label: sourceLabel, cls: 'bg-neutral-100 text-neutral-700' };
   const isPeerReviewed = book.source === 'oapen' || book.source === 'doab';
   return (
     <Resource3DBookCard
       id={book.id}
-      title={book.title}
+      title={title}
       authors={book.authors}
       year={book.year}
       resourceType="ebook"
       coverUrl={book.cover_url}
       href={book.read_url || book.download_url || null}
-      status="External open-access source"
+      status={t('catalogue.externalSource')}
       actions={(
         <>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
-          {isPeerReviewed && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200">Peer-reviewed</span>}
+          {isPeerReviewed && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200">{t('catalogue.peerReviewed')}</span>}
         </>
       )}
     />
@@ -369,7 +382,8 @@ function EbookCard({ book }: { book: EbookResult }) {
 
 // ── Main Catalogue component ──────────────────────────────────────────────────
 export default function Catalogue() {
-  usePageTitle('Catalogue');
+  const { t } = useI18n();
+  usePageTitle(t('catalogue.title'));
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Active top-level tab: 'local' | 'ebooks'
@@ -451,8 +465,8 @@ export default function Catalogue() {
       setItems([]);
       setTotal(0);
       setCatalogueError(missingSchema
-        ? 'The hosted Supabase database does not have the catalogue schema yet. Apply the Supabase migrations, then refresh this page.'
-        : error.message || 'Catalogue search failed.');
+        ? t('catalogue.schemaNotReady')
+        : error.message || t('catalogue.catalogueSearchFailed'));
       setLoading(false);
       return;
     }
@@ -460,7 +474,7 @@ export default function Catalogue() {
     setTotal(count ?? 0);
     lastResultCountRef.current = count ?? 0;
     setLoading(false);
-  }, [search, faculty, formats_sel, yearRange, language, availability, page, isLoggedIn, mainTab]);
+  }, [search, faculty, formats_sel, yearRange, language, availability, page, isLoggedIn, mainTab, t]);
 
   useEffect(() => { void fetchItems(); }, [fetchItems]);
 
@@ -476,63 +490,74 @@ export default function Catalogue() {
 
   const totalPages = Math.ceil(total / pageSize);
   const activeFilterCount = [faculty, yearRange, language, availability].filter(Boolean).length + formats_sel.length;
+  const yearRangeChipLabel = (() => {
+    const r = yearRanges.find(y => y.label === yearRange);
+    return r ? t(r.labelKey) : yearRange;
+  })();
+  const languageChipLabel = (() => {
+    const i = languages.indexOf(language);
+    return i >= 0 ? t(LANGUAGE_KEYS[i]) : language;
+  })();
 
   const Sidebar = () => (
     <div className="space-y-6">
       {activeFilterCount > 0 && (
         <button onClick={clearAll} className="text-xs text-error-600 hover:text-error-800 font-medium flex items-center gap-1">
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          Clear all filters ({activeFilterCount})
+          {t('catalogue.clearAllFilters', { count: activeFilterCount })}
         </button>
       )}
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Faculty</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.faculty')}</div>
         <select className="input text-xs" value={faculty} onChange={e => { setFaculty(e.target.value); setPage(1); }}>
-          <option value="">All Faculties</option>
+          <option value="">{t('catalogue.allFaculties')}</option>
           {institutionConfig.faculties.map(f => <option key={f.code} value={f.code}>{f.name}</option>)}
         </select>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Format</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.format')}</div>
         <div className="space-y-1">
-          {formats.map(f => (
+          {formats.map((f, i) => (
             <label key={f} className="flex items-center gap-2 cursor-pointer group">
               <input type="checkbox" checked={formats_sel.includes(f)} onChange={() => toggleFormat(f)}
                 className="w-3.5 h-3.5 rounded border-neutral-300 accent-primary-600" />
-              <span className={`text-sm transition-colors ${formats_sel.includes(f) ? 'text-primary-700 font-medium' : 'text-neutral-600 group-hover:text-neutral-800'}`}>{f}</span>
+              <span className={`text-sm transition-colors ${formats_sel.includes(f) ? 'text-primary-700 font-medium' : 'text-neutral-600 group-hover:text-neutral-800'}`}>{t(FORMAT_KEYS[i])}</span>
             </label>
           ))}
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Year Range</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.yearRange')}</div>
         <div className="space-y-1">
           {yearRanges.map(r => (
             <button key={r.label} onClick={() => { setYearRange(yearRange === r.label ? '' : r.label); setPage(1); }}
               className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${yearRange === r.label ? 'bg-primary-50 text-primary-700 font-medium' : 'text-neutral-600 hover:bg-neutral-50'}`}>
-              {r.label}
+              {t(r.labelKey)}
             </button>
           ))}
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Language</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.language')}</div>
         <div className="space-y-1">
-          {languages.map(l => (
+          {languages.map((l, i) => (
             <button key={l} onClick={() => { setLanguage(language === l ? '' : l); setPage(1); }}
               className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${language === l ? 'bg-primary-50 text-primary-700 font-medium' : 'text-neutral-600 hover:bg-neutral-50'}`}>
-              {l}
+              {t(LANGUAGE_KEYS[i])}
             </button>
           ))}
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Availability</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.availability')}</div>
         <div className="space-y-1">
-          {[{ val: '', label: 'All items' }, { val: 'available', label: 'Available now' }].map(opt => (
+          {[
+            { val: '', labelKey: 'catalogue.allItems' as TranslationKey },
+            { val: 'available', labelKey: 'catalogue.availableNow' as TranslationKey },
+          ].map(opt => (
             <button key={opt.val} onClick={() => { setAvailability(opt.val); setPage(1); }}
               className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${availability === opt.val ? 'bg-primary-50 text-primary-700 font-medium' : 'text-neutral-600 hover:bg-neutral-50'}`}>
-              {opt.label}
+              {t(opt.labelKey)}
             </button>
           ))}
         </div>
@@ -547,8 +572,8 @@ export default function Catalogue() {
         <div className="section py-10">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-3xl font-serif font-semibold text-white mb-2">Library Catalogue</h1>
-              <p className="text-white/70 text-sm mb-5">Browse, search and reserve our collections</p>
+              <h1 className="text-3xl font-serif font-semibold text-white mb-2">{t('catalogue.title')}</h1>
+              <p className="text-white/70 text-sm mb-5">{t('catalogue.subtitle')}</p>
             </div>
             <StudyBreakButton className="!bg-white/10 !border-white/40 !text-white hover:!bg-white/20" />
           </div>
@@ -557,7 +582,7 @@ export default function Catalogue() {
               <div className="flex-1 relative">
                 <input
                   type="text"
-                  placeholder="Search by title, author, subject, or ISBN…"
+                  placeholder={t('catalogue.searchPlaceholder')}
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
                   className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-white text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-gold-400"
@@ -571,7 +596,7 @@ export default function Catalogue() {
                 className="lg:hidden flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 010 2H4a1 1 0 01-1-1zm3 6a1 1 0 011-1h10a1 1 0 010 2H7a1 1 0 01-1-1zm4 6a1 1 0 011-1h4a1 1 0 010 2h-4a1 1 0 01-1-1z" /></svg>
-                Filters {activeFilterCount > 0 && <span className="bg-gold-400 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
+                {t('catalogue.filters')} {activeFilterCount > 0 && <span className="bg-gold-400 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
               </button>
             </div>
           )}
@@ -583,8 +608,8 @@ export default function Catalogue() {
         <div className="section">
           <div className="flex gap-0">
             {[
-              { id: 'local' as const,  label: '📚 Local Collection' },
-              { id: 'ebooks' as const, label: '🌐 Free Ebooks' },
+              { id: 'local' as const,  labelKey: 'catalogue.localCollection' as TranslationKey },
+              { id: 'ebooks' as const, labelKey: 'catalogue.freeEbooks' as TranslationKey },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -595,7 +620,7 @@ export default function Catalogue() {
                     : 'border-transparent text-neutral-500 hover:text-neutral-800'
                 }`}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
@@ -609,10 +634,13 @@ export default function Catalogue() {
             {activeFilterCount > 0 && (
               <div className="flex flex-wrap gap-2 mb-5">
                 {faculty && <Chip label={institutionConfig.faculties.find(f => f.code === faculty)?.name ?? faculty} onRemove={() => setFaculty('')} />}
-                {formats_sel.map(f => <Chip key={f} label={f} onRemove={() => toggleFormat(f)} />)}
-                {yearRange && <Chip label={yearRange} onRemove={() => setYearRange('')} />}
-                {language && <Chip label={language} onRemove={() => setLanguage('')} />}
-                {availability && <Chip label="Available now" onRemove={() => setAvailability('')} />}
+                {formats_sel.map(f => {
+                  const i = formats.indexOf(f);
+                  return <Chip key={f} label={i >= 0 ? t(FORMAT_KEYS[i]) : f} onRemove={() => toggleFormat(f)} />;
+                })}
+                {yearRange && <Chip label={yearRangeChipLabel} onRemove={() => setYearRange('')} />}
+                {language && <Chip label={languageChipLabel} onRemove={() => setLanguage('')} />}
+                {availability && <Chip label={t('catalogue.availableNow')} onRemove={() => setAvailability('')} />}
               </div>
             )}
 
@@ -630,7 +658,7 @@ export default function Catalogue() {
                   <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
                   <div className="absolute inset-y-0 left-0 w-72 bg-white p-5 overflow-y-auto">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-semibold">Filters</h3>
+                      <h3 className="font-semibold">{t('catalogue.filters')}</h3>
                       <button onClick={() => setSidebarOpen(false)} className="text-neutral-400 hover:text-neutral-600">✕</button>
                     </div>
                     <Sidebar />
@@ -642,15 +670,15 @@ export default function Catalogue() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-neutral-500">
-                    {loading ? 'Searching…' : `${total.toLocaleString()} item${total !== 1 ? 's' : ''} found`}
+                    {loading ? t('catalogue.searching') : t('catalogue.itemsFound', { count: total })}
                   </p>
                 </div>
 
                 {catalogueError && (
                   <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    <p className="font-semibold">Catalogue database is not ready</p>
+                    <p className="font-semibold">{t('catalogue.catalogueNotReady')}</p>
                     <p className="mt-1">{catalogueError}</p>
-                    <p className="mt-2 text-xs">Check <code>/api/health/schema</code> to see which Supabase tables are missing.</p>
+                    <p className="mt-2 text-xs">{t('catalogue.checkSchema')}</p>
                   </div>
                 )}
 
@@ -661,10 +689,10 @@ export default function Catalogue() {
                 ) : items.length === 0 ? (
                   <div className="text-center py-20 text-neutral-400">
                     <p className="text-5xl mb-4">📚</p>
-                    <p className="font-medium text-neutral-600">No items found</p>
-                    <p className="text-sm mt-1">Try adjusting your search or filters</p>
-                    <Link to={`/repository${search ? `?q=${encodeURIComponent(search)}` : ''}`} className="inline-flex mt-3 text-primary-700 font-semibold text-sm hover:underline">Also search the Institutional Repository</Link>
-                    {activeFilterCount > 0 && <button onClick={clearAll} className="btn-outline mt-4 text-sm">Clear all filters</button>}
+                    <p className="font-medium text-neutral-600">{t('catalogue.noItemsFound')}</p>
+                    <p className="text-sm mt-1">{t('catalogue.tryAdjusting')}</p>
+                    <Link to={`/repository${search ? `?q=${encodeURIComponent(search)}` : ''}`} className="inline-flex mt-3 text-primary-700 font-semibold text-sm hover:underline">{t('catalogue.alsoSearchRepository')}</Link>
+                    {activeFilterCount > 0 && <button onClick={clearAll} className="btn-outline mt-4 text-sm">{t('catalogue.clearAll')}</button>}
                   </div>
                 ) : (
                   <>
@@ -674,10 +702,10 @@ export default function Catalogue() {
                     {totalPages > 1 && (
                       <div className="flex items-center justify-center gap-2 mt-8">
                         <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                          className="btn-outline px-3 py-1.5 text-sm disabled:opacity-40">Previous</button>
-                        <span className="text-sm text-neutral-500">Page {page} of {totalPages}</span>
+                          className="btn-outline px-3 py-1.5 text-sm disabled:opacity-40">{t('common.previous')}</button>
+                        <span className="text-sm text-neutral-500">{t('repository.pageOf', { current: page, total: totalPages })}</span>
                         <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                          className="btn-outline px-3 py-1.5 text-sm disabled:opacity-40">Next</button>
+                          className="btn-outline px-3 py-1.5 text-sm disabled:opacity-40">{t('common.next')}</button>
                       </div>
                     )}
                   </>
@@ -695,7 +723,8 @@ export default function Catalogue() {
 }
 
 function CatalogueCard({ item, query }: { item: CatalogueItemRow; query?: string }) {
-  const title = typeof item.title === 'string' ? item.title : (item.title?.name || item.title?.value || item.title?.text || 'Untitled');
+  const { t } = useI18n();
+  const title = typeof item.title === 'string' ? item.title : (item.title?.name || item.title?.value || item.title?.text || t('catalogue.untitled'));
   const trackClick = () => {
     void trackClientEvent({
       event_type: 'catalogue_result_click',
@@ -718,15 +747,15 @@ function CatalogueCard({ item, query }: { item: CatalogueItemRow; query?: string
       spineText={item.call_number || item.isbn || item.format || 'Catalogue'}
       href={`/catalogue/${item.id}`}
       onClick={trackClick}
-      status={item.available_copies > 0 ? `${item.available_copies} available` : 'Unavailable'}
+      status={item.available_copies > 0 ? t('catalogue.availableCount', { count: item.available_copies }) : t('catalogue.unavailable')}
       actions={(
         <>
           <span className={`badge text-xs ${item.available_copies > 0 ? 'badge-success' : 'badge-error'}`}>
-            {item.available_copies > 0 ? `${item.available_copies} avail.` : 'Unavailable'}
+            {item.available_copies > 0 ? t('catalogue.availableShort', { count: item.available_copies }) : t('catalogue.unavailable')}
           </span>
           {item.visibility === 'members' && (
-            <span title="Members only" className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
-              Members
+            <span title={t('catalogue.membersOnly')} className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
+              {t('catalogue.members')}
             </span>
           )}
           {item.view_count > 0 && (

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { format, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
+import { useI18n } from '@/lib/i18n';
 import { logCirculationEvent } from '@/lib/audit';
 import { trackClientEvent } from '@/lib/analytics';
 import { useBarcodeScanner } from '@/features/barcode/useBarcodeScanner';
@@ -69,6 +70,7 @@ const ITEM_COLS = 'id, title, authors, call_number, available_copies, total_copi
 const PATRON_COLS = 'id, patron_id, user_id, full_name, email, patron_category, faculty_name, status, membership_expires_at';
 
 export default function Circulation() {
+  const { t, formatDate, formatCurrency } = useI18n();
   const off = useOfflineCirculation();
   const [tab, setTab] = useState<'checkout' | 'checkin' | 'holds' | 'offline'>('checkout');
 
@@ -194,9 +196,9 @@ export default function Circulation() {
         selectedItem,
       );
       if (!res.ok) {
-        setCoAlert({ type: 'error', msg: res.reason ?? 'Could not queue checkout.' });
+        setCoAlert({ type: 'error', msg: res.reason ?? t('circulation.couldNotQueueCheckout') });
       } else {
-        setCoAlert({ type: 'warning', msg: `OFFLINE — checkout queued for ${selectedPatron.full_name}. It will sync when the desk reconnects.` });
+        setCoAlert({ type: 'warning', msg: t('circulation.checkoutQueued', { name: selectedPatron.full_name }) });
         resetCheckout();
       }
       setCoLoading(false);
@@ -206,7 +208,7 @@ export default function Circulation() {
     const due = dueDate(selectedPatron);
     try {
       if ((selectedItem.available_copies ?? 0) <= 0) {
-        throw new Error('No copies available. Place a hold instead.');
+        throw new Error(t('circulation.noCopiesAvailable'));
       }
 
       const maxAllowed = maxItemsFor(selectedPatron.patron_category);
@@ -217,7 +219,7 @@ export default function Circulation() {
         .eq('status', 'active');
       if (countErr) throw countErr;
       if ((activeLoanCount ?? 0) >= maxAllowed) {
-        throw new Error(`${selectedPatron.full_name} already has ${activeLoanCount} active loan(s). Maximum allowed for ${selectedPatron.patron_category} is ${maxAllowed}.`);
+        throw new Error(t('circulation.maxLoansReached', { name: selectedPatron.full_name, count: activeLoanCount ?? 0, category: selectedPatron.patron_category, max: maxAllowed }));
       }
 
       const { data: loan, error: loanErr } = await supabase.from('loans').insert({
@@ -266,11 +268,11 @@ export default function Circulation() {
         });
       }
 
-      setCoAlert({ type: 'success', msg: `Checked out "${selectedItem.title}" to ${selectedPatron.full_name}. Due: ${due}.` });
+      setCoAlert({ type: 'success', msg: t('circulation.checkoutSuccess', { title: selectedItem.title, name: selectedPatron.full_name, due }) });
       resetCheckout();
       void off.refreshCache();
     } catch (err) {
-      setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Checkout failed.' });
+      setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : t('circulation.checkoutFailed') });
     } finally {
       setCoLoading(false);
     }
@@ -357,8 +359,8 @@ export default function Circulation() {
           loan.patrons?.full_name ?? '',
           loan.catalogue_items?.title ?? '',
         );
-        if (!res.ok) throw new Error(res.reason ?? 'Could not queue check-in.');
-        setCiAlert({ type: 'warning', msg: `OFFLINE — check-in queued for "${loan.catalogue_items?.title}". It will sync when the desk reconnects.` });
+        if (!res.ok) throw new Error(res.reason ?? t('circulation.couldNotQueueCheckin'));
+        setCiAlert({ type: 'warning', msg: t('circulation.checkinQueued', { title: loan.catalogue_items?.title }) });
         setCheckinResults([]);
         setCheckinQuery('');
         return;
@@ -397,7 +399,7 @@ export default function Circulation() {
         catalogue_item_id: loan.catalogue_item_id,
         loan_id: loan.id,
         offline_id: crypto.randomUUID(),
-        notes: fine > 0 ? `Fine applied: ₦${fine}` : '',
+        notes: fine > 0 ? t('circulation.fineApplied', { amount: formatCurrency(fine) }) : '',
       });
 
       await logCirculationEvent({
@@ -454,15 +456,17 @@ export default function Circulation() {
         });
       }
 
+      const fineMsg = fine > 0 ? ` ${t('circulation.fineApplied', { amount: formatCurrency(fine) })}` : '';
+      const examMsg = isExamPeriod() ? ` ${t('circulation.examPeriodNote')}` : '';
       setCiAlert({
         type: 'success',
-        msg: `Checked in "${loan.catalogue_items?.title}".${fine > 0 ? ` Fine applied: ₦${fine.toLocaleString()}.` : ''} ${isExamPeriod() ? '(Exam period — fines suspended)' : ''}`,
+        msg: t('circulation.checkinSuccess', { title: loan.catalogue_items?.title, fine: fineMsg, exam: examMsg }),
       });
       setCheckinResults([]);
       setCheckinQuery('');
       void off.refreshCache();
     } catch (err) {
-      setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Check-in failed.' });
+      setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : t('circulation.checkinFailed') });
     } finally {
       setCiLoading(false);
     }
@@ -488,8 +492,8 @@ export default function Circulation() {
           patron,
           loan.catalogue_items?.title ?? '',
         );
-        if (!res.ok) throw new Error(res.reason ?? 'Could not queue renewal.');
-        setCiAlert({ type: 'warning', msg: `OFFLINE — renewal queued for ${loan.patrons?.full_name}. It will sync when the desk reconnects.` });
+        if (!res.ok) throw new Error(res.reason ?? t('circulation.couldNotQueueRenewal'));
+        setCiAlert({ type: 'warning', msg: t('circulation.renewalQueued', { name: loan.patrons?.full_name }) });
         setCheckinResults([]);
         setCheckinQuery('');
         return;
@@ -504,10 +508,10 @@ export default function Circulation() {
       const renewed = loan.renewed_count ?? 0;
       const maxRenewals = renewalsFor(category);
       if (renewed >= maxRenewals) {
-        throw new Error(`Renewal limit of ${maxRenewals} already reached for ${category ?? 'this patron'}.`);
+        throw new Error(t('circulation.renewalLimitReached', { max: maxRenewals, category: category ?? 'this patron' }));
       }
       if (Date.parse(loan.due_date) < Date.now()) {
-        throw new Error('Loan is overdue — overdue loans cannot be renewed.');
+        throw new Error(t('circulation.cannotRenewOverdue'));
       }
       const newDue = computeDueDate(new Date(), category);
       const { error } = await supabase.from('loans').update({
@@ -550,11 +554,11 @@ export default function Circulation() {
         });
       }
 
-      setCiAlert({ type: 'success', msg: `Renewed "${loan.catalogue_items?.title}" — now due ${newDue}.` });
+      setCiAlert({ type: 'success', msg: t('circulation.renewalSuccess', { title: loan.catalogue_items?.title, due: newDue }) });
       setCheckinResults([]);
       setCheckinQuery('');
     } catch (err) {
-      setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Renewal failed.' });
+      setCiAlert({ type: 'error', msg: err instanceof Error ? err.message : t('circulation.renewalFailed') });
     } finally {
       setCiLoading(false);
     }
@@ -563,7 +567,7 @@ export default function Circulation() {
   // ── Holds ───────────────────────────────────────────────────────────────────
   const checkoutFromHold = async (hold: HoldRow) => {
     if (!serverReachable) {
-      setCoAlert({ type: 'error', msg: 'Hold fulfilment requires a connection — complete it when the desk is back online.' });
+      setCoAlert({ type: 'error', msg: t('circulation.holdFulfilmentOffline') });
       setTab('holds');
       return;
     }
@@ -576,7 +580,7 @@ export default function Circulation() {
         .eq('id', hold.id)
         .maybeSingle();
       if (!freshHold || freshHold.status !== 'ready_for_collection') {
-        setCoAlert({ type: 'error', msg: 'Hold is no longer eligible for checkout.' });
+        setCoAlert({ type: 'error', msg: t('circulation.holdNotEligible') });
         void fetchHolds();
         return;
       }
@@ -587,7 +591,7 @@ export default function Circulation() {
         .eq('status', 'active')
         .maybeSingle();
       if (existingLoan) {
-        setCoAlert({ type: 'error', msg: 'Item is already checked out.' });
+        setCoAlert({ type: 'error', msg: t('circulation.alreadyCheckedOut') });
         return;
       }
       const { error: loanError } = await supabase
@@ -600,17 +604,17 @@ export default function Circulation() {
           status: 'active',
         });
       if (loanError) {
-        setCoAlert({ type: 'error', msg: 'Checkout failed: ' + loanError.message });
+        setCoAlert({ type: 'error', msg: t('circulation.checkoutFailedInline', { message: loanError.message }) });
         return;
       }
       await supabase
         .from('reservations')
         .update({ status: 'fulfilled' })
         .eq('id', freshHold.id);
-      setCoAlert({ type: 'success', msg: 'Checked out from hold.' });
+      setCoAlert({ type: 'success', msg: t('circulation.checkoutFromHold') });
       void fetchHolds();
     } catch (err) {
-      setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : 'Checkout from hold failed.' });
+      setCoAlert({ type: 'error', msg: err instanceof Error ? err.message : t('circulation.checkoutFromHoldFailed') });
     } finally {
       setCoLoading(false);
     }
@@ -628,7 +632,7 @@ export default function Circulation() {
   const placeHold = async () => {
     if (!holdsPatron || !holdsItem) return;
     if (!serverReachable) {
-      setHoldsAlert({ type: 'error', msg: 'Placing holds requires a connection.' });
+      setHoldsAlert({ type: 'error', msg: t('circulation.holdsRequireConnection') });
       return;
     }
     setHoldsAlert(null);
@@ -646,8 +650,8 @@ export default function Circulation() {
       status: 'pending',
       priority: (count ?? 0) + 1,
     });
-    if (error) { setHoldsAlert({ type: 'error', msg: 'Hold failed: ' + error.message }); return; }
-    setHoldsAlert({ type: 'success', msg: `Hold placed for ${holdsPatron.full_name} on "${holdsItem.title}".` });
+    if (error) { setHoldsAlert({ type: 'error', msg: t('circulation.holdFailed', { message: error.message }) }); return; }
+    setHoldsAlert({ type: 'success', msg: t('circulation.holdPlaced', { name: holdsPatron.full_name, title: holdsItem.title }) });
     setHoldsPatron(null);
     setHoldsItem(null);
     setHoldsPatronQuery('');
@@ -665,7 +669,7 @@ export default function Circulation() {
       <input
         type="text"
         className="input w-full"
-        placeholder="Search patron by name, ID or email…"
+        placeholder={t('circulation.searchPatronPlaceholder')}
         value={query}
         onChange={(e) => onQuery(e.target.value)}
         autoComplete="off"
@@ -696,7 +700,7 @@ export default function Circulation() {
       <input
         type="text"
         className="input w-full"
-        placeholder="Search item by title, call number or scan barcode…"
+        placeholder={t('circulation.searchItemPlaceholder')}
         value={query}
         onChange={(e) => onQuery(e.target.value)}
         autoComplete="off"
@@ -721,10 +725,10 @@ export default function Circulation() {
   );
 
   const TABS = [
-    { id: 'checkout', label: 'Check Out' },
-    { id: 'checkin',  label: 'Check In' },
-    { id: 'holds',    label: `Holds${holds.length > 0 ? ` (${holds.length})` : ''}` },
-    { id: 'offline',  label: `Offline Queue${off.queue.length > 0 ? ` (${off.queue.length})` : ''}` },
+    { id: 'checkout', label: t('circulation.checkOut') },
+    { id: 'checkin',  label: t('circulation.checkIn') },
+    { id: 'holds',    label: t('circulation.holds', { count: holds.length > 0 ? ` (${holds.length})` : '' }) },
+    { id: 'offline',  label: t('circulation.offlineQueue', { count: off.queue.length > 0 ? ` (${off.queue.length})` : '' }) },
   ] as const;
 
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -764,8 +768,8 @@ export default function Circulation() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Circulation</h1>
-          <p className="text-gray-600 mt-1">Check out, check in, renew, and manage patron holds.</p>
+          <h1 className="text-3xl font-bold">{t('circulation.circulationTitle')}</h1>
+          <p className="text-gray-600 mt-1">{t('circulation.circulationSubtitle')}</p>
         </div>
         <div className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full ${stateBadge}`}>
           <span className={`w-2 h-2 rounded-full ${stateDot}`} />
@@ -776,44 +780,42 @@ export default function Circulation() {
       {/* Connectivity / queue banner */}
       {off.state === 'OFFLINE' && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 font-medium">
-          Offline — checkout, check-in and renewal are validated against the local desk cache and queued durably.
-          They will sync (in order, duplicate-safe) when the connection returns.
-          {!off.session && ' No staff session yet — connect once to sign in for offline work.'}
+          {t('circulation.offlineModeNote')} {!off.session && t('circulation.noStaffSession')}
         </div>
       )}
       {off.state === 'DEGRADED' && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
-          Server unreachable — transactions are being queued locally. {off.lastError ?? ''}
+          {t('circulation.serverUnreachable', { error: off.lastError ?? '' })}
         </div>
       )}
       {off.state === 'ONLINE' && (off.pendingCount > 0 || off.conflictCount > 0) && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 font-medium flex items-center justify-between gap-3">
           <span>
-            {off.pendingCount > 0 && `${off.pendingCount} queued transaction(s) waiting to sync. `}
-            {off.conflictCount > 0 && `${off.conflictCount} conflict(s) need a librarian decision.`}
+            {off.pendingCount > 0 && t('circulation.queuedTransactions', { count: off.pendingCount })}
+            {off.conflictCount > 0 && t('circulation.conflictsNeedDecision', { count: off.conflictCount })}
           </span>
           <button onClick={() => setTab('offline')} className="btn-secondary text-xs py-1 px-2">
-            Open Offline Queue
+            {t('circulation.openOfflineQueue')}
           </button>
         </div>
       )}
       {off.state === 'ONLINE' && off.cache && off.staleCache && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium flex items-center justify-between gap-3">
-          <span>Offline cache has expired — refresh before starting offline work.</span>
+          <span>{t('circulation.cacheExpired')}</span>
           <button onClick={() => void off.refreshCache()} className="btn-secondary text-xs py-1 px-2" disabled={off.cacheLoading}>
-            {off.cacheLoading ? 'Refreshing…' : 'Refresh Cache'}
+            {off.cacheLoading ? t('circulation.refreshing') : t('circulation.refreshCache')}
           </button>
         </div>
       )}
       {!off.session && off.state !== 'ONLINE' && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
-          Offline operations require an active staff session. Reconnect once to sign in.
+          {t('circulation.staffSessionRequired')}
         </div>
       )}
 
       {isExamPeriod() && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
-          Exam period active — overdue fines are currently suspended.
+          {t('circulation.examPeriodFinesSuspended')}
         </div>
       )}
 
@@ -842,7 +844,7 @@ export default function Circulation() {
           )}
 
           <div className="card space-y-4">
-            <h2 className="font-semibold text-lg">1. Find Patron</h2>
+            <h2 className="font-semibold text-lg">{t('circulation.findPatron')}</h2>
             <PatronDropdown
               query={patronQuery}
               results={patronResults}
@@ -852,13 +854,13 @@ export default function Circulation() {
             {selectedPatron && (
               <div className="p-3 bg-blue-50 rounded-lg text-sm">
                 <strong>{selectedPatron.full_name}</strong> — {selectedPatron.patron_category}
-                <span className="text-gray-500"> · Due in {durationDaysFor(selectedPatron.patron_category)} days → {dueDate(selectedPatron)}</span>
+                <span className="text-gray-500"> · {t('circulation.dueInDays', { days: durationDaysFor(selectedPatron.patron_category), due: dueDate(selectedPatron) })}</span>
               </div>
             )}
           </div>
 
           <div className="card space-y-4">
-            <h2 className="font-semibold text-lg">2. Find Item</h2>
+            <h2 className="font-semibold text-lg">{t('circulation.findItem')}</h2>
             <ItemDropdown
               query={itemQuery}
               results={itemResults}
@@ -868,9 +870,9 @@ export default function Circulation() {
             <button
               onClick={() => setScannerOpen(true)}
               className="btn-secondary mt-2"
-              title="Scan Barcode"
+              title={t('circulation.scanBarcodeTitle')}
             >
-              Scan Barcode
+              {t('circulation.scanBarcode')}
             </button>
             {selectedItem && (
               <div className={`p-3 rounded-lg text-sm ${selectedItem.available_copies > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -880,8 +882,8 @@ export default function Circulation() {
             )}
             {!serverReachable && (
               <div className="p-3 bg-amber-50 rounded-lg text-xs text-amber-800">
-                Offline mode: eligibility is checked against the local cache
-                {offlineEligible ? ' (cache ready).' : ' (cache not ready — reconnect to preload before checking out).'}
+                {t('circulation.offlineEligibility')}
+                {offlineEligible ? t('circulation.cacheReady') : t('circulation.cacheNotReady')}
               </div>
             )}
           </div>
@@ -891,7 +893,7 @@ export default function Circulation() {
             disabled={!selectedPatron || !selectedItem || coLoading}
             className="btn-primary w-full py-3 text-base disabled:opacity-50"
           >
-            {coLoading ? 'Processing…' : serverReachable ? 'Check Out' : 'Check Out (Queue Offline)'}
+            {coLoading ? t('circulation.processing') : serverReachable ? t('circulation.checkOut') : t('circulation.checkOutQueue')}
           </button>
         </div>
       )}
@@ -905,16 +907,16 @@ export default function Circulation() {
             </div>
           )}
           <div className="card space-y-3">
-            <h2 className="font-semibold text-lg">Find Active Loan</h2>
+            <h2 className="font-semibold text-lg">{t('circulation.findActiveLoan')}</h2>
             <input
               type="text"
               className="input w-full"
-              placeholder="Search by patron name, title, call number or barcode…"
+              placeholder={t('circulation.searchLoanPlaceholder')}
               value={checkinQuery}
               onChange={(e) => void searchLoans(e.target.value)}
             />
             {!serverReachable && (
-              <p className="text-xs text-amber-700">Offline: results come from the local desk cache.</p>
+              <p className="text-xs text-amber-700">{t('circulation.offlineResultsNote')}</p>
             )}
           </div>
 
@@ -923,10 +925,10 @@ export default function Circulation() {
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr>
-                    <th className="text-left p-3 font-semibold">Item</th>
-                    <th className="text-left p-3 font-semibold">Patron</th>
-                    <th className="text-left p-3 font-semibold">Due</th>
-                    <th className="text-left p-3 font-semibold">Fine</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.tableItem')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.tablePatron')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.tableDue')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.tableFine')}</th>
                     <th className="p-3" />
                   </tr>
                 </thead>
@@ -946,7 +948,7 @@ export default function Circulation() {
                           {loan.due_date}
                         </td>
                         <td className="p-3 text-sm font-semibold text-red-700">
-                          {fine > 0 ? `₦${fine.toLocaleString()}` : isExamPeriod() ? '—' : '₦0'}
+                          {fine > 0 ? t('circulation.fineCurrency', { amount: formatCurrency(fine) }) : isExamPeriod() ? t('circulation.dash') : t('circulation.zeroCurrency', { amount: formatCurrency(0) })}
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2 justify-end">
@@ -955,15 +957,15 @@ export default function Circulation() {
                               disabled={ciLoading}
                               className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
                             >
-                              Return
+                              {t('circulation.return')}
                             </button>
                             <button
                               onClick={() => void handleRenew(loan)}
                               disabled={ciLoading}
                               className="btn-secondary text-xs py-1.5 px-3 disabled:opacity-50"
-                              title="Renew loan"
+                              title={t('circulation.renewLoanTitle')}
                             >
-                              Renew
+                              {t('circulation.renew')}
                             </button>
                           </div>
                         </td>
@@ -982,18 +984,18 @@ export default function Circulation() {
         <div className="space-y-6">
           {!serverReachable && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
-              Hold placement and fulfilment require a connection. Returns (check-in) remain available offline.
+              {t('circulation.holdsOfflineNote')}
             </div>
           )}
           <div className="max-w-xl card space-y-4">
-            <h2 className="font-semibold text-lg">Place a Hold</h2>
+            <h2 className="font-semibold text-lg">{t('circulation.placeHold')}</h2>
             {holdsAlert && (
               <div className={`p-3 rounded-lg text-sm font-medium ${alertCls(holdsAlert.type)}`}>
                 {holdsAlert.msg}
               </div>
             )}
             <div>
-              <label className="label">Patron</label>
+              <label className="label">{t('circulation.patron')}</label>
               <PatronDropdown
                 query={holdsPatronQuery}
                 results={patronResults}
@@ -1002,7 +1004,7 @@ export default function Circulation() {
               />
             </div>
             <div>
-              <label className="label">Item</label>
+              <label className="label">{t('circulation.item')}</label>
               <ItemDropdown
                 query={holdsItemQuery}
                 results={itemResults}
@@ -1015,23 +1017,23 @@ export default function Circulation() {
               disabled={!holdsPatron || !holdsItem || !serverReachable}
               className="btn-primary w-full disabled:opacity-50"
             >
-              Place Hold
+              {t('circulation.placeHoldButton')}
             </button>
           </div>
 
           <div className="card overflow-x-auto">
-            <h2 className="font-semibold text-lg mb-4">Active Hold Queue</h2>
+            <h2 className="font-semibold text-lg mb-4">{t('circulation.activeHoldQueue')}</h2>
             {holds.length === 0 ? (
-              <p className="text-gray-400 text-sm">No pending holds.</p>
+              <p className="text-gray-400 text-sm">{t('circulation.noPendingHolds')}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr>
-                    <th className="text-left p-3 font-semibold">Priority</th>
-                    <th className="text-left p-3 font-semibold">Item</th>
-                    <th className="text-left p-3 font-semibold">Patron</th>
-                    <th className="text-left p-3 font-semibold">Requested</th>
-                    <th className="text-left p-3 font-semibold">Status</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.priority')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.item')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.patron')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.requested')}</th>
+                    <th className="text-left p-3 font-semibold">{t('circulation.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1040,7 +1042,7 @@ export default function Circulation() {
                       <td className="p-3 font-bold text-primary-700">{h.priority}</td>
                       <td className="p-3 font-medium">{h.catalogue_items?.title}</td>
                       <td className="p-3 text-gray-600">{h.patrons?.full_name} <span className="text-xs">({h.patrons?.patron_id})</span></td>
-                      <td className="p-3 text-sm text-gray-500">{format(new Date(h.created_at), 'dd MMM yyyy')}</td>
+                      <td className="p-3 text-sm text-gray-500">{formatDate(h.created_at)}</td>
                       <td className="p-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${h.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                           {h.status}
@@ -1053,7 +1055,7 @@ export default function Circulation() {
                             disabled={coLoading}
                             className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
                           >
-                            Check Out
+                            {t('circulation.checkOut')}
                           </button>
                         )}
                       </td>
@@ -1072,21 +1074,21 @@ export default function Circulation() {
       {scannerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 space-y-4">
-            <h3 className="font-semibold text-lg">Scan Barcode</h3>
+            <h3 className="font-semibold text-lg">{t('circulation.scanBarcodeModal')}</h3>
             <div className="relative bg-black rounded-lg overflow-hidden" style={{ minHeight: 240 }}>
               <video ref={scanner.videoRef} className="w-full" autoPlay playsInline muted />
               {!scanner.error && scanner.status !== 'scanning' && (
                 <div className="absolute inset-0 flex items-center justify-center text-white text-sm">
-                  <button onClick={() => void scanner.start()} className="btn-primary">Start Camera</button>
+                  <button onClick={() => void scanner.start()} className="btn-primary">{t('circulation.startCamera')}</button>
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-500">Point camera at barcode. Scan populates the item search field (works offline against the cached barcode index).</p>
+            <p className="text-xs text-gray-500">{t('circulation.cameraHint')}</p>
             <div className="flex gap-2">
               {scanner.status === 'scanning' && (
-                <button onClick={() => void scanner.stop()} className="btn-secondary flex-1">Stop</button>
+                <button onClick={() => void scanner.stop()} className="btn-secondary flex-1">{t('circulation.stop')}</button>
               )}
-              <button onClick={() => { void scanner.stop(); setScannerOpen(false); }} className="btn-secondary flex-1">Cancel</button>
+              <button onClick={() => { void scanner.stop(); setScannerOpen(false); }} className="btn-secondary flex-1">{t('circulation.cancel')}</button>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import StudyBreakButton from '@/components/StudyBreakButton';
 import BackButton from '@/components/BackButton';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 interface PatronData {
   id: string;
@@ -36,33 +37,34 @@ interface CalendarRecord {
   vacation_end: string | null;
 }
 
-function getCalendarPeriod(cal: CalendarRecord): { label: string; color: string; icon: string } {
+function getCalendarPeriod(cal: CalendarRecord): { label: TranslationKey; color: string; icon: string } {
   const today = new Date().toISOString().slice(0, 10);
   const between = (s: string | null, e: string | null) => !!(s && e && today >= s && today <= e);
 
-  if (between(cal.exam_one_start, cal.exam_one_end)) return { label: 'Exam Period 1', color: 'text-red-700 bg-red-50 border-red-200', icon: '📝' };
-  if (between(cal.exam_two_start, cal.exam_two_end)) return { label: 'Exam Period 2', color: 'text-red-700 bg-red-50 border-red-200', icon: '📝' };
-  if (between(cal.semester_one_start, cal.semester_one_end)) return { label: 'Semester 1', color: 'text-primary-700 bg-primary-50 border-primary-200', icon: '📚' };
-  if (between(cal.semester_two_start, cal.semester_two_end)) return { label: 'Semester 2', color: 'text-primary-700 bg-primary-50 border-primary-200', icon: '📚' };
-  if (between(cal.vacation_start, cal.vacation_end)) return { label: 'Long Vacation', color: 'text-green-700 bg-green-50 border-green-200', icon: '🌴' };
-  return { label: 'Between Periods', color: 'text-neutral-600 bg-neutral-50 border-neutral-200', icon: '📅' };
+  if (between(cal.exam_one_start, cal.exam_one_end)) return { label: 'dashboard.calExam1', color: 'text-red-700 bg-red-50 border-red-200', icon: '📝' };
+  if (between(cal.exam_two_start, cal.exam_two_end)) return { label: 'dashboard.calExam2', color: 'text-red-700 bg-red-50 border-red-200', icon: '📝' };
+  if (between(cal.semester_one_start, cal.semester_one_end)) return { label: 'dashboard.calSem1', color: 'text-primary-700 bg-primary-50 border-primary-200', icon: '📚' };
+  if (between(cal.semester_two_start, cal.semester_two_end)) return { label: 'dashboard.calSem2', color: 'text-primary-700 bg-primary-50 border-primary-200', icon: '📚' };
+  if (between(cal.vacation_start, cal.vacation_end)) return { label: 'dashboard.calLongVacation', color: 'text-green-700 bg-green-50 border-green-200', icon: '🌴' };
+  return { label: 'dashboard.calBetweenPeriods', color: 'text-neutral-600 bg-neutral-50 border-neutral-200', icon: '📅' };
 }
 
-function getNextKeyDate(cal: CalendarRecord): { label: string; days: number } | null {
+function getNextKeyDate(cal: CalendarRecord): { label: TranslationKey; days: number } | null {
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
-  const candidates = [
-    { label: 'Semester 1 Starts', date: cal.semester_one_start },
-    { label: 'Semester 1 Ends', date: cal.semester_one_end },
-    { label: 'Exam Period 1', date: cal.exam_one_start },
-    { label: 'Exam Period 1 Ends', date: cal.exam_one_end },
-    { label: 'Semester 2 Starts', date: cal.semester_two_start },
-    { label: 'Semester 2 Ends', date: cal.semester_two_end },
-    { label: 'Exam Period 2', date: cal.exam_two_start },
-    { label: 'Exam Period 2 Ends', date: cal.exam_two_end },
-    { label: 'Long Vacation', date: cal.vacation_start },
-    { label: 'Vacation Ends', date: cal.vacation_end },
-  ].filter(c => c.date && c.date > todayStr);
+  const keyDates: Array<{ label: TranslationKey; date: string | null }> = [
+    { label: 'dashboard.calSem1Starts', date: cal.semester_one_start },
+    { label: 'dashboard.calSem1Ends', date: cal.semester_one_end },
+    { label: 'dashboard.calExam1', date: cal.exam_one_start },
+    { label: 'dashboard.calExam1Ends', date: cal.exam_one_end },
+    { label: 'dashboard.calSem2Starts', date: cal.semester_two_start },
+    { label: 'dashboard.calSem2Ends', date: cal.semester_two_end },
+    { label: 'dashboard.calExam2', date: cal.exam_two_start },
+    { label: 'dashboard.calExam2Ends', date: cal.exam_two_end },
+    { label: 'dashboard.calLongVacation', date: cal.vacation_start },
+    { label: 'dashboard.calVacationEnds', date: cal.vacation_end },
+  ];
+  const candidates = keyDates.filter(c => c.date && c.date > todayStr);
 
   if (!candidates.length) return null;
   candidates.sort((a, b) => a.date!.localeCompare(b.date!));
@@ -73,6 +75,7 @@ function getNextKeyDate(cal: CalendarRecord): { label: string; days: number } | 
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t, formatDate } = useI18n();
   const [patron, setPatron] = useState<PatronData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     active_loans: 0,
@@ -164,7 +167,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">{t('dashboard.loadingDashboard')}</p>
         </div>
       </div>
     );
@@ -173,11 +176,10 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
-        <BackButton label="Back" />
+        <BackButton label={t('dashboard.back')} />
         {patron?.status === 'pending' && (
           <div className="mb-6 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-            Your account is <strong>pending approval</strong>. A librarian will review your registration and
-            issue your Library Number. Some features stay limited until then.
+            {t('dashboard.pendingApproval')}
           </div>
         )}
         <div className="card mb-8 bg-gradient-to-r from-primary-700 to-primary-800 text-white">
@@ -187,9 +189,9 @@ export default function Dashboard() {
                 {patron?.profile_photo_url ? <img src={patron.profile_photo_url} alt="" className="w-full h-full object-cover" /> : '👤'}
               </div>
               <div>
-              <h1 className="text-4xl font-bold mb-2">Welcome, {patron?.full_name}!</h1>
+              <h1 className="text-4xl font-bold mb-2">{t('dashboard.welcome', { name: patron?.full_name ?? '' })}</h1>
               <p className="text-primary-100 text-lg">
-                {patron?.library_number ? 'Library Number' : 'Patron ID'}:{' '}
+                {patron?.library_number ? t('dashboard.libraryNumber') : t('dashboard.patronId')}{' '}
                 <span className="font-mono font-semibold">{patron?.library_number ?? patron?.patron_id}</span>
               </p>
               </div>
@@ -201,40 +203,40 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="stat-card bg-white rounded-lg shadow">
             <div className="p-6">
-              <div className="text-gray-600 text-sm font-medium mb-2">Active Loans</div>
+              <div className="text-gray-600 text-sm font-medium mb-2">{t('dashboard.activeLoans')}</div>
               <div className="text-4xl font-bold text-primary-700 mb-2">{stats.active_loans}</div>
               <Link to="/dashboard/loans" className="text-primary-700 text-sm hover:underline">
-                View loans →
+                {t('dashboard.viewLoans')}
               </Link>
             </div>
           </div>
 
           <div className="stat-card bg-white rounded-lg shadow">
             <div className="p-6">
-              <div className="text-gray-600 text-sm font-medium mb-2">Due Soon</div>
+              <div className="text-gray-600 text-sm font-medium mb-2">{t('dashboard.dueSoon')}</div>
               <div className="text-4xl font-bold text-orange-600 mb-2">{stats.due_soon}</div>
               <Link to="/dashboard/loans" className="text-orange-600 text-sm hover:underline">
-                View due dates →
+                {t('dashboard.viewDueDates')}
               </Link>
             </div>
           </div>
 
           <div className="stat-card bg-white rounded-lg shadow">
             <div className="p-6">
-              <div className="text-gray-600 text-sm font-medium mb-2">ILL Tickets</div>
+              <div className="text-gray-600 text-sm font-medium mb-2">{t('dashboard.illTickets')}</div>
               <div className="text-4xl font-bold text-green-600 mb-2">{stats.ill_tickets}</div>
               <Link to="/dashboard/ill" className="text-green-600 text-sm hover:underline">
-                View requests →
+                {t('dashboard.viewRequests')}
               </Link>
             </div>
           </div>
 
           <div className="stat-card bg-white rounded-lg shadow">
             <div className="p-6">
-              <div className="text-gray-600 text-sm font-medium mb-2">Outstanding Fines</div>
+              <div className="text-gray-600 text-sm font-medium mb-2">{t('dashboard.outstandingFines')}</div>
               <div className="text-4xl font-bold text-red-600 mb-2">{stats.fines}</div>
               <Link to="/dashboard/loans" className="text-red-600 text-sm hover:underline">
-                View loans →
+                {t('dashboard.viewLoans')}
               </Link>
             </div>
           </div>
@@ -244,7 +246,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2">
             <div className="card bg-white rounded-lg shadow">
               <div className="p-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900">Recent Loans</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.recentLoans')}</h2>
               </div>
               <div className="p-6">
                 {recentLoans.length > 0 ? (
@@ -255,15 +257,15 @@ export default function Dashboard() {
                           <h3 className="font-semibold text-gray-900">{loan.item_title}</h3>
                           <p className="text-sm text-gray-600 mt-1">{loan.item_authors}</p>
                           <p className="text-xs text-gray-500 mt-2">
-                            Due: {new Date(loan.due_date).toLocaleDateString()}
+                            {t('dashboard.dueOn', { date: formatDate(loan.due_date) })}
                           </p>
                         </div>
-                        <button className="btn-outline px-4 py-2 rounded ml-4">Renew</button>
+                        <button className="btn-outline px-4 py-2 rounded ml-4">{t('dashboard.renew')}</button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-600 text-center py-8">No active loans</p>
+                  <p className="text-gray-600 text-center py-8">{t('dashboard.noActiveLoans')}</p>
                 )}
               </div>
             </div>
@@ -276,10 +278,10 @@ export default function Dashboard() {
               const next = getNextKeyDate(calendar);
               return (
                 <div className={`card rounded-lg shadow p-5 border ${period.color}`}>
-                  <h3 className="text-xs font-bold uppercase tracking-wide opacity-60 mb-3">Academic Calendar</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wide opacity-60 mb-3">{t('dashboard.academicCalendar')}</h3>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xl">{period.icon}</span>
-                    <span className="font-bold text-base">{period.label}</span>
+                    <span className="font-bold text-base">{t(period.label)}</span>
                   </div>
                   {calendar.session && (
                     <p className="text-xs opacity-70 mb-3">{calendar.session}</p>
@@ -287,11 +289,11 @@ export default function Dashboard() {
                   {next && (
                     <div className="flex items-center justify-between pt-3 border-t border-current border-opacity-20">
                       <div>
-                        <p className="text-xs opacity-60">Next: {next.label}</p>
+                        <p className="text-xs opacity-60">{t('dashboard.nextEvent', { label: t(next.label) })}</p>
                       </div>
                       <div className="text-right">
                         <span className="font-bold text-xl">{next.days}</span>
-                        <span className="text-xs opacity-60 ml-1">days</span>
+                        <span className="text-xs opacity-60 ml-1">{t('dashboard.days')}</span>
                       </div>
                     </div>
                   )}
@@ -300,19 +302,19 @@ export default function Dashboard() {
             })()}
 
             <div className="card bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Access</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">{t('dashboard.quickAccess')}</h3>
               <div className="space-y-3">
                 <Link to="/dashboard/library-card" className="btn-primary w-full px-4 py-2 rounded block text-center">
-                  Library Card
+                  {t('dashboard.libraryCard')}
                 </Link>
                 <Link to="/library-manual" className="btn-outline w-full px-4 py-2 rounded block text-center">
-                  Library Manual
+                  {t('dashboard.libraryManual')}
                 </Link>
                 <Link to="/dashboard/reading-lists" className="btn-outline w-full px-4 py-2 rounded block text-center">
-                  Reading Lists
+                  {t('dashboard.readingLists')}
                 </Link>
                 <Link to="/ai-librarian" className="btn-ghost w-full px-4 py-2 rounded block text-center">
-                  Ask AI Reference Librarian
+                  {t('dashboard.askAiLibrarian')}
                 </Link>
               </div>
             </div>
@@ -322,10 +324,10 @@ export default function Dashboard() {
                 {institutionConfig.libraryName}
               </h3>
               <p className="text-sm text-gray-600">
-                Need help? Ask {institutionConfig.librarianName} or contact our library staff.
+                {t('dashboard.needHelp', { name: institutionConfig.librarianName })}
               </p>
               <Link to="/contact" className="btn-outline w-full px-4 py-2 rounded mt-4 block text-center">
-                Contact Library
+                {t('dashboard.contactLibrary')}
               </Link>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Link } from 'react-router-dom';
 import ShareButtons from '@/components/ShareButtons';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 interface Event {
   id: string;
@@ -26,8 +27,12 @@ interface Event {
 
 type ViewMode = 'month' | 'list';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_KEYS: TranslationKey[] = ['events.sun', 'events.mon', 'events.tue', 'events.wed', 'events.thu', 'events.fri', 'events.sat'];
+const MONTH_KEYS: TranslationKey[] = [
+  'events.months.january', 'events.months.february', 'events.months.march', 'events.months.april',
+  'events.months.may', 'events.months.june', 'events.months.july', 'events.months.august',
+  'events.months.september', 'events.months.october', 'events.months.november', 'events.months.december',
+];
 
 function buildCalendarGrid(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -46,10 +51,18 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-600 border-red-200',
 };
 
+const STATUS_KEYS: Record<string, TranslationKey> = {
+  upcoming: 'events.statusUpcoming',
+  ongoing: 'events.statusOngoing',
+  completed: 'events.statusCompleted',
+  cancelled: 'events.statusCancelled',
+};
+
 const HERO_IMAGE = '/nigerian-library-people.svg';
 
 export default function Events() {
-  usePageTitle('Events Calendar');
+  const { t, formatDate, formatDateTime } = useI18n();
+  usePageTitle(t('events.title'));
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -115,21 +128,21 @@ export default function Events() {
     <div>
       {/* Hero banner */}
       <div className="relative overflow-hidden" style={{ minHeight: 300 }}>
-        <img src={HERO_IMAGE} alt="Events" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={HERO_IMAGE} alt={t('nav.events')} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
         <div className="relative section py-14">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-white/60 text-sm mb-4 font-medium">
-              <Link to="/" className="hover:text-white transition-colors">Home</Link>
+              <Link to="/" className="hover:text-white transition-colors">{t('nav.home')}</Link>
               <span>›</span>
-              <span>Events</span>
+              <span>{t('nav.events')}</span>
             </div>
-            <h1 className="text-4xl font-bold text-white mb-2">Events Calendar</h1>
-            <p className="text-white/80 text-lg">Library events, workshops, seminars and more.</p>
+            <h1 className="text-4xl font-bold text-white mb-2">{t('events.title')}</h1>
+            <p className="text-white/80 text-lg">{t('events.subtitle')}</p>
             {upcomingCount > 0 && (
               <div className="mt-4 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-sm font-medium px-4 py-2 rounded-full">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                {upcomingCount} upcoming event{upcomingCount !== 1 ? 's' : ''}
+                {t('events.upcomingCount', { count: upcomingCount })}
               </div>
             )}
           </div>
@@ -147,7 +160,7 @@ export default function Events() {
                 !category ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
               }`}
             >
-              All
+              {t('events.all')}
             </button>
             {categories.map(cat => (
               <button
@@ -172,7 +185,7 @@ export default function Events() {
                   viewMode === m ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
                 }`}
               >
-                {m === 'month' ? '📅 Calendar' : '☰ List'}
+                {m === 'month' ? t('events.calendar') : t('events.list')}
               </button>
             ))}
           </div>
@@ -186,8 +199,8 @@ export default function Events() {
           filtered.length === 0 ? (
             <div className="text-center py-24 bg-white border border-neutral-100 rounded-2xl">
               <div className="text-5xl mb-4">📅</div>
-              <p className="text-neutral-500 font-medium">No events found.</p>
-              <p className="text-neutral-400 text-sm mt-1">Check back soon for upcoming library events.</p>
+              <p className="text-neutral-500 font-medium">{t('events.noEventsFound')}</p>
+              <p className="text-neutral-400 text-sm mt-1">{t('events.checkBackSoon')}</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -203,7 +216,7 @@ export default function Events() {
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary-700 to-primary-900 flex flex-col items-center justify-center gap-2">
                         <span className="text-4xl text-white/30">📅</span>
-                        <span className="text-xs text-white/50 font-medium">{ev.category || 'Event'}</span>
+                        <span className="text-xs text-white/50 font-medium">{ev.category || t('events.event')}</span>
                       </div>
                     )}
                   </div>
@@ -211,26 +224,27 @@ export default function Events() {
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {ev.status && (
                         <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLOR[ev.status] ?? 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}>
-                          {ev.status.charAt(0).toUpperCase() + ev.status.slice(1)}
+                          {STATUS_KEYS[ev.status]
+                            ? t(STATUS_KEYS[ev.status])
+                            : ev.status.charAt(0).toUpperCase() + ev.status.slice(1)}
                         </span>
                       )}
                       {ev.category && (
                         <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">{ev.category}</span>
                       )}
                       {ev.is_virtual && (
-                        <span className="text-xs bg-primary-50 text-primary-600 px-2 py-0.5 rounded-full">Virtual</span>
+                        <span className="text-xs bg-primary-50 text-primary-600 px-2 py-0.5 rounded-full">{t('events.virtual')}</span>
                       )}
                     </div>
                     <h2 className="font-semibold text-neutral-900 group-hover:text-primary-700 transition-colors line-clamp-2">{ev.title}</h2>
                     <p className="text-xs text-neutral-500 mt-1.5">
-                      {ev.start_at ? new Date(ev.start_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                      {ev.start_at ? ` · ${new Date(ev.start_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                      {ev.start_at ? formatDateTime(ev.start_at) : '—'}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{ev.venue || ev.location || 'TBC'}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">{ev.venue || ev.location || t('events.tbc')}</p>
                     {ev.registration_required && (
                       <div className="mt-3">
                         <span className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full font-medium">
-                          Registration open{ev.max_attendees > 0 ? ` · ${ev.registrations_count ?? 0}/${ev.max_attendees}` : ''}
+                          {t('events.registrationOpen', { extra: ev.max_attendees > 0 ? ` · ${ev.registrations_count ?? 0}/${ev.max_attendees}` : '' })}
                         </span>
                       </div>
                     )}
@@ -252,7 +266,7 @@ export default function Events() {
               >
                 ‹
               </button>
-              <h2 className="font-bold text-neutral-900">{MONTHS[calMonth]} {calYear}</h2>
+              <h2 className="font-bold text-neutral-900">{t(MONTH_KEYS[calMonth])} {calYear}</h2>
               <button
                 onClick={() => {
                   if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); }
@@ -264,8 +278,8 @@ export default function Events() {
               </button>
             </div>
             <div className="grid grid-cols-7 bg-neutral-50 border-b border-neutral-100">
-              {DAYS.map(d => (
-                <div key={d} className="text-center text-xs font-semibold text-neutral-400 py-2">{d}</div>
+              {DAY_KEYS.map(dk => (
+                <div key={dk} className="text-center text-xs font-semibold text-neutral-400 py-2">{t(dk)}</div>
               ))}
             </div>
             <div className="grid grid-cols-7">
@@ -296,7 +310,7 @@ export default function Events() {
                           </button>
                         ))}
                         {dayEvents.length > 2 && (
-                          <span className="text-xs text-neutral-400">+{dayEvents.length - 2} more</span>
+                          <span className="text-xs text-neutral-400">{t('events.moreEvents', { count: dayEvents.length - 2 })}</span>
                         )}
                       </>
                     )}
@@ -326,25 +340,22 @@ export default function Events() {
 
               <div className="space-y-2 mb-4 text-sm text-neutral-600">
                 <p>
-                  <span className="font-medium text-neutral-800">Date: </span>
+                  <span className="font-medium text-neutral-800">{t('events.date')}</span>
                   {selected.start_at
-                    ? new Date(selected.start_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                    ? formatDateTime(selected.start_at, 'long')
                     : '—'}
-                  {selected.start_at
-                    ? ` at ${new Date(selected.start_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-                    : ''}
                 </p>
                 {(selected.venue || selected.location) && (
-                  <p><span className="font-medium text-neutral-800">Venue: </span>{selected.venue || selected.location}</p>
+                  <p><span className="font-medium text-neutral-800">{t('events.venue')}</span>{selected.venue || selected.location}</p>
                 )}
                 {selected.department && (
-                  <p><span className="font-medium text-neutral-800">For: </span>{selected.department}</p>
+                  <p><span className="font-medium text-neutral-800">{t('events.for')}</span>{selected.department}</p>
                 )}
                 {selected.is_virtual && selected.virtual_url && (
                   <p>
-                    <span className="font-medium text-neutral-800">Join online: </span>
+                    <span className="font-medium text-neutral-800">{t('events.joinOnline')}</span>
                     <a href={selected.virtual_url} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline">
-                      Click here
+                      {t('events.clickHere')}
                     </a>
                   </p>
                 )}
@@ -357,30 +368,30 @@ export default function Events() {
               <div className="mb-5">
                 <ShareButtons
                   title={selected.title}
-                  text={`${selected.title} — ${selected.start_at ? new Date(selected.start_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}`}
+                  text={`${selected.title} — ${selected.start_at ? formatDate(selected.start_at, 'long') : ''}`}
                 />
               </div>
 
               {selected.registration_required && selected.status !== 'cancelled' && selected.status !== 'completed' && (
                 <div className="border-t border-neutral-100 pt-5">
-                  <h3 className="font-semibold text-neutral-900 mb-3 text-sm">Register for this event</h3>
+                  <h3 className="font-semibold text-neutral-900 mb-3 text-sm">{t('events.registerForEvent')}</h3>
                   {selected.max_attendees > 0 && (selected.registrations_count ?? 0) >= selected.max_attendees ? (
-                    <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">This event is fully booked.</p>
+                    <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">{t('events.fullyBooked')}</p>
                   ) : regDone ? (
-                    <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">You're registered! See you there.</p>
+                    <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">{t('events.registeredConfirmation')}</p>
                   ) : (
                     <div className="space-y-3">
                       <input
                         value={regName}
                         onChange={e => setRegName(e.target.value)}
-                        placeholder="Your full name"
+                        placeholder={t('events.fullName')}
                         className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                       <input
                         type="email"
                         value={regEmail}
                         onChange={e => setRegEmail(e.target.value)}
-                        placeholder="Your email address"
+                        placeholder={t('events.emailAddress')}
                         className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                       <button
@@ -388,7 +399,7 @@ export default function Events() {
                         disabled={registering || !regName.trim() || !regEmail.trim()}
                         className="w-full bg-primary-700 hover:bg-primary-800 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
                       >
-                        {registering ? 'Registering…' : 'Register Now'}
+                        {registering ? t('events.registering') : t('events.registerNow')}
                       </button>
                     </div>
                   )}

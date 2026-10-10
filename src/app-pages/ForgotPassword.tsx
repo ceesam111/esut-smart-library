@@ -2,10 +2,12 @@ import { useState, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/lib/i18n';
 
 const GREEN = '#6B1D2A';
 
 export default function ForgotPassword() {
+  const { t } = useI18n();
   const [email, setEmail]     = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
@@ -28,7 +30,7 @@ export default function ForgotPassword() {
         {/* Wordmark */}
         <div className="text-center mb-8">
           <img src="/assets/esut-logo.png" alt="ESUT Logo" className="w-14 h-14 mx-auto mb-3 rounded-lg object-contain" />
-          <h1 className="text-2xl font-serif font-semibold text-neutral-900">Reset Your Password</h1>
+          <h1 className="text-2xl font-serif font-semibold text-neutral-900">{t('auth.forgotTitle')}</h1>
           <p className="text-sm text-neutral-500 mt-1">{institutionConfig.name}</p>
         </div>
 
@@ -45,11 +47,11 @@ export default function ForgotPassword() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-neutral-900">Check your email</h2>
+                <h2 className="text-lg font-semibold text-neutral-900">{t('auth.checkEmail')}</h2>
                 <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
-                  We sent a password reset link to{' '}
+                  {t('auth.sentToLabel')}{' '}
                   <span className="font-medium text-neutral-700">{email}</span>.
-                  The link expires in 1 hour.
+                  {t('auth.linkExpires')}
                 </p>
               </div>
               <Link
@@ -57,15 +59,15 @@ export default function ForgotPassword() {
                 className="inline-block px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ background: GREEN }}
               >
-                ← Back to Sign In
+                {t('auth.backToSignIn')}
               </Link>
             </div>
           ) : (
             /* Step 1 — form */
             <>
-              <h2 className="text-lg font-semibold text-neutral-900 mb-2">Forgot your password?</h2>
+              <h2 className="text-lg font-semibold text-neutral-900 mb-2">{t('auth.forgotPrompt')}</h2>
               <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
-                 Enter the email address on your ESUT Library account and we will send a reset link.
+                 {t('auth.forgotSubtitle')}
               </p>
 
               {error && (
@@ -76,7 +78,7 @@ export default function ForgotPassword() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="label">Email Address</label>
+                  <label htmlFor="email" className="label">{t('auth.email')}</label>
                   <input
                     id="email"
                     type="email"
@@ -94,13 +96,13 @@ export default function ForgotPassword() {
                   className="w-full py-3 rounded-lg text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                   style={{ background: GREEN }}
                 >
-                  {loading ? 'Sending…' : 'Send Reset Link'}
+                  {loading ? t('auth.sending') : t('auth.sendResetLink')}
                 </button>
               </form>
 
               <p className="text-sm text-neutral-500 text-center mt-5">
                 <Link to="/login" className="hover:underline font-medium" style={{ color: GREEN }}>
-                  ← Back to Sign In
+                  {t('auth.backToSignIn')}
                 </Link>
               </p>
             </>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import BackButton from '@/components/BackButton';
 import { readProfilePhoto } from '@/components/auth/ProfilePhotoInput';
+import { useI18n } from '@/lib/i18n';
 
 interface ResearcherProfile {
   id: string;
@@ -28,6 +29,7 @@ interface ResearcherProfile {
 
 export default function MyProfile() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [profile, setProfile] = useState<ResearcherProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -198,7 +200,7 @@ export default function MyProfile() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading profile...</p>
+          <p className="text-gray-600">{t('profile.loadingProfile')}</p>
         </div>
       </div>
     );
@@ -212,10 +214,10 @@ export default function MyProfile() {
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <BackButton />
-            <h1 className="text-4xl font-bold text-gray-900">Research Profile</h1>
+            <BackButton label={t('common.back')} />
+            <h1 className="text-4xl font-bold text-gray-900">{t('profile.researchProfile')}</h1>
             <p className="text-gray-600 mt-2">
-              Manage your academic researcher profile
+              {t('profile.manageResearcherProfile')}
             </p>
           </div>
           {profile && (
@@ -235,13 +237,13 @@ export default function MyProfile() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Photo</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.profilePhoto')}</h2>
             <div className="flex gap-6 items-start">
               <div className="w-24 h-24 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {photoUrl ? (
                   <img
                     src={photoUrl}
-                    alt="Profile"
+                    alt={t('profile.profilePhoto')}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -250,7 +252,7 @@ export default function MyProfile() {
               </div>
               <div className="flex-1">
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Upload Photo
+                  {t('profile.uploadPhoto')}
                 </label>
                 <input
                   type="file"
@@ -260,7 +262,7 @@ export default function MyProfile() {
                   className="input w-full text-sm text-gray-600"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  JPG, PNG, or WebP (max 150 KB — larger photos are compressed automatically)
+                  {t('profile.photoHint')}
                 </p>
                 {photoError && <p className="text-xs text-red-600 mt-2">{photoError}</p>}
               </div>
@@ -268,11 +270,11 @@ export default function MyProfile() {
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Personal Information</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.personalInformation')}</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Salutation
+                  {t('profile.salutation')}
                 </label>
                 <select
                   name="salutation"
@@ -280,18 +282,18 @@ export default function MyProfile() {
                   onChange={handleInputChange}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select...</option>
-                  <option value="Dr">Dr</option>
-                  <option value="Prof">Prof</option>
-                  <option value="Ms">Ms</option>
-                  <option value="Mr">Mr</option>
-                  <option value="Mrs">Mrs</option>
+                  <option value="">{t('profile.selectPlaceholder')}</option>
+                  <option value="Dr">{t('profile.dr')}</option>
+                  <option value="Prof">{t('profile.prof')}</option>
+                  <option value="Ms">{t('profile.ms')}</option>
+                  <option value="Mr">{t('profile.mr')}</option>
+                  <option value="Mrs">{t('profile.mrs')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Full Name
+                  {t('profile.fullName')}
                 </label>
                 <input
                   type="text"
@@ -304,21 +306,21 @@ export default function MyProfile() {
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Academic Rank
+                  {t('profile.academicRank')}
                 </label>
                 <input
                   type="text"
                   name="rank"
                   value={formData.rank}
                   onChange={handleInputChange}
-                  placeholder="e.g., Senior Lecturer"
+                  placeholder={t('profile.rankPlaceholder')}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Employment Status
+                  {t('profile.employmentStatus')}
                 </label>
                 <select
                   name="employment_status"
@@ -326,21 +328,21 @@ export default function MyProfile() {
                   onChange={handleInputChange}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select...</option>
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
+                  <option value="">{t('profile.selectPlaceholder')}</option>
+                  <option value="Full-time">{t('profile.fullTime')}</option>
+                  <option value="Part-time">{t('profile.partTime')}</option>
+                  <option value="Contract">{t('profile.contract')}</option>
                 </select>
               </div>
             </div>
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Contact Information</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.contactInformation')}</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Institutional Email
+                  {t('profile.institutionalEmail')}
                 </label>
                 <input
                   type="email"
@@ -353,7 +355,7 @@ export default function MyProfile() {
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Phone
+                  {t('profile.phone')}
                 </label>
                 <input
                   type="tel"
@@ -366,14 +368,14 @@ export default function MyProfile() {
 
               <div className="md:col-span-2">
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Office Location
+                  {t('profile.officeLocation')}
                 </label>
                 <input
                   type="text"
                   name="office_location"
                   value={formData.office_location}
                   onChange={handleInputChange}
-                  placeholder="e.g., Science Building, Room 201"
+                  placeholder={t('profile.officePlaceholder')}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -381,37 +383,37 @@ export default function MyProfile() {
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Qualifications</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.qualifications')}</h2>
             <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Degree
+                  {t('profile.degree')}
                 </label>
                 <input
                   type="text"
                   value={formData.highest_qualification.degree}
                   onChange={(e) => handleQualificationChange('degree', e.target.value)}
-                  placeholder="e.g., PhD"
+                  placeholder={t('profile.degreePlaceholder')}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Field
+                  {t('profile.field')}
                 </label>
                 <input
                   type="text"
                   value={formData.highest_qualification.field}
                   onChange={(e) => handleQualificationChange('field', e.target.value)}
-                  placeholder="e.g., Physics"
+                  placeholder={t('profile.fieldPlaceholder')}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Year
+                  {t('profile.year')}
                 </label>
                 <input
                   type="number"
@@ -424,8 +426,8 @@ export default function MyProfile() {
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Specialisations</h2>
-            <p className="text-sm text-gray-600 mb-4">Maximum 3 specialisations</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.specialisations')}</h2>
+            <p className="text-sm text-gray-600 mb-4">{t('profile.maxSpecialisations')}</p>
             <div className="space-y-3">
               {formData.specialisations.map((spec, index) => (
                 <input
@@ -433,7 +435,7 @@ export default function MyProfile() {
                   type="text"
                   value={spec}
                   onChange={(e) => handleArrayFieldChange('specialisations', index, e.target.value)}
-                  placeholder={`Specialisation ${index + 1}`}
+                  placeholder={t('profile.specialisation', { index: index + 1 })}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ))}
@@ -441,8 +443,8 @@ export default function MyProfile() {
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Research Keywords</h2>
-            <p className="text-sm text-gray-600 mb-4">Minimum 5 keywords</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.researchKeywords')}</h2>
+            <p className="text-sm text-gray-600 mb-4">{t('profile.minKeywords')}</p>
             <div className="space-y-3">
               {formData.research_keywords.map((keyword, index) => (
                 <input
@@ -450,7 +452,7 @@ export default function MyProfile() {
                   type="text"
                   value={keyword}
                   onChange={(e) => handleArrayFieldChange('research_keywords', index, e.target.value)}
-                  placeholder={`Keyword ${index + 1}`}
+                  placeholder={t('profile.keyword', { index: index + 1 })}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ))}
@@ -458,37 +460,37 @@ export default function MyProfile() {
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Biography</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.biography')}</h2>
             <div className="mb-3">
               <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                Professional Biography
+                {t('profile.professionalBiography')}
               </label>
-              <p className="text-xs text-gray-600 mb-2">200-500 words</p>
+              <p className="text-xs text-gray-600 mb-2">{t('profile.wordCountHint')}</p>
               <textarea
                 name="biography"
                 value={formData.biography}
                 onChange={handleInputChange}
-                placeholder="Write your professional biography..."
+                placeholder={t('profile.bioPlaceholder')}
                 className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 rows={5}
               />
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-600">
-                {bioWordCount} words
+                {t('profile.wordsCount', { count: bioWordCount })}
               </span>
               <span className={bioValid ? 'text-green-600 font-semibold' : 'text-orange-600 font-semibold'}>
-                {bioValid ? '✓ Valid' : '⚠ 200-500 words required'}
+                {bioValid ? t('profile.valid') : t('profile.bioRequired')}
               </span>
             </div>
           </div>
 
           <div className="card bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Academic IDs</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.academicIds')}</h2>
             <div className="space-y-4">
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  ORCID
+                  {t('profile.orcid')}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -496,7 +498,7 @@ export default function MyProfile() {
                     name="orcid"
                     value={formData.orcid}
                     onChange={handleInputChange}
-                    placeholder="e.g., 0000-0001-2345-6789"
+                    placeholder={t('profile.orcidPlaceholder')}
                     className="input flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {formData.orcid && (
@@ -504,7 +506,7 @@ export default function MyProfile() {
                       type="button"
                       className="btn-outline px-4 py-2 rounded font-semibold"
                     >
-                      Verify
+                      {t('profile.verify')}
                     </button>
                   )}
                 </div>
@@ -512,7 +514,7 @@ export default function MyProfile() {
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  Google Scholar ID
+                  {t('profile.googleScholarId')}
                 </label>
                 <input
                   type="text"
@@ -525,14 +527,14 @@ export default function MyProfile() {
 
               <div>
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
-                  ResearchGate URL
+                  {t('profile.researchGateUrl')}
                 </label>
                 <input
                   type="url"
                   name="researchgate_url"
                   value={formData.researchgate_url}
                   onChange={handleInputChange}
-                  placeholder="https://researchgate.net/profile/..."
+                  placeholder={t('profile.researchGatePlaceholder')}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -545,10 +547,10 @@ export default function MyProfile() {
               disabled={saving || !bioValid}
               className="btn-primary flex-1 px-4 py-3 rounded font-semibold disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Submit for Review'}
+              {saving ? t('profile.saving') : t('profile.submitForReview')}
             </button>
             <a href="/dashboard" className="btn-outline flex-1 px-4 py-3 rounded font-semibold text-center">
-              Cancel
+              {t('profile.cancel')}
             </a>
           </div>
         </form>

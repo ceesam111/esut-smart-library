@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import BackButton from '@/components/BackButton';
+import { useI18n } from '@/lib/i18n';
 
 interface Loan {
   id: string;
@@ -25,6 +26,7 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
 
 export default function Loans() {
   const navigate = useNavigate();
+  const { t, formatDate, formatCurrency } = useI18n();
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +145,7 @@ export default function Loans() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading loans...</p>
+          <p className="text-gray-600">{t('loans.loadingLoans')}</p>
         </div>
       </div>
     );
@@ -153,9 +155,9 @@ export default function Loans() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <BackButton />
-          <h1 className="text-4xl font-bold text-gray-900">My Loans</h1>
-          <p className="text-gray-600 mt-2">Manage your borrowed items</p>
+          <BackButton label={t('common.back')} />
+          <h1 className="text-4xl font-bold text-gray-900">{t('loans.myLoans')}</h1>
+          <p className="text-gray-600 mt-2">{t('loans.manageBorrowed')}</p>
         </div>
 
         <div className="card bg-white rounded-lg shadow mb-6">
@@ -169,7 +171,7 @@ export default function Loans() {
                     : 'text-gray-600 border-transparent hover:text-gray-900'
                 }`}
               >
-                Active Loans ({activeLoans.length})
+                {t('loans.activeLoans', { count: activeLoans.length })}
               </button>
               <button
                 onClick={() => setActiveTab('history')}
@@ -179,7 +181,7 @@ export default function Loans() {
                     : 'text-gray-600 border-transparent hover:text-gray-900'
                 }`}
               >
-                History ({historyLoans.length})
+                {t('loans.history', { count: historyLoans.length })}
               </button>
             </div>
           </div>
@@ -210,15 +212,15 @@ export default function Loans() {
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {item?.title ?? 'Library item'}
+                            {item?.title ?? t('loans.libraryItem')}
                           </h3>
                           <p className="text-sm text-gray-600 mt-1">
-                            by {Array.isArray(item?.authors) ? item?.authors.join('; ') : item?.authors || 'Unknown author'}
+                            {t('loans.byAuthor', { authors: Array.isArray(item?.authors) ? item?.authors.join('; ') : item?.authors || t('loans.unknownAuthor') })}
                           </p>
                         </div>
                         {overdue && (
                           <span className="badge badge-error px-3 py-1 rounded-full text-xs font-semibold">
-                            Overdue
+                            {t('loans.overdue')}
                           </span>
                         )}
                       </div>
@@ -226,15 +228,15 @@ export default function Loans() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 py-3 border-t border-gray-200">
                         <div>
                           <div className="text-xs text-gray-600 font-medium">
-                            Issued
+                            {t('loans.issued')}
                           </div>
                           <div className="text-sm font-semibold text-gray-900 mt-1">
-                            {new Date(loan.checkout_date).toLocaleDateString()}
+                            {formatDate(loan.checkout_date)}
                           </div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-600 font-medium">
-                            Due Date
+                            {t('loans.dueDate')}
                           </div>
                           <div
                             className={`text-sm font-semibold mt-1 ${
@@ -245,27 +247,27 @@ export default function Loans() {
                                   : 'text-gray-900'
                             }`}
                           >
-                            {new Date(loan.due_date).toLocaleDateString()}
+                            {formatDate(loan.due_date)}
                           </div>
                           {activeTab === 'active' && (
                             <div className="text-xs text-gray-500 mt-1">
                               {overdue
-                                ? `${Math.abs(daysUntilDue)} days overdue`
-                                : `${daysUntilDue} days left`}
+                                ? t('loans.daysOverdue', { count: Math.abs(daysUntilDue) })
+                                : t('loans.daysLeft', { count: daysUntilDue })}
                             </div>
                           )}
                         </div>
                         <div>
                           <div className="text-xs text-gray-600 font-medium">
-                            Renewals
+                            {t('loans.renewals')}
                           </div>
                           <div className="text-sm font-semibold text-gray-900 mt-1">
-                            {loan.renewed_count ?? 0}/{maxRenewals}
+                            {t('loans.renewalsCount', { count: loan.renewed_count ?? 0, max: maxRenewals })}
                           </div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-600 font-medium">
-                            Status
+                            {t('loans.status')}
                           </div>
                           <div className="mt-1">
                             <span
@@ -276,8 +278,8 @@ export default function Loans() {
                               }`}
                             >
                               {loan.status === 'active'
-                                ? 'Active'
-                                : 'Returned'}
+                                ? t('loans.active')
+                                : t('loans.returned')}
                             </span>
                           </div>
                         </div>
@@ -287,13 +289,13 @@ export default function Loans() {
                         <div className={`mb-4 rounded-xl border p-4 ${overdue ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'}`}>
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className={`text-xs font-semibold uppercase tracking-wide ${overdue ? 'text-red-700' : 'text-emerald-700'}`}>{overdue ? 'Overdue Counter' : 'Return Countdown'}</p>
-                              <p className={`text-2xl font-bold ${overdue ? 'text-red-700' : 'text-emerald-700'}`}>{overdue ? `${Math.abs(daysUntilDue)} day(s) overdue` : `${daysUntilDue} day(s) remaining`}</p>
+                              <p className={`text-xs font-semibold uppercase tracking-wide ${overdue ? 'text-red-700' : 'text-emerald-700'}`}>{overdue ? t('loans.overdueCounter') : t('loans.returnCountdown')}</p>
+                              <p className={`text-2xl font-bold ${overdue ? 'text-red-700' : 'text-emerald-700'}`}>{overdue ? t('loans.daysOverdueCounter', { count: Math.abs(daysUntilDue) }) : t('loans.daysRemaining', { count: daysUntilDue })}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{fine ? 'Recorded Fine' : 'Estimated Fine'}</p>
-                              <p className={`text-2xl font-bold ${(fine || estimatedFine > 0) ? 'text-red-700' : 'text-neutral-700'}`}>₦{Number(fine?.amount ?? estimatedFine).toLocaleString()}</p>
-                              <p className="text-xs text-neutral-500">Rate: ₦{fineRate.toLocaleString()} per overdue day</p>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{fine ? t('loans.recordedFine') : t('loans.estimatedFine')}</p>
+                              <p className={`text-2xl font-bold ${(fine || estimatedFine > 0) ? 'text-red-700' : 'text-neutral-700'}`}>{t('loans.fineAmount', { amount: formatCurrency(Number(fine?.amount ?? estimatedFine)) })}</p>
+                              <p className="text-xs text-neutral-500">{t('loans.fineRate', { rate: formatCurrency(fineRate) })}</p>
                             </div>
                           </div>
                         </div>
@@ -307,20 +309,20 @@ export default function Loans() {
                               disabled={renewingId === loan.id}
                               className="btn-primary px-4 py-2 rounded font-semibold disabled:opacity-50"
                             >
-                              {renewingId === loan.id ? 'Renewing...' : 'Renew'}
+                              {renewingId === loan.id ? t('loans.renewing') : t('loans.renew')}
                             </button>
                           )}
                           {!canRenew && activeTab === 'active' && (
                             <div className="text-sm text-gray-600">
                               {(loan.renewed_count ?? 0) >= maxRenewals
-                                ? 'No renewals remaining'
+                                ? t('loans.noRenewalsRemaining')
                                 : overdue
-                                  ? 'Cannot renew overdue items'
+                                  ? t('loans.cannotRenewOverdue')
                                   : ''}
                             </div>
                           )}
                           <button className="btn-outline px-4 py-2 rounded font-semibold">
-                            Item Details
+                            {t('loans.itemDetails')}
                           </button>
                         </div>
                       )}
@@ -332,15 +334,15 @@ export default function Loans() {
               <div className="text-center py-12">
                 <p className="text-gray-600 text-lg mb-4">
                   {activeTab === 'active'
-                    ? 'No active loans'
-                    : 'No loan history'}
+                    ? t('loans.noActiveLoans')
+                    : t('loans.noLoanHistory')}
                 </p>
                 {activeTab === 'active' && (
                   <a
                     href="/catalogue"
                     className="btn-primary inline-block px-6 py-2 rounded font-semibold"
                   >
-                    Search Catalogue
+                    {t('loans.searchCatalogue')}
                   </a>
                 )}
               </div>
@@ -349,7 +351,7 @@ export default function Loans() {
         </div>
 
         <a href="/dashboard" className="btn-ghost px-4 py-2 rounded font-semibold">
-          ← Back to Dashboard
+          {t('loans.backToDashboard')}
         </a>
       </div>
     </div>

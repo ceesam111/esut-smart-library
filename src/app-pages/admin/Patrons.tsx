@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { institutionConfig } from '@config/institution.config';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/lib/i18n';
 
 interface Patron {
   id: string;
@@ -49,18 +50,30 @@ const patronCategories = [
   'Alumni',
 ];
 
+const patronCategoryKeys = [
+  'patrons.undergraduate',
+  'patrons.postgraduateTaught',
+  'patrons.postgraduateResearch',
+  'patrons.academicStaff',
+  'patrons.nonAcademicStaff',
+  'patrons.visitingScholar',
+  'patrons.externalReader',
+  'patrons.alumni',
+] as const;
+
 const statusOptions = [
-  { value: 'active', label: 'Active', color: 'badge-success' },
-  { value: 'suspended', label: 'Suspended', color: 'badge-warning' },
-  { value: 'expired', label: 'Expired', color: 'badge-error' },
-  { value: 'graduated', label: 'Graduated Student', color: 'badge-secondary' },
-  { value: 'withdrawn', label: 'Withdrawn Student', color: 'badge-error' },
-  { value: 'retired', label: 'Retired Staff', color: 'badge-secondary' },
-  { value: 'disengaged', label: 'Disengaged Staff', color: 'badge-error' },
-  { value: 'visitor', label: 'Visitor Only', color: 'badge-secondary' },
-];
+  { value: 'active', labelKey: 'patrons.statusActive', color: 'badge-success' },
+  { value: 'suspended', labelKey: 'patrons.statusSuspended', color: 'badge-warning' },
+  { value: 'expired', labelKey: 'patrons.statusExpired', color: 'badge-error' },
+  { value: 'graduated', labelKey: 'patrons.statusGraduated', color: 'badge-secondary' },
+  { value: 'withdrawn', labelKey: 'patrons.statusWithdrawn', color: 'badge-error' },
+  { value: 'retired', labelKey: 'patrons.statusRetired', color: 'badge-secondary' },
+  { value: 'disengaged', labelKey: 'patrons.statusDisengaged', color: 'badge-error' },
+  { value: 'visitor', labelKey: 'patrons.statusVisitor', color: 'badge-secondary' },
+] as const;
 
 export default function Patrons() {
+  const { t, formatDate, formatCurrency } = useI18n();
   const [patrons, setPatrons] = useState<Patron[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -178,7 +191,7 @@ export default function Patrons() {
         };
         const formattedLoans: LoanRecord[] = (loans as unknown as LoanRow[]).map((loan) => ({
           id: loan.id,
-          item_title: loan.catalogue_items?.title || 'Unknown Item',
+          item_title: loan.catalogue_items?.title || t('patrons.unknownItem'),
           checkout_date: loan.checkout_date,
           due_date: loan.due_date,
           return_date: loan.return_date,
@@ -210,19 +223,19 @@ export default function Patrons() {
 
   const exportCSV = () => {
     const headers = [
-      'Patron ID',
-      'Full Name',
-      'Email',
-      'Phone',
-      'Faculty',
-      'Department',
-      'Category',
-      'Level',
-      'Matric Number',
-      'Staff ID',
-      'Registration Date',
-      'Expiry Date',
-      'Status'
+      t('patrons.csvPatronId'),
+      t('patrons.csvFullName'),
+      t('patrons.csvEmail'),
+      t('patrons.csvPhone'),
+      t('patrons.csvFaculty'),
+      t('patrons.csvDepartment'),
+      t('patrons.csvCategory'),
+      t('patrons.csvLevel'),
+      t('patrons.csvMatricNumber'),
+      t('patrons.csvStaffId'),
+      t('patrons.csvRegistrationDate'),
+      t('patrons.csvExpiryDate'),
+      t('patrons.csvStatus'),
     ];
 
     const rows = patrons.map((p) => [
@@ -284,17 +297,17 @@ export default function Patrons() {
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-800">Patron Directory</h1>
+          <h1 className="text-3xl font-bold text-neutral-800">{t('patrons.patronDirectory')}</h1>
           <p className="text-neutral-500 mt-1">
-            Manage library patron accounts • {totalPatrons.toLocaleString()} total
+            {t('patrons.managePatrons', { count: totalPatrons })}
           </p>
         </div>
         <div className="flex gap-2">
           <a href="/admin/patrons/import" className="btn-outline">
-            Import CSV
+            {t('patrons.importCsv')}
           </a>
           <button onClick={exportCSV} className="btn-primary">
-            Export CSV
+            {t('patrons.exportCsv')}
           </button>
         </div>
       </div>
@@ -304,11 +317,11 @@ export default function Patrons() {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
-            <label className="label">Search</label>
+            <label className="label">{t('patrons.search')}</label>
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search by name, ID, email, matric, or staff ID..."
+                placeholder={t('patrons.searchPlaceholder')}
                 className="input pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -321,13 +334,13 @@ export default function Patrons() {
 
           {/* Faculty */}
           <div className="w-full lg:w-48">
-            <label className="label">Faculty</label>
+            <label className="label">{t('patrons.faculty')}</label>
             <select
               className="input"
               value={filterFaculty}
               onChange={(e) => { setFilterFaculty(e.target.value); setCurrentPage(1); }}
             >
-              <option value="">All Faculties</option>
+              <option value="">{t('patrons.allFaculties')}</option>
               {institutionConfig.faculties.map((f) => (
                 <option key={f.code} value={f.code}>{f.name}</option>
               ))}
@@ -336,30 +349,30 @@ export default function Patrons() {
 
           {/* Category */}
           <div className="w-full lg:w-48">
-            <label className="label">Category</label>
+            <label className="label">{t('patrons.category')}</label>
             <select
               className="input"
               value={filterCategory}
               onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
             >
-              <option value="">All Categories</option>
-              {patronCategories.map((c) => (
-                <option key={c} value={c}>{c}</option>
+              <option value="">{t('patrons.allCategories')}</option>
+              {patronCategories.map((c, i) => (
+                <option key={c} value={c}>{t(patronCategoryKeys[i])}</option>
               ))}
             </select>
           </div>
 
           {/* Status */}
           <div className="w-full lg:w-36">
-            <label className="label">Status</label>
+            <label className="label">{t('patrons.status')}</label>
             <select
               className="input"
               value={filterStatus}
               onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
             >
-              <option value="">All Status</option>
+              <option value="">{t('patrons.allStatus')}</option>
               {statusOptions.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>{t(s.labelKey)}</option>
               ))}
             </select>
           </div>
@@ -368,7 +381,7 @@ export default function Patrons() {
         {/* Date range */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 sm:max-w-xs">
-            <label className="label">Registered From</label>
+            <label className="label">{t('patrons.registeredFrom')}</label>
             <input
               type="date"
               className="input"
@@ -377,7 +390,7 @@ export default function Patrons() {
             />
           </div>
           <div className="flex-1 sm:max-w-xs">
-            <label className="label">Registered To</label>
+            <label className="label">{t('patrons.registeredTo')}</label>
             <input
               type="date"
               className="input"
@@ -387,7 +400,7 @@ export default function Patrons() {
           </div>
           <div className="flex items-end">
             <button onClick={clearFilters} className="btn-ghost text-sm">
-              Clear Filters
+              {t('patrons.clearFilters')}
             </button>
           </div>
         </div>
@@ -399,16 +412,16 @@ export default function Patrons() {
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 border-b border-neutral-200">
               <tr>
-                <th className="text-left p-3 font-semibold text-neutral-600">Patron ID</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Name</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Email</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Faculty</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Department</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Category</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Matric/Staff ID</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Registered</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Expiry</th>
-                <th className="text-left p-3 font-semibold text-neutral-600">Status</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colPatronId')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colName')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colEmail')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colFaculty')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colDepartment')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colCategory')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colMatricStaffId')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colRegistered')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colExpiry')}</th>
+                <th className="text-left p-3 font-semibold text-neutral-600">{t('patrons.colStatus')}</th>
                 <th className="text-left p-3 font-semibold text-neutral-600"></th>
               </tr>
             </thead>
@@ -418,7 +431,7 @@ export default function Patrons() {
                   <td colSpan={11} className="p-8 text-center text-neutral-400">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                      Loading patrons...
+                      {t('patrons.loadingPatrons')}
                     </div>
                   </td>
                 </tr>
@@ -426,8 +439,8 @@ export default function Patrons() {
                 <tr>
                   <td colSpan={11} className="p-8 text-center text-neutral-400">
                     <div className="text-4xl mb-2">📇</div>
-                    <p className="font-medium">No patrons found</p>
-                    <p className="text-sm">Try adjusting your filters</p>
+                    <p className="font-medium">{t('patrons.noPatronsFound')}</p>
+                    <p className="text-sm">{t('patrons.tryAdjustingFilters')}</p>
                   </td>
                 </tr>
               ) : (
@@ -445,30 +458,30 @@ export default function Patrons() {
                       {patron.matric_number || patron.staff_id || '—'}
                     </td>
                     <td className="p-3 text-neutral-500">
-                      {new Date(patron.created_at).toLocaleDateString()}
+                      {formatDate(patron.created_at)}
                     </td>
                     <td className="p-3 text-neutral-500">
-                      {new Date(patron.membership_expires_at).toLocaleDateString()}
+                      {formatDate(patron.membership_expires_at)}
                     </td>
                     <td className="p-3">
                       <span className={`badge ${getStatusBadge(patron.status)}`}>
                         {patron.status}
                       </span>
                     </td>
-                    <td className="p-3">
-                      <div className="flex flex-col gap-1">
-                        <button onClick={() => viewPatronDetails(patron)} className="text-primary-600 hover:text-primary-800 font-medium text-left">View</button>
-                        <select value="" onChange={(e) => e.target.value && updatePatronStatus(patron, e.target.value)} className="rounded border border-neutral-200 px-1 py-0.5 text-xs">
-                          <option value="">Clearance/status...</option>
-                          <option value="graduated">Graduated</option>
-                          <option value="withdrawn">Withdrawn</option>
-                          <option value="retired">Retired</option>
-                          <option value="disengaged">Disengaged</option>
-                          <option value="visitor">Visitor only</option>
-                          <option value="active">Restore active</option>
-                        </select>
-                      </div>
-                    </td>
+                  <td className="p-3">
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => viewPatronDetails(patron)} className="text-primary-600 hover:text-primary-800 font-medium text-left">{t('patrons.view')}</button>
+                      <select value="" onChange={(e) => e.target.value && updatePatronStatus(patron, e.target.value)} className="rounded border border-neutral-200 px-1 py-0.5 text-xs">
+                        <option value="">Clearance/status...</option>
+                        <option value="graduated">{t('patrons.clearanceGraduated')}</option>
+                        <option value="withdrawn">{t('patrons.clearanceWithdrawn')}</option>
+                        <option value="retired">{t('patrons.clearanceRetired')}</option>
+                        <option value="disengaged">{t('patrons.clearanceDisengaged')}</option>
+                        <option value="visitor">{t('patrons.clearanceVisitor')}</option>
+                        <option value="active">{t('patrons.clearanceRestore')}</option>
+                      </select>
+                    </div>
+                  </td>
                   </tr>
                 ))
               )}
@@ -480,7 +493,7 @@ export default function Patrons() {
         {totalPatrons > 0 && (
           <div className="flex items-center justify-between p-4 bg-neutral-50 border-t border-neutral-100">
             <div className="text-sm text-neutral-500">
-              Showing {startItem} to {endItem} of {totalPatrons.toLocaleString()} patrons
+              {t('patrons.showingPatrons', { from: startItem, to: endItem, count: totalPatrons })}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -488,7 +501,7 @@ export default function Patrons() {
                 disabled={currentPage === 1}
                 className="btn-outline px-3 py-1.5 text-sm disabled:opacity-40"
               >
-                Previous
+                {t('patrons.previous')}
               </button>
               <div className="flex items-center gap-1">
                 {(() => {
@@ -534,7 +547,7 @@ export default function Patrons() {
                 disabled={currentPage === totalPages}
                 className="btn-outline px-3 py-1.5 text-sm disabled:opacity-40"
               >
-                Next
+                {t('patrons.next')}
               </button>
             </div>
           </div>
@@ -573,74 +586,74 @@ export default function Patrons() {
                   {/* Profile info */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Email</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailEmail')}</p>
                       <p className="text-sm text-neutral-800">{selectedPatron.email}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Phone</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailPhone')}</p>
                       <p className="text-sm text-neutral-800">{selectedPatron.phone || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Category</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailCategory')}</p>
                       <span className="badge badge-secondary">{selectedPatron.patron_category}</span>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Status</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailStatus')}</p>
                       <span className={`badge ${getStatusBadge(selectedPatron.status)}`}>
                         {selectedPatron.status}
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Faculty</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailFaculty')}</p>
                       <p className="text-sm text-neutral-800">{selectedPatron.faculty_name || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Department</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailDepartment')}</p>
                       <p className="text-sm text-neutral-800">{selectedPatron.department || '—'}</p>
                     </div>
                     {selectedPatron.matric_number && (
                       <div>
-                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Matric Number</p>
+                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailMatricNumber')}</p>
                         <p className="font-mono text-sm text-neutral-800">{selectedPatron.matric_number}</p>
                       </div>
                     )}
                     {selectedPatron.staff_id && (
                       <div>
-                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Staff ID</p>
+                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailStaffId')}</p>
                         <p className="font-mono text-sm text-neutral-800">{selectedPatron.staff_id}</p>
                       </div>
                     )}
                     {selectedPatron.level && (
                       <div>
-                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Level</p>
+                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailLevel')}</p>
                         <p className="text-sm text-neutral-800">{selectedPatron.level}</p>
                       </div>
                     )}
                     {selectedPatron.rank && (
                       <div>
-                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Rank</p>
+                        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailRank')}</p>
                         <p className="text-sm text-neutral-800">{selectedPatron.rank}</p>
                       </div>
                     )}
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Registered</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailRegistered')}</p>
                       <p className="text-sm text-neutral-800">
-                        {new Date(selectedPatron.created_at).toLocaleDateString()}
+                        {formatDate(selectedPatron.created_at)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Expires</p>
+                      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">{t('patrons.detailExpires')}</p>
                       <p className="text-sm text-neutral-800">
-                        {new Date(selectedPatron.membership_expires_at).toLocaleDateString()}
+                        {formatDate(selectedPatron.membership_expires_at)}
                       </p>
                     </div>
                   </div>
 
                   {/* Loan History */}
                   <div className="border-t border-neutral-200 pt-6">
-                    <h3 className="font-semibold text-neutral-800 mb-4">Loan History</h3>
+                    <h3 className="font-semibold text-neutral-800 mb-4">{t('patrons.loanHistory')}</h3>
                     {loanHistory.length === 0 ? (
-                      <p className="text-neutral-500 text-sm">No loan history</p>
+                      <p className="text-neutral-500 text-sm">{t('patrons.noLoanHistory')}</p>
                     ) : (
                       <div className="space-y-3">
                         {loanHistory.map((loan) => (
@@ -659,22 +672,22 @@ export default function Patrons() {
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-xs text-neutral-500">
                               <div>
-                                <span className="text-neutral-400">Checkout:</span>{' '}
-                                {new Date(loan.checkout_date).toLocaleDateString()}
+                                <span className="text-neutral-400">{t('patrons.checkout')}</span>{' '}
+                                {formatDate(loan.checkout_date)}
                               </div>
                               <div>
-                                <span className="text-neutral-400">Due:</span>{' '}
-                                {new Date(loan.due_date).toLocaleDateString()}
+                                <span className="text-neutral-400">{t('patrons.due')}</span>{' '}
+                                {formatDate(loan.due_date)}
                               </div>
                               {loan.return_date && (
                                 <div>
-                                  <span className="text-neutral-400">Returned:</span>{' '}
-                                  {new Date(loan.return_date).toLocaleDateString()}
+                                  <span className="text-neutral-400">{t('patrons.returned')}</span>{' '}
+                                  {formatDate(loan.return_date)}
                                 </div>
                               )}
                               {loan.fine_amount && (
                                 <div className="text-error-600">
-                                  Fine: ₦{loan.fine_amount.toLocaleString()}
+                                  {t('patrons.fine', { amount: formatCurrency(loan.fine_amount) })}
                                 </div>
                               )}
                             </div>
@@ -700,7 +713,7 @@ export default function Patrons() {
                   }
                 }}
               >
-                {selectedPatron?.status === 'suspended' ? 'Reactivate Account' : 'Suspend Account'}
+                {selectedPatron?.status === 'suspended' ? t('patrons.reactivateAccount') : t('patrons.suspendAccount')}
               </button>
               <button
                 className="btn-primary flex-1"
@@ -715,7 +728,7 @@ export default function Patrons() {
                   setSelectedPatron({ ...selectedPatron, membership_expires_at: newExpiry.toISOString() });
                 }}
               >
-                Renew Membership (+1 Year)
+                {t('patrons.renewMembership')}
               </button>
             </div>
           </div>

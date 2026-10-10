@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, Send, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 
 interface NoticeTemplate {
   id: string;
@@ -27,32 +28,32 @@ interface NoticeTemplate {
   version: number;
 }
 
-const NOTICE_TYPE_LABELS: Record<string, string> = {
-  checkout_receipt: 'Checkout Receipt',
-  checkin_receipt: 'Checkin Receipt',
-  due_soon: 'Due Soon',
-  overdue: 'Overdue',
-  overdue_escalation: 'Overdue Escalation',
-  hold_ready: 'Hold Ready',
-  hold_cancelled: 'Hold Cancelled',
-  renewal_confirmation: 'Renewal Confirmation',
-  fine_notice: 'Fine Notice',
-  welcome: 'Welcome',
-  email_verification: 'Email Verification',
-  password_reset: 'Password Reset',
-  account_expiry: 'Account Expiry',
-  account_restriction: 'Account Restriction',
-  submission_received: 'Submission Received',
-  reviewer_assigned: 'Reviewer Assigned',
-  changes_requested: 'Changes Requested',
-  returned_for_correction: 'Returned for Correction',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  published: 'Published',
-  claim_notice: 'Claim Notice',
-  order_notice: 'Order Notice',
-  vendor_notice: 'Vendor Notice',
-  custom_notice: 'Custom Notice',
+const NOTICE_TYPE_KEYS: Record<string, TranslationKey> = {
+  checkout_receipt: 'notices.checkoutReceipt',
+  checkin_receipt: 'notices.checkinReceipt',
+  due_soon: 'notices.dueSoon',
+  overdue: 'notices.overdue',
+  overdue_escalation: 'notices.overdueEscalation',
+  hold_ready: 'notices.holdReady',
+  hold_cancelled: 'notices.holdCancelled',
+  renewal_confirmation: 'notices.renewalConfirmation',
+  fine_notice: 'notices.fineNotice',
+  welcome: 'notices.welcome',
+  email_verification: 'notices.emailVerification',
+  password_reset: 'notices.passwordReset',
+  account_expiry: 'notices.accountExpiry',
+  account_restriction: 'notices.accountRestriction',
+  submission_received: 'notices.submissionReceived',
+  reviewer_assigned: 'notices.reviewerAssigned',
+  changes_requested: 'notices.changesRequested',
+  returned_for_correction: 'notices.returnedForCorrection',
+  approved: 'notices.approved',
+  rejected: 'notices.rejected',
+  published: 'notices.published',
+  claim_notice: 'notices.claimNotice',
+  order_notice: 'notices.orderNotice',
+  vendor_notice: 'notices.vendorNotice',
+  custom_notice: 'notices.customNotice',
 };
 
 const SAMPLE_CONTEXT: Record<string, unknown> = {
@@ -69,6 +70,7 @@ const SAMPLE_CONTEXT: Record<string, unknown> = {
 };
 
 export default function NoticesPage() {
+  const { t } = useI18n();
   const [templates, setTemplates] = useState<NoticeTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<NoticeTemplate | null>(null);
@@ -103,11 +105,11 @@ export default function NoticesPage() {
         }
       }
     } catch {
-      toast.error('Failed to load templates');
+      toast.error(t('notices.failedToLoadTemplates'));
     } finally {
       setLoading(false);
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, t]);
 
   useEffect(() => {
     void fetchTemplates();
@@ -126,7 +128,7 @@ export default function NoticesPage() {
         setPreviewData(data.rendered);
       }
     } catch {
-      toast.error('Preview failed');
+      toast.error(t('notices.previewFailed'));
     }
   };
 
@@ -146,12 +148,12 @@ export default function NoticesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Test sent via ${data.delivery?.status ?? 'unknown'}`);
+        toast.success(t('notices.testSent', { status: data.delivery?.status ?? 'unknown' }));
       } else {
-        toast.error(data.error || 'Test send failed');
+        toast.error(data.error || t('notices.testSendFailed'));
       }
     } catch {
-      toast.error('Test send failed');
+      toast.error(t('notices.testSendFailed'));
     } finally {
       setSending(false);
     }
@@ -179,15 +181,15 @@ export default function NoticesPage() {
       const data = await res.json();
       if (data.success) {
         const updated: NoticeTemplate = data.template;
-        setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setTemplates((prev) => prev.map((tpl) => (tpl.id === updated.id ? updated : tpl)));
         setSelectedTemplate(updated);
-        toast.success(`Template saved (v${updated.version})`);
+        toast.success(t('notices.templateSaved', { version: updated.version }));
       } else {
-        toast.error(data.error || 'Save failed');
+        toast.error(data.error || t('notices.saveFailed'));
         if (res.status === 409) void fetchTemplates();
       }
     } catch {
-      toast.error('Save failed');
+      toast.error(t('notices.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -202,11 +204,11 @@ export default function NoticesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, enabled } : t)));
-        toast.success(enabled ? 'Template enabled' : 'Template disabled');
+        setTemplates((prev) => prev.map((tpl) => (tpl.id === templateId ? { ...tpl, enabled } : tpl)));
+        toast.success(enabled ? t('notices.templateEnabled') : t('notices.templateDisabled'));
       }
     } catch {
-      toast.error('Toggle failed');
+      toast.error(t('notices.toggleFailed'));
     }
   };
 
@@ -215,21 +217,21 @@ export default function NoticesPage() {
       const res = await fetch('/api/admin/notices/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'duplicate', templateId: template.id, newName: `${template.name} (Copy)` }),
+        body: JSON.stringify({ action: 'duplicate', templateId: template.id, newName: `${template.name}${t('notices.copySuffix')}` }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Template duplicated');
+        toast.success(t('notices.templateDuplicated'));
         void fetchTemplates();
       }
     } catch {
-      toast.error('Duplicate failed');
+      toast.error(t('notices.duplicateFailed'));
     }
   };
 
   const filteredTemplates = filterChannel === 'all'
     ? templates
-    : templates.filter((t) => t.channel === filterChannel);
+    : templates.filter((tpl) => tpl.channel === filterChannel);
 
   if (loading) {
     return (
@@ -243,25 +245,25 @@ export default function NoticesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Notice Templates</h1>
-          <p className="text-sm text-muted-foreground">Manage notice templates, preview, and test send</p>
+          <h1 className="text-2xl font-bold">{t('notices.noticeTemplates')}</h1>
+          <p className="text-sm text-muted-foreground">{t('notices.noticeTemplatesSubtitle')}</p>
         </div>
         <Select value={filterChannel} onValueChange={setFilterChannel}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter by channel" />
+            <SelectValue placeholder={t('notices.filterByChannel')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Channels</SelectItem>
-            <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="in-app">In-App</SelectItem>
-            <SelectItem value="print">Print</SelectItem>
+            <SelectItem value="all">{t('notices.allChannels')}</SelectItem>
+            <SelectItem value="email">{t('notices.email')}</SelectItem>
+            <SelectItem value="in-app">{t('notices.inApp')}</SelectItem>
+            <SelectItem value="print">{t('notices.print')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-3">
-          <h2 className="text-lg font-semibold">Templates ({filteredTemplates.length})</h2>
+          <h2 className="text-lg font-semibold">{t('notices.templates', { count: filteredTemplates.length })}</h2>
           {filteredTemplates.map((template) => (
             <Card
               key={template.id}
@@ -275,14 +277,16 @@ export default function NoticesPage() {
                   <div>
                     <p className="font-medium text-sm">{template.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {NOTICE_TYPE_LABELS[template.notice_type] ?? template.notice_type}
+                      {NOTICE_TYPE_KEYS[template.notice_type]
+                        ? t(NOTICE_TYPE_KEYS[template.notice_type])
+                        : template.notice_type}
                     </p>
                   </div>
                   <Badge variant={template.enabled ? 'default' : 'secondary'}>
-                    {template.enabled ? 'Enabled' : 'Disabled'}
+                    {template.enabled ? t('notices.enabled') : t('notices.disabled')}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">v{template.version} | {template.channel}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('notices.versionChannel', { version: template.version, channel: template.channel })}</p>
               </CardContent>
             </Card>
           ))}
@@ -292,40 +296,40 @@ export default function NoticesPage() {
           {selectedTemplate ? (
             <Tabs defaultValue="edit">
               <TabsList>
-                <TabsTrigger value="edit">Edit</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-                <TabsTrigger value="test">Test Send</TabsTrigger>
-                <TabsTrigger value="variables">Variables</TabsTrigger>
+                <TabsTrigger value="edit">{t('notices.edit')}</TabsTrigger>
+                <TabsTrigger value="preview">{t('notices.preview')}</TabsTrigger>
+                <TabsTrigger value="test">{t('notices.testSend')}</TabsTrigger>
+                <TabsTrigger value="variables">{t('notices.variables')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="edit" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Template Details</CardTitle>
+                    <CardTitle className="text-base">{t('notices.templateDetails')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Name</Label>
+                        <Label>{t('notices.name')}</Label>
                         <Input
                           value={editDraft?.name ?? ''}
                           onChange={(e) => setEditDraft((d) => (d ? { ...d, name: e.target.value } : d))}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Channel</Label>
+                        <Label>{t('notices.channel')}</Label>
                         <Input value={selectedTemplate.channel} readOnly />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Subject</Label>
+                      <Label>{t('notices.subject')}</Label>
                       <Input
                         value={editDraft?.subject ?? ''}
                         onChange={(e) => setEditDraft((d) => (d ? { ...d, subject: e.target.value } : d))}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Body (Text)</Label>
+                      <Label>{t('notices.bodyText')}</Label>
                       <Textarea
                         value={editDraft?.body_text ?? ''}
                         onChange={(e) => setEditDraft((d) => (d ? { ...d, body_text: e.target.value } : d))}
@@ -334,7 +338,7 @@ export default function NoticesPage() {
                     </div>
                     {selectedTemplate.body_html !== undefined && (
                       <div className="space-y-2">
-                        <Label>Body (HTML)</Label>
+                        <Label>{t('notices.bodyHtml')}</Label>
                         <Textarea
                           value={editDraft?.body_html ?? ''}
                           onChange={(e) => setEditDraft((d) => (d ? { ...d, body_html: e.target.value } : d))}
@@ -348,14 +352,14 @@ export default function NoticesPage() {
                           checked={selectedTemplate.enabled}
                           onCheckedChange={(checked) => void handleToggle(selectedTemplate.id, checked)}
                         />
-                        <Label>Enabled</Label>
+                        <Label>{t('notices.enabled')}</Label>
                       </div>
                       <Button variant="outline" size="sm" onClick={() => void handleDuplicate(selectedTemplate)}>
-                        <Copy className="h-4 w-4 mr-1" /> Duplicate
+                        <Copy className="h-4 w-4 mr-1" /> {t('notices.duplicate')}
                       </Button>
                       <Button size="sm" onClick={() => void handleSave()} disabled={saving || !editDraft}>
                         {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                        Save (v{selectedTemplate.version})
+                        {t('notices.saveVersion', { version: selectedTemplate.version })}
                       </Button>
                     </div>
                   </CardContent>
@@ -365,29 +369,29 @@ export default function NoticesPage() {
               <TabsContent value="preview">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Preview</CardTitle>
+                    <CardTitle className="text-base">{t('notices.preview')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Alert>
-                      <AlertDescription>SAMPLE DATA — preview only, not sent</AlertDescription>
+                      <AlertDescription>{t('notices.sampleDataNote')}</AlertDescription>
                     </Alert>
                     <Button onClick={() => void handlePreview()} variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-1" /> Render Preview
+                      <Eye className="h-4 w-4 mr-1" /> {t('notices.renderPreview')}
                     </Button>
                     {previewData && (
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Subject</Label>
+                          <Label>{t('notices.subject')}</Label>
                           <div className="p-3 bg-muted rounded-md text-sm">{previewData.subject}</div>
                         </div>
                         <div className="space-y-2">
-                          <Label>HTML Body</Label>
+                          <Label>{t('notices.htmlBody')}</Label>
                           <div className="p-3 bg-muted rounded-md text-sm overflow-auto max-h-64">
                             <pre className="whitespace-pre-wrap">{previewData.html}</pre>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label>Text Body</Label>
+                          <Label>{t('notices.textBody')}</Label>
                           <div className="p-3 bg-muted rounded-md text-sm whitespace-pre-wrap">{previewData.text}</div>
                         </div>
                       </div>
@@ -399,26 +403,26 @@ export default function NoticesPage() {
               <TabsContent value="test">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Test Send</CardTitle>
+                    <CardTitle className="text-base">{t('notices.testSend')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Alert>
                       <AlertDescription>
-                        Sends a test notice to the specified email. Clearly marked as TEST in delivery log.
+                        {t('notices.testSendDesc')}
                       </AlertDescription>
                     </Alert>
                     <div className="space-y-2">
-                      <Label>Test Recipient Email</Label>
+                      <Label>{t('notices.testRecipientEmail')}</Label>
                       <Input
                         type="email"
-                        placeholder="test@example.com"
+                        placeholder={t('notices.testEmailPlaceholder')}
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
                       />
                     </div>
                     <Button onClick={() => void handleTestSend()} disabled={sending || !testEmail}>
                       {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
-                      Send Test
+                      {t('notices.sendTest')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -427,7 +431,7 @@ export default function NoticesPage() {
               <TabsContent value="variables">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Template Variables</CardTitle>
+                    <CardTitle className="text-base">{t('notices.variables')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -439,7 +443,7 @@ export default function NoticesPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{schema.type}</Badge>
-                            {schema.required && <Badge>Required</Badge>}
+                            {schema.required && <Badge>{t('notices.required')}</Badge>}
                           </div>
                         </div>
                       ))}
@@ -451,7 +455,7 @@ export default function NoticesPage() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
-                Select a template to view details
+                {t('notices.selectTemplate')}
               </CardContent>
             </Card>
           )}
