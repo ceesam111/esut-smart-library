@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import LyriaMessageContent from '@/components/ai/LyriaMessageContent';
 import { institutionConfig } from '@config/institution.config';
 import { SUPABASE_PUBLISHABLE_KEY, supabaseFunctionUrl } from '@/lib/env';
+import { useI18n } from '@/lib/i18n';
 
 const LIBRARIAN_NAME = 'Lexis';
 const GOLD = '#D4A017';
@@ -148,10 +149,12 @@ export default function AILibrarianWidget() {
   const [streaming, setStreaming] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const [fabBottom, setFabBottom] = useState(24);
+  const [replyStatus, setReplyStatus] = useState('');
   const bottomRef                 = useRef<HTMLDivElement>(null);
   const inputRef                  = useRef<HTMLInputElement>(null);
   const abortRef                  = useRef<AbortController | null>(null);
   const { speak, stop, speaking, supported: ttsSupported } = useSpeech();
+  const { t } = useI18n();
 
   const wa = `https://wa.me/${institutionConfig.whatsappNumber.replace(/\D/g, '')}`;
   const tel = `tel:${institutionConfig.contactPhone}`;
@@ -259,9 +262,10 @@ export default function AILibrarianWidget() {
       }
     } finally {
       setStreaming(false);
+      setReplyStatus(t('a11y.aiReplyStatus'));
       abortRef.current = null;
     }
-  }, [messages, streaming, voiceMode, speak, stop]);
+  }, [messages, streaming, voiceMode, speak, stop, t]);
 
   const clearChat = () => {
     abortRef.current?.abort();
@@ -323,19 +327,31 @@ export default function AILibrarianWidget() {
                   </svg>
                 </button>
               )}
-              <Link to="/ai-librarian" title="Open full page"
-                className="p-1.5 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors text-xs font-mono">
-                ⤢
+              <Link
+                to="/ai-librarian"
+                title="Open full page"
+                aria-label={t('a11y.aiExpand')}
+                className="p-1.5 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors text-xs font-mono min-w-6 min-h-6 flex items-center justify-center"
+              >
+                <span aria-hidden="true">⤢</span>
               </Link>
-              <button onClick={() => setMinimized((m) => !m)} title="Minimise"
-                className="p-1.5 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button
+                onClick={() => setMinimized((m) => !m)}
+                title="Minimise"
+                aria-label={t('a11y.aiMinimize')}
+                className="p-1.5 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors min-w-6 min-h-6 flex items-center justify-center"
+              >
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                 </svg>
               </button>
-              <button onClick={() => { setOpen(false); stop(); }} title="Close"
-                className="p-1.5 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button
+                onClick={() => { setOpen(false); stop(); }}
+                title="Close"
+                aria-label={t('a11y.aiClose')}
+                className="p-1.5 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors min-w-6 min-h-6 flex items-center justify-center"
+              >
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -358,7 +374,12 @@ export default function AILibrarianWidget() {
               )}
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50 min-h-0" style={{ maxHeight: '42vh' }}>
+              <div
+                className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50 min-h-0"
+                style={{ maxHeight: '42vh' }}
+                role="log"
+                aria-label={t('a11y.aiChat')}
+              >
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} animate-fade-in`}>
                     <div
@@ -411,6 +432,7 @@ export default function AILibrarianWidget() {
                   </div>
                 ))}
                 <div ref={bottomRef} />
+                <div role="status" aria-live="polite" className="sr-only">{replyStatus}</div>
               </div>
 
               {/* Quick suggestions */}
@@ -435,6 +457,7 @@ export default function AILibrarianWidget() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && send(input)}
                     placeholder={`Ask ${LIBRARIAN_NAME} anything…`}
+                    aria-label={t('a11y.aiInput')}
                     className="input flex-1 py-2 text-sm"
                     disabled={streaming}
                   />
@@ -465,10 +488,14 @@ export default function AILibrarianWidget() {
                     </button>
                   )}
 
-                  <button onClick={() => send(input)} disabled={!input.trim() || streaming}
-                    className="p-2 rounded-lg transition-colors disabled:opacity-40 shrink-0"
-                    style={{ background: NAVY, color: 'white' }}>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button
+                    onClick={() => send(input)}
+                    disabled={!input.trim() || streaming}
+                    aria-label={t('a11y.aiSend')}
+                    className="p-2 rounded-lg transition-colors disabled:opacity-40 shrink-0 min-w-8 min-h-8 flex items-center justify-center"
+                    style={{ background: NAVY, color: 'white' }}
+                  >
+                    <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   </button>

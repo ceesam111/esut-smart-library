@@ -6,7 +6,6 @@ import { useI18n } from '@/lib/i18n';
 import { getDashboardPath, type AppRole } from '@/config/roles.config';
 
 const GREEN = '#6B1D2A';
-const GOLD  = '#D4A017';
 
 const LOCKOUT_KEY   = 'esut_login_attempts';
 const MAX_ATTEMPTS  = 5;
@@ -37,7 +36,7 @@ function PasswordInput({
       <div className="flex items-center justify-between mb-1.5">
         <label htmlFor={id} className="label mb-0">{label}</label>
         {id === 'password' && (
-          <Link to="/forgot-password" className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
+          <Link to="/forgot-password" className="text-xs text-neutral-600 hover:text-neutral-800 transition-colors">
             {t('auth.forgotPasswordLink')}
           </Link>
         )}
@@ -244,13 +243,13 @@ export default function Login() {
 
           <p className="text-sm text-neutral-500 text-center mt-5">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="font-semibold hover:underline" style={{ color: GOLD }}>
+            <Link to="/register" className="font-semibold underline underline-offset-2" style={{ color: '#8A6A00' }}>
               {t('nav.signUp')}
             </Link>
           </p>
         </div>
 
-        <p className="text-neutral-400 text-xs text-center italic mt-4">
+        <p className="text-neutral-600 text-xs text-center italic mt-4">
           {t('auth.loginFootnote')}
         </p>
       </div>

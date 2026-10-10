@@ -1,15 +1,45 @@
+import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import AILibrarianWidget from '@/components/ai/AILibrarianWidget';
 import CookieConsent from '@/components/CookieConsent';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
+import { institutionConfig } from '@config/institution.config';
+
+const routeTitleKeys: Record<string, TranslationKey> = {
+  '/': 'nav.home',
+  '/catalogue': 'nav.catalog',
+  '/repository': 'nav.repository',
+  '/events': 'nav.events',
+  '/login': 'nav.login',
+  '/register': 'common.register',
+  '/about': 'nav.about',
+  '/contact': 'nav.contactUs',
+  '/blog': 'common.blog',
+  '/accessibility': 'nav.accessibility',
+};
 
 export default function Layout() {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const { t } = useI18n();
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    const titleKey = routeTitleKeys[location.pathname];
+    document.title = titleKey
+      ? `${t(titleKey)} — ${institutionConfig.name}`
+      : institutionConfig.name;
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const main = document.getElementById('main-content');
+    main?.focus();
+    main?.scrollIntoView({ block: 'start' });
+  }, [location.pathname, t]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -23,7 +53,7 @@ export default function Layout() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex-1 relative"
+        className="flex-1 relative outline-none"
         style={{ zIndex: 2, paddingTop: isHome ? 0 : 64, paddingBottom: 0 }}
       >
         <Outlet />
@@ -41,7 +71,7 @@ export default function Layout() {
         style={{ bottom: '80px', zIndex: 39, background: '#6B1D2A', width: '52px', height: '52px' }}
         title={t('a11y.callUs')}
       >
-        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>

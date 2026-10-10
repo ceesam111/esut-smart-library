@@ -12,6 +12,10 @@ function useCountUp(target: number, duration = 1500): number {
   const ref = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setValue(target);
+      return;
+    }
     let start = 0;
     const step = Math.ceil(target / (duration / 16));
     ref.current = setInterval(() => {
@@ -197,8 +201,8 @@ function Hero() {
         style={{ background: '#6B1D2A' }}
       >
         {/* Location pill */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 self-start text-xs font-semibold" style={{ borderColor: 'rgba(201,168,76,0.5)', color: '#D4A017', background: 'rgba(201,168,76,0.08)' }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#D4A017' }} />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 self-start text-xs font-semibold" style={{ borderColor: 'rgba(201,168,76,0.7)', color: '#F0D060', background: 'rgba(201,168,76,0.14)' }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#F0D060' }} />
           Enugu, Enugu State, Nigeria
         </div>
 
@@ -224,14 +228,15 @@ function Hero() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchTarget === 'catalog' ? t('home.searchPlaceholderCatalogue') : t('home.searchPlaceholderTheses')}
+            aria-label={t('a11y.homeSearch')}
             className="w-full pl-5 pr-28 py-4 rounded-2xl text-sm text-neutral-800 placeholder:text-neutral-400 bg-white shadow-lg focus:outline-none focus:ring-2"
             style={{ '--tw-ring-color': '#D4A017' } as React.CSSProperties}
             onKeyDown={(e) => e.key === 'Enter' && query && (window.location.href = `/${searchTarget === 'catalog' ? 'catalog' : 'repository'}?q=${encodeURIComponent(query)}`)}
           />
           <Link
             to={`/${searchTarget === 'catalog' ? 'catalog' : 'repository'}${query ? `?q=${encodeURIComponent(query)}` : ''}`}
-            className="absolute right-2 top-2 bottom-2 px-4 rounded-xl text-white text-sm font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-90"
-            style={{ background: '#D4A017' }}
+            className="absolute right-2 top-2 bottom-2 px-4 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-90"
+            style={{ background: '#D4A017', color: '#1F1200' }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -268,7 +273,7 @@ function Hero() {
           ].map((s) => (
             <div key={s.label}>
               <div className="text-2xl font-bold font-mono" style={{ color: '#D4A017' }}>{s.value}</div>
-              <div className="text-white/50 text-xs mt-0.5">{s.label}</div>
+              <div className="text-white/85 text-xs mt-0.5">{s.label}</div>
             </div>
           ))}
         </div>
@@ -354,7 +359,7 @@ function AIPromo() {
       <div className="section">
         <div className="flex flex-col lg:flex-row items-center gap-8">
           <div className="flex-1">
-            <div className="badge badge-gold inline-flex mb-4">{t('home.aiPowered')}</div>
+            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium mb-4 bg-gold-300 text-gold-900">{t('home.aiPowered')}</div>
             <h2 className="text-3xl font-serif font-semibold mb-4">
               {t('home.lexisTitle')}
             </h2>
@@ -368,7 +373,7 @@ function AIPromo() {
                 </span>
               ))}
             </div>
-            <Link to="/ai-librarian" className="btn-primary bg-gold-500 hover:bg-gold-600">
+            <Link to="/ai-librarian" className="btn-primary bg-gold-500 hover:bg-gold-600" style={{ color: '#1F1200' }}>
               {t('home.startConversation')}
             </Link>
           </div>
@@ -381,7 +386,7 @@ function AIPromo() {
               </div>
             </div>
             <div className="flex justify-end">
-              <div className="bg-primary-500 text-white rounded-xl rounded-br-sm px-4 py-3 text-sm max-w-[85%]">
+              <div className="bg-primary-700 text-white rounded-xl rounded-br-sm px-4 py-3 text-sm max-w-[85%]">
                 {t('home.sampleQuery')}
               </div>
             </div>
@@ -533,8 +538,8 @@ function FreeEbooksStrip() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-neutral-800 text-xs leading-snug line-clamp-2 mb-0.5">{book.title}</h3>
-                    <p className="text-xs text-neutral-400 line-clamp-1">{book.authors}</p>
-                    {book.publisher && <p className="text-[11px] text-neutral-400 line-clamp-1">{book.publisher}</p>}
+                    <p className="text-xs text-neutral-600 line-clamp-1">{book.authors}</p>
+                    {book.publisher && <p className="text-[11px] text-neutral-600 line-clamp-1">{book.publisher}</p>}
                     <div className="flex items-center gap-1.5 flex-wrap mt-1 mb-3">
                       {book.year && <span className="text-[10px] bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded-full">{book.year}</span>}
                       {book.subject && book.subject !== 'General' && (
@@ -579,9 +584,14 @@ function FreeEbooksStrip() {
           </>
         )}
 
-        <p className="text-xs text-neutral-400 mt-6 text-center">
+        <p className="text-xs text-neutral-600 mt-6 text-center">
           {t('home.poweredBy')}{' '}
-          <a href="https://www.doabooks.org" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+          <a
+            href="https://www.doabooks.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-700 underline underline-offset-2 hover:text-primary-900"
+          >
             {t('home.doab')}
           </a>{' '}
           {t('home.doabDescription')}
@@ -627,7 +637,7 @@ export default function Home() {
                   <span className="text-sm font-semibold text-neutral-800 group-hover:text-primary-700 transition-colors leading-tight">
                     {t(l.labelKey)}
                   </span>
-                  <span className="text-xs text-neutral-400 line-clamp-2">{t(l.descKey)}</span>
+                  <span className="text-xs text-neutral-600 line-clamp-2">{t(l.descKey)}</span>
                 </Link>
               ))}
           </div>
@@ -664,7 +674,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {Object.entries(institutionConfig.loanRules).map(([category, rules]) => (
               <div key={category} className="card p-5">
-                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-3">
                   {category.replace('_', ' ')}
                 </div>
                 <div className="space-y-2">
@@ -702,7 +712,7 @@ export default function Home() {
             {t('home.joinDescription')}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/register" className="btn-primary bg-gold-500 hover:bg-gold-600">
+            <Link to="/register" className="btn-primary bg-gold-500 hover:bg-gold-600" style={{ color: '#1F1200' }}>
               {t('home.registerNow')}
             </Link>
             <Link to="/login" className="btn-outline !border-white !text-white hover:!bg-white hover:!text-primary-800">

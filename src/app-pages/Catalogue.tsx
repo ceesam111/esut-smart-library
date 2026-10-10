@@ -508,14 +508,14 @@ export default function Catalogue() {
         </button>
       )}
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.faculty')}</div>
-        <select className="input text-xs" value={faculty} onChange={e => { setFaculty(e.target.value); setPage(1); }}>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-2">{t('catalogue.faculty')}</div>
+        <select className="input text-xs" aria-label={t('a11y.catalogueFaculty')} value={faculty} onChange={e => { setFaculty(e.target.value); setPage(1); }}>
           <option value="">{t('catalogue.allFaculties')}</option>
           {institutionConfig.faculties.map(f => <option key={f.code} value={f.code}>{f.name}</option>)}
         </select>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.format')}</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-2">{t('catalogue.format')}</div>
         <div className="space-y-1">
           {formats.map((f, i) => (
             <label key={f} className="flex items-center gap-2 cursor-pointer group">
@@ -527,7 +527,7 @@ export default function Catalogue() {
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.yearRange')}</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-2">{t('catalogue.yearRange')}</div>
         <div className="space-y-1">
           {yearRanges.map(r => (
             <button key={r.label} onClick={() => { setYearRange(yearRange === r.label ? '' : r.label); setPage(1); }}
@@ -538,7 +538,7 @@ export default function Catalogue() {
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.language')}</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-2">{t('catalogue.language')}</div>
         <div className="space-y-1">
           {languages.map((l, i) => (
             <button key={l} onClick={() => { setLanguage(language === l ? '' : l); setPage(1); }}
@@ -549,7 +549,7 @@ export default function Catalogue() {
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{t('catalogue.availability')}</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-2">{t('catalogue.availability')}</div>
         <div className="space-y-1">
           {[
             { val: '', labelKey: 'catalogue.allItems' as TranslationKey },
@@ -582,10 +582,11 @@ export default function Catalogue() {
               <div className="flex-1 relative">
                 <input
                   type="text"
+                  aria-label={t('a11y.catalogueSearch')}
                   placeholder={t('catalogue.searchPlaceholder')}
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-white text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-white text-neutral-800 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-gold-400"
                 />
                 <svg className="absolute left-3 top-3.5 w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />

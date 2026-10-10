@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { OfflineCirculation } from '@/lib/offline/useOfflineCirculation';
+import { useI18n } from '@/lib/i18n';
 
 const STATE_BADGE: Record<string, { cls: string; label: string }> = {
   pending: { cls: 'bg-blue-100 text-blue-800', label: 'Queued' },
@@ -38,6 +39,7 @@ interface Props {
 export default function OfflinePanel({ offline }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: string; msg: string } | null>(null);
+  const { t } = useI18n();
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -140,6 +142,8 @@ export default function OfflinePanel({ offline }: Props) {
 
         {message && (
           <div
+            role="status"
+            aria-live="polite"
             className={`p-3 rounded-lg text-sm font-medium ${
               message.type === 'success' ? 'bg-green-50 text-green-800' :
               message.type === 'warning' ? 'bg-amber-50 text-amber-800' :
@@ -155,16 +159,16 @@ export default function OfflinePanel({ offline }: Props) {
         <div className="card text-center text-gray-400 py-12">No offline transactions queued.</div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label={t('a11y.offlineQueueTable')}>
             <thead className="border-b">
               <tr>
-                <th className="text-left p-3 font-semibold">#</th>
-                <th className="text-left p-3 font-semibold">Type</th>
-                <th className="text-left p-3 font-semibold">Patron</th>
-                <th className="text-left p-3 font-semibold">Item</th>
-                <th className="text-left p-3 font-semibold">Queued</th>
-                <th className="text-left p-3 font-semibold">State</th>
-                <th className="p-3" />
+                <th scope="col" className="text-left p-3 font-semibold">#</th>
+                <th scope="col" className="text-left p-3 font-semibold">Type</th>
+                <th scope="col" className="text-left p-3 font-semibold">Patron</th>
+                <th scope="col" className="text-left p-3 font-semibold">Item</th>
+                <th scope="col" className="text-left p-3 font-semibold">Queued</th>
+                <th scope="col" className="text-left p-3 font-semibold">State</th>
+                <th scope="col" className="p-3"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>

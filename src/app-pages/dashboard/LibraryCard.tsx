@@ -163,7 +163,7 @@ export default function LibraryCard() {
             {profile.matric_number && <p className="text-xs text-white/50 mt-1 font-mono">{t('libraryCard.matric', { id: profile.matric_number })}</p>}
             {profile.staff_id && <p className="text-xs text-white/50 mt-1 font-mono">{t('libraryCard.staffIdLabel', { id: profile.staff_id })}</p>}
           </div>
-          <div className="bg-white p-2 rounded-xl shadow-lg">
+          <div className="bg-white p-2 rounded-xl shadow-lg" role="img" aria-label={t('a11y.libraryCardQr', { code: cardCode })}>
             <QRCodeSVG value={cardCode} size={80 * scale} level="H" bgColor="#ffffff" fgColor={institutionConfig.primaryColour} />
           </div>
         </div>

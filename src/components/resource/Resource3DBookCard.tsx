@@ -139,7 +139,6 @@ export function GeneratedBookCover({ title, authors, resourceType, coverUrl, spi
 export function Resource3DBookCard(props: Resource3DBookCardProps) {
   const authorText = authorsToText(props.authors);
   const type = normalizeType(props.resourceType);
-  const label = `${props.title}${authorText ? ` by ${authorText}` : ''}${props.year ? `, ${props.year}` : ''}`;
   const statusText = [props.status, props.confidence].filter(Boolean).join(' · ');
 
   const body = (
@@ -153,7 +152,7 @@ export function Resource3DBookCard(props: Resource3DBookCardProps) {
           {props.publisher && <span className="line-clamp-1 max-w-[120px]">{props.publisher}</span>}
           {props.category && <span>{props.category}</span>}
         </div>
-        {props.subjects?.length ? <p className="mx-auto mt-1 max-w-[14rem] text-[11px] text-neutral-400 line-clamp-1">{props.subjects.slice(0, 3).join(' · ')}</p> : null}
+        {props.subjects?.length ? <p className="mx-auto mt-1 max-w-[14rem] text-[11px] text-neutral-600 line-clamp-1">{props.subjects.filter((s): s is string => typeof s === 'string').slice(0, 3).join(' · ')}</p> : null}
         {statusText && <span className="mt-2 inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700">{statusText}</span>}
       </div>
       {props.actions && <div className="mt-3 flex flex-wrap justify-center gap-2">{props.actions}</div>}
@@ -162,11 +161,11 @@ export function Resource3DBookCard(props: Resource3DBookCardProps) {
 
   const className = `group block rounded-2xl p-3 outline-none transition focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2 motion-reduce:transition-none ${props.className || ''}`;
   if (props.href) {
-    if (props.href.startsWith('/')) return <Link to={props.href} aria-label={label} onClick={props.onClick} className={className}>{body}</Link>;
-    return <a href={props.href} target="_blank" rel="noopener noreferrer" aria-label={label} onClick={props.onClick} className={className}>{body}</a>;
+    if (props.href.startsWith('/')) return <Link to={props.href} onClick={props.onClick} className={className}>{body}</Link>;
+    return <a href={props.href} target="_blank" rel="noopener noreferrer" onClick={props.onClick} className={className}>{body}</a>;
   }
-  if (props.onClick) return <button type="button" aria-label={label} onClick={props.onClick} className={`${className} w-full text-left`}>{body}</button>;
-  return <div aria-label={label} className={className}>{body}</div>;
+  if (props.onClick) return <button type="button" onClick={props.onClick} className={`${className} w-full text-left`}>{body}</button>;
+  return <div className={className}>{body}</div>;
 }
 
 export function Resource3DBookCardSkeleton() {

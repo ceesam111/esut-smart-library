@@ -207,10 +207,15 @@ export default function AdminTheses() {
         {FILTER_OPTIONS.slice(1).map(s => {
           const count = theses.filter(t => t.status === s).length;
           return (
-            <div key={s} className="card p-3 text-center cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilter(s)}>
+            <button
+              key={s}
+              type="button"
+              onClick={() => setFilter(s)}
+              className="card p-3 text-center cursor-pointer hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 w-full"
+            >
               <p className="text-xs text-neutral-500 mb-1 capitalize">{s.replace(/_/g, ' ')}</p>
               <p className="text-2xl font-bold text-neutral-800">{count}</p>
-            </div>
+            </button>
           );
         })}
       </div>

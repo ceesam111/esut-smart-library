@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/lib/i18n';
 
 interface MenuItem {
   id: string;
@@ -35,6 +36,7 @@ export default function CmsMenu() {
   const [saving, setSaving] = useState(false);
   const [dragSrc, setDragSrc] = useState<string | null>(null);
   const dragOver = useRef<string | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     void load();
@@ -117,6 +119,16 @@ export default function CmsMenu() {
     void load();
   }
 
+  async function moveItem(item: MenuItem, direction: -1 | 1) {
+    const peers = items
+      .filter(i => i.menu_key === item.menu_key && i.parent_id === item.parent_id)
+      .sort((a, b) => a.position - b.position);
+    const idx = peers.findIndex(i => i.id === item.id);
+    const target = peers[idx + direction];
+    if (!target) return;
+    await reorder(item.id, target.id);
+  }
+
   function MenuItemRow({ item, depth = 0 }: { item: MenuItem; depth?: number }) {
     const children = childrenOf(item.id);
     return (
@@ -135,8 +147,8 @@ export default function CmsMenu() {
           }`}
           style={{ paddingLeft: `${16 + depth * 24}px` }}
         >
-          <span className="text-neutral-300 cursor-grab text-lg select-none">⠿</span>
-          {depth > 0 && <span className="text-neutral-300 text-sm">↳</span>}
+          <span aria-hidden="true" className="text-neutral-300 cursor-grab text-lg select-none">⠿</span>
+          {depth > 0 && <span aria-hidden="true" className="text-neutral-300 text-sm">↳</span>}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-neutral-800 truncate">{item.label}</p>
             <p className="text-xs text-neutral-400 truncate">{item.url}</p>
@@ -145,6 +157,20 @@ export default function CmsMenu() {
             <span className="text-xs bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded">↗ new tab</span>
           )}
           <div className="flex gap-1">
+            <button
+              onClick={() => void moveItem(item, -1)}
+              aria-label={`${t('a11y.moveUp')}: ${item.label}`}
+              className="text-xs px-2 py-1 text-neutral-600 hover:bg-neutral-100 rounded transition-colors min-w-6 min-h-6"
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => void moveItem(item, 1)}
+              aria-label={`${t('a11y.moveDown')}: ${item.label}`}
+              className="text-xs px-2 py-1 text-neutral-600 hover:bg-neutral-100 rounded transition-colors min-w-6 min-h-6"
+            >
+              ↓
+            </button>
             {depth === 0 && (
               <button
                 onClick={() => startCreate(item.id)}
@@ -177,7 +203,7 @@ export default function CmsMenu() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Menu Manager</h1>
-          <p className="text-sm text-neutral-500 mt-1">Drag to reorder. Add sub-items for dropdown menus.</p>
+          <p className="text-sm text-neutral-500 mt-1">Drag to reorder, or use the move up / move down buttons. Add sub-items for dropdown menus.</p>
         </div>
         <button
           onClick={() => startCreate()}

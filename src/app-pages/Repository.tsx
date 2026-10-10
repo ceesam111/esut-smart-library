@@ -267,8 +267,8 @@ export default function Repository() {
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">{t('repository.itemType')}</label>
-                <select value={filterType} onChange={e => setFilterType(e.target.value)} className="input text-sm">
+                <label className="label text-xs mb-1 block" htmlFor="repo-type-filter">{t('repository.itemType')}</label>
+                <select id="repo-type-filter" value={filterType} onChange={e => setFilterType(e.target.value)} className="input text-sm">
                   <option value="">{t('repository.allTypes')}</option>
                   {(facets?.resourceType?.length ? facets.resourceType.map(f => f.value) : ITEM_TYPES).map((typeValue, idx) => (
                     <option key={typeValue} value={typeValue}>
@@ -279,8 +279,8 @@ export default function Repository() {
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">{t('repository.department')}</label>
-                <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="input text-sm">
+                <label className="label text-xs mb-1 block" htmlFor="repo-dept-filter">{t('repository.department')}</label>
+                <select id="repo-dept-filter" value={filterDept} onChange={e => setFilterDept(e.target.value)} className="input text-sm">
                   <option value="">{t('repository.allDepartments')}</option>
                   {institutionConfig.faculties.map(f => (
                     <option key={f.code} value={f.slug}>{f.name}</option>
@@ -289,8 +289,8 @@ export default function Repository() {
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">{t('repository.year')}</label>
-                <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="input text-sm">
+                <label className="label text-xs mb-1 block" htmlFor="repo-year-filter">{t('repository.year')}</label>
+                <select id="repo-year-filter" value={filterYear} onChange={e => setFilterYear(e.target.value)} className="input text-sm">
                   <option value="">{t('repository.allYears')}</option>
                   {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                   <option value="before2020">{t('repository.before2020')}</option>
@@ -298,8 +298,8 @@ export default function Repository() {
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">{t('repository.language')}</label>
-                <select value={filterLang} onChange={e => setFilterLang(e.target.value)} className="input text-sm">
+                <label className="label text-xs mb-1 block" htmlFor="repo-lang-filter">{t('repository.language')}</label>
+                <select id="repo-lang-filter" value={filterLang} onChange={e => setFilterLang(e.target.value)} className="input text-sm">
                   <option value="">{t('repository.allLanguages')}</option>
                   <option value="English">{t('repository.english')}</option>
                   <option value="Yoruba">{t('repository.yoruba')}</option>
@@ -309,8 +309,8 @@ export default function Repository() {
               </div>
 
               <div>
-                <label className="label text-xs mb-1 block">{t('repository.access')}</label>
-                <select value={filterAccess} onChange={e => setFilterAccess(e.target.value)} className="input text-sm">
+                <label className="label text-xs mb-1 block" htmlFor="repo-access-filter">{t('repository.access')}</label>
+                <select id="repo-access-filter" value={filterAccess} onChange={e => setFilterAccess(e.target.value)} className="input text-sm">
                   <option value="">{t('repository.allAccessLevels')}</option>
                   <option value="global">{t('repository.openAccess')}</option>
                   <option value="faculty">{t('repository.membersOnly')}</option>

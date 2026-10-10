@@ -464,7 +464,7 @@ export default function ThesisSubmit() {
                 </div>
                 <button
                   onClick={() => setEmbargoEnabled(p => !p)}
-                  className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none ${embargoEnabled ? 'bg-primary-600' : 'bg-neutral-200'}`}
+                  className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${embargoEnabled ? 'bg-primary-600' : 'bg-neutral-200'}`}
                 >
                   <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${embargoEnabled ? 'translate-x-5' : ''}`} />
                 </button>

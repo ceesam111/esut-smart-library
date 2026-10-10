@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/lib/i18n';
 
 // ── Block types ───────────────────────────────────────────────────────────────
 
@@ -198,6 +199,7 @@ function BlockPreview({ block }: { block: Block }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function CMS() {
+  const { t } = useI18n();
   const [pages, setPages] = useState<CMSPage[]>([]);
   const [selectedPage, setSelectedPage] = useState<CMSPage | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -413,16 +415,17 @@ export default function CMS() {
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide mb-2">Blocks</p>
           <div className="space-y-1">
             {BLOCK_DEFS.map(def => (
-              <div
+              <button
                 key={def.type}
+                type="button"
                 draggable
                 onDragStart={() => handleSidebarDragStart(def.type)}
                 onClick={() => addBlock(def.type)}
-                className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition-all text-sm select-none"
+                className="w-full flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition-all text-sm select-none text-left"
               >
-                <span className="w-6 h-6 flex items-center justify-center bg-neutral-200 rounded text-xs font-bold shrink-0">{def.icon}</span>
+                <span aria-hidden="true" className="w-6 h-6 flex items-center justify-center bg-neutral-200 rounded text-xs font-bold shrink-0">{def.icon}</span>
                 <span className="text-neutral-700 text-xs leading-tight">{def.label}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -449,7 +452,7 @@ export default function CMS() {
               >
                 <div className="flex items-start gap-3">
                   <div className="flex flex-col gap-1 pt-1 shrink-0">
-                    <span className="text-neutral-300 cursor-grab text-lg leading-none">⠿</span>
+                    <span aria-hidden="true" className="text-neutral-300 cursor-grab text-lg leading-none">⠿</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -458,9 +461,26 @@ export default function CMS() {
                     <BlockPreview block={block} />
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={e => { e.stopPropagation(); moveBlock(block.id, -1); }} disabled={idx === 0} className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-100 text-neutral-400 disabled:opacity-30 text-xs">↑</button>
-                    <button onClick={e => { e.stopPropagation(); moveBlock(block.id, 1); }} disabled={idx === (selectedPage?.blocks.length ?? 0) - 1} className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-100 text-neutral-400 disabled:opacity-30 text-xs">↓</button>
-                    <button onClick={e => { e.stopPropagation(); removeBlock(block.id); }} className="w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 text-red-400 text-xs">×</button>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); moveBlock(block.id, -1); }}
+                      disabled={idx === 0}
+                      aria-label={`${t('a11y.moveUp')} — ${BLOCK_DEFS.find(b => b.type === block.type)?.label ?? block.type}`}
+                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-100 text-neutral-400 disabled:opacity-30 text-xs min-w-6 min-h-6"
+                    >↑</button>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); moveBlock(block.id, 1); }}
+                      disabled={idx === (selectedPage?.blocks.length ?? 0) - 1}
+                      aria-label={`${t('a11y.moveDown')} — ${BLOCK_DEFS.find(b => b.type === block.type)?.label ?? block.type}`}
+                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-100 text-neutral-400 disabled:opacity-30 text-xs min-w-6 min-h-6"
+                    >↓</button>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); removeBlock(block.id); }}
+                      aria-label={`${t('a11y.close')} — ${BLOCK_DEFS.find(b => b.type === block.type)?.label ?? block.type}`}
+                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 text-red-400 text-xs min-w-6 min-h-6"
+                    >×</button>
                   </div>
                 </div>
               </div>
@@ -474,7 +494,12 @@ export default function CMS() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <p className="font-semibold text-sm text-neutral-800">{BLOCK_DEFS.find(b => b.type === selectedBlock.type)?.label}</p>
-                <button onClick={() => setSelectedBlockId(null)} className="text-neutral-400 hover:text-neutral-600 text-lg">×</button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBlockId(null)}
+                  aria-label={t('a11y.close')}
+                  className="text-neutral-400 hover:text-neutral-600 text-lg min-w-6 min-h-6 flex items-center justify-center"
+                >×</button>
               </div>
               <BlockEditor block={selectedBlock} onChange={data => updateBlock(selectedBlock.id, data)} />
             </>

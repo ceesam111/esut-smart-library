@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardLabel, getDashboardPath } from '@/config/roles.config';
+import { useI18n } from '@/lib/i18n';
 
 const TYPE_ICONS: Record<string, string> = {
   event: '📅',
@@ -18,8 +19,10 @@ const GREEN = '#6B1D2A';
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const { role } = useAuth();
+  const { t } = useI18n();
 
   const {
     permission,
@@ -42,6 +45,18 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open]);
+
   async function handleEnable() {
     const granted = await requestPermission();
     if (granted) {
@@ -62,16 +77,20 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={panelRef}>
       <button
+        ref={triggerRef}
         onClick={() => setOpen(!open)}
-        aria-label={`Notifications${unreadCount > 0 ? ` — ${unreadCount} unread` : ''}`}
+        aria-label={unreadCount > 0 ? t('a11y.notificationsUnread', { count: unreadCount }) : t('a11y.notifications')}
+        aria-expanded={open}
+        aria-haspopup="dialog"
         className="relative p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg aria-hidden="true" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         {unreadCount > 0 && (
           <span
+            aria-hidden="true"
             className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1"
             style={{ background: '#E53E3E' }}
           >
@@ -81,10 +100,15 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-neutral-100 z-[200] overflow-hidden">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-label={t('a11y.notificationsPanel')}
+          className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-neutral-100 z-[200] overflow-hidden"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
-            <span className="font-semibold text-sm text-neutral-900">Notifications</span>
+            <span className="font-semibold text-sm text-neutral-900">{t('a11y.notifications')}</span>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -95,8 +119,12 @@ export default function NotificationBell() {
                 </button>
               )}
               <button
-                onClick={() => setOpen(false)}
-                className="text-neutral-400 hover:text-neutral-600 text-lg leading-none"
+                onClick={() => {
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
+                aria-label={t('a11y.close')}
+                className="text-neutral-400 hover:text-neutral-600 text-lg leading-none p-1 min-w-6 min-h-6 flex items-center justify-center"
               >
                 ×
               </button>
@@ -128,7 +156,8 @@ export default function NotificationBell() {
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="w-5 h-5 rounded-full border-2 border-primary-600 border-t-transparent animate-spin" />
+                <div aria-hidden="true" className="w-5 h-5 rounded-full border-2 border-primary-600 border-t-transparent animate-spin" />
+                <span className="sr-only">Loading</span>
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-10 text-center">
@@ -145,14 +174,14 @@ export default function NotificationBell() {
                     !notif.is_read ? 'bg-primary-50/50' : ''
                   }`}
                 >
-                  <span className="text-lg shrink-0 mt-0.5">{TYPE_ICONS[notif.type] ?? '🔔'}</span>
+                  <span aria-hidden="true" className="text-lg shrink-0 mt-0.5">{TYPE_ICONS[notif.type] ?? '🔔'}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className={`text-sm leading-snug ${!notif.is_read ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-700'}`}>
                         {notif.title}
                       </p>
                       {!notif.is_read && (
-                        <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: GREEN }} />
+                        <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: GREEN }} />
                       )}
                     </div>
                     <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2 leading-snug">{notif.body}</p>

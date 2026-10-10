@@ -326,7 +326,7 @@ export default function AdminCourseReserves() {
                             <button
                               onClick={() => toggleShortLoan(item.id)}
                               disabled={toggling === item.id}
-                              className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none ${isShortLoan ? 'bg-primary-600' : 'bg-neutral-200'} disabled:opacity-50`}
+                              className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${isShortLoan ? 'bg-primary-600' : 'bg-neutral-200'} disabled:opacity-50`}
                             >
                               <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isShortLoan ? 'translate-x-4' : ''}`} />
                             </button>

@@ -85,7 +85,7 @@ export default function ShareButtons({ title, url, text, className = '' }: Share
 
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`}>
-      <span className="text-xs font-medium text-neutral-500 mr-1">Share:</span>
+      <span className="text-xs font-medium text-neutral-800 mr-1">Share:</span>
 
       {'share' in navigator && (
         <button

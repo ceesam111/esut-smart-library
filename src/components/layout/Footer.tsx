@@ -130,7 +130,7 @@ export default function Footer() {
                 </FooterLibLink>
                 {institutionConfig.libraryMode === 'multi' && institutionConfig.branchLibraries.length > 0 && (
                   <>
-                    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontStyle: 'italic', padding: '4px 0' }}>
+                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontStyle: 'italic', padding: '4px 0' }}>
                       ─── Branch Libraries
                     </div>
                     {institutionConfig.branchLibraries.map((l) => (
@@ -140,7 +140,7 @@ export default function Footer() {
                     ))}
                   </>
                 )}
-                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontStyle: 'italic', padding: '4px 0', marginTop: 4 }}>
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontStyle: 'italic', padding: '4px 0', marginTop: 4 }}>
                   ─── Faculty Libraries
                 </div>
                 {institutionConfig.facultyLibraries.map((l) => (
