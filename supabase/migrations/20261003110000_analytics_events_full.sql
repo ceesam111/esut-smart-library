@@ -9,7 +9,8 @@ alter table analytics_events add constraint analytics_events_event_type_check ch
   'checkout', 'checkin', 'renewal', 'hold_placed', 'hold_fulfilled', 'hold_cancelled', 'overdue',
   'event_view', 'event_registration', 'blog_view', 'forum_activity',
   'federated_search', 'federated_result_click', 'provider_result_click',
-  'ai_session_started', 'ai_query'
+  'ai_session_started', 'ai_query',
+  'library_visit', 'library_gate'
 ));
 
 alter table analytics_events add column if not exists entity_type text;

@@ -36,6 +36,7 @@ const VALID_EVENT_TYPES = new Set([
   'event_view', 'event_registration', 'blog_view', 'forum_activity',
   'federated_search', 'federated_result_click', 'provider_result_click',
   'ai_session_started', 'ai_query',
+  'library_visit', 'library_gate',
 ]);
 
 const BOT_USER_AGENTS = [
