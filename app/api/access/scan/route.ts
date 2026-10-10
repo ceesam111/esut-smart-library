@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { NextRequest } from 'next/server';
 import { withHandler } from '@/server/api/withHandler';
 import { requireRole } from '@/server/auth/requireRole';
 import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';

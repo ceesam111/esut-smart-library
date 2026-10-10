@@ -53,7 +53,6 @@ export function generateStaticCredential(accessIdentityId: string): string {
   };
   return signClaims(payload);
 }
-
 export function generateDynamicCredential(
   accessIdentityId: string,
   ttlSeconds: number = DEFAULT_TTL_SECONDS,
@@ -113,4 +112,53 @@ export function verifyCredential(token: string, now = nowSeconds()): VerifyResul
 
 export function hashForStorage(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+export interface VisitorPassClaims {
+  v: number;
+  kind: 'visitor';
+  sub: string;
+  iat: number;
+  exp: number;
+  jti: string;
+}
+
+export function signVisitorPass(
+  visitorId: string,
+  validFrom: Date,
+  validUntil: Date,
+): string {
+  const iat = Math.floor(validFrom.getTime() / 1000);
+  const exp = Math.floor(validUntil.getTime() / 1000);
+  const nonce = randomBytes(NONCE_BYTES).toString('base64url');
+  const claims: VisitorPassClaims = { v: TOKEN_VERSION, kind: 'visitor', sub: visitorId, iat, exp, jti: nonce };
+  const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
+  const sig = createHmac('sha256', getSecret()).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+
+export type VisitorPassVerifyResult =
+  | { ok: true; claims: VisitorPassClaims }
+  | { ok: false; reason: 'malformed' | 'bad_signature' | 'expired' | 'not_visitor' };
+
+export function verifyVisitorPass(token: string, now = nowSeconds()): VisitorPassVerifyResult {
+  if (typeof token !== 'string' || !token.includes('.')) return { ok: false, reason: 'malformed' };
+  const [body, sig] = token.split('.');
+  if (!body || !sig) return { ok: false, reason: 'malformed' };
+  const expectedSig = createHmac('sha256', getSecret()).update(body).digest('base64url');
+  const sigBuf = Buffer.from(sig);
+  const expBuf = Buffer.from(expectedSig);
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+    return { ok: false, reason: 'bad_signature' };
+  }
+  let claims: VisitorPassClaims;
+  try {
+    claims = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+  } catch {
+    return { ok: false, reason: 'malformed' };
+  }
+  if (claims.kind !== 'visitor') return { ok: false, reason: 'not_visitor' };
+  if (claims.v !== TOKEN_VERSION) return { ok: false, reason: 'not_visitor' };
+  if (typeof claims.exp !== 'number' || claims.exp < now) return { ok: false, reason: 'expired' };
+  return { ok: true, claims };
 }
