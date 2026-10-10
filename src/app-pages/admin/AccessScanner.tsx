@@ -36,6 +36,7 @@ interface ScanResultData {
   errorCode: string | null;
   visit: { id: string; status: string; checked_in_at: string; checked_out_at: string | null; duration_minutes: number | null } | null;
   identity: IdentityInfo | null;
+  visitor: { id: string; fullName: string } | null;
   occupancy: OccupancyInfo | null;
   timestamp: string;
 }
@@ -173,7 +174,7 @@ export default function AccessScanner() {
           method: 'POST',
           body: JSON.stringify({ action: 'check_in', patronId: target.id, branchId }),
         });
-        setLastResult({ ok: true, event: 'CHECK_IN', errorCode: null, visit: null, identity: null, occupancy: null, timestamp: new Date().toISOString() });
+        setLastResult({ ok: true, event: 'CHECK_IN', errorCode: null, visit: null, identity: null, visitor: null, occupancy: null, timestamp: new Date().toISOString() });
       } else {
         const openVisit = await authFetch('/api/access/visits?status=checked_in&pageSize=200');
         const match = (openVisit.rows as Array<{ id: string; patron_id: string }>).find((r) => r.patron_id === target.id);
@@ -182,7 +183,7 @@ export default function AccessScanner() {
           method: 'POST',
           body: JSON.stringify({ action: 'check_out', visitId: match.id, branchId }),
         });
-        setLastResult({ ok: true, event: 'CHECK_OUT', errorCode: null, visit: null, identity: null, occupancy: null, timestamp: new Date().toISOString() });
+        setLastResult({ ok: true, event: 'CHECK_OUT', errorCode: null, visit: null, identity: null, visitor: null, occupancy: null, timestamp: new Date().toISOString() });
       }
       await searchManual();
     } catch (err) {
@@ -286,6 +287,12 @@ export default function AccessScanner() {
                 <span className="font-semibold">{lastResult.identity.fullName}</span>
                 {' · '}{lastResult.identity.patronCategory}
                 {lastResult.identity.department ? ` · ${lastResult.identity.department}` : ''}
+              </div>
+            )}
+            {!lastResult.identity && lastResult.visitor && (
+              <div className="mt-1 text-sm text-neutral-700">
+                <span className="font-semibold">{lastResult.visitor.fullName}</span>
+                {' · '}{t('slaas.visitor')}
               </div>
             )}
             {lastResult.occupancy && (

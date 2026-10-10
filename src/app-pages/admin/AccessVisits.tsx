@@ -70,6 +70,8 @@ export default function AccessVisits() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'checked_in' | 'checked_out' | 'auto_closed'>('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [academicSession, setAcademicSession] = useState('');
+  const [semester, setSemester] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [target, setTarget] = useState<CorrectionTarget | null>(null);
@@ -91,13 +93,15 @@ export default function AccessVisits() {
       if (branchFilter) params.set('branchId', branchFilter);
       if (from) params.set('from', new Date(from).toISOString());
       if (to) params.set('to', new Date(to).toISOString());
+      if (academicSession.trim()) params.set('academicSession', academicSession.trim());
+      if (semester) params.set('semester', semester);
       const data = await authFetch(`/api/access/visits?${params.toString()}`);
       setRows(data.rows);
       setTotal(data.total);
     } catch (err) {
       setError((err as Error).message);
     }
-  }, [branchFilter, from, page, pageSize, statusFilter, to]);
+  }, [academicSession, branchFilter, from, page, pageSize, semester, statusFilter, to]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -210,6 +214,18 @@ export default function AccessVisits() {
           <label className="block text-sm">
             <span className="text-neutral-600">{t('slaas.to')}</span>
             <input type="datetime-local" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="input block mt-1" />
+          </label>
+          <label className="block text-sm">
+            <span className="text-neutral-600">{t('slaas.academicSession')}</span>
+            <input value={academicSession} onChange={(e) => { setAcademicSession(e.target.value); setPage(1); }} placeholder="2025/2026" className="input block mt-1" />
+          </label>
+          <label className="block text-sm">
+            <span className="text-neutral-600">{t('slaas.semester')}</span>
+            <select value={semester} onChange={(e) => { setSemester(e.target.value); setPage(1); }} className="input block mt-1">
+              <option value="">—</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
           </label>
           <div className="flex gap-2 ml-auto">
             <button type="button" onClick={() => void download('csv')} className="btn-outline text-sm">{t('slaas.exportCsv')}</button>

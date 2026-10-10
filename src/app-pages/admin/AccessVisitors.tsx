@@ -158,6 +158,28 @@ export default function AccessVisitors() {
     }
   }
 
+  async function revokePass(passId: string) {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await authFetch('/api/access/visitor-passes', {
+        method: 'PATCH',
+        body: JSON.stringify({ passId }),
+      });
+      if (result.ok) {
+        setMessage(t('slaas.passRevoked'));
+        await load();
+      } else {
+        setError(result.error ?? t('slaas.errorGeneric'));
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-5">
       <div>
@@ -249,10 +271,11 @@ export default function AccessVisitors() {
               <th className="py-2">{t('slaas.branch')}</th>
               <th className="py-2">{t('slaas.validUntil')}</th>
               <th className="py-2">{t('slaas.accountStatus')}</th>
+              <th className="py-2" />
             </tr>
           </thead>
           <tbody>
-            {passes.length === 0 && <tr><td colSpan={4} className="py-3 text-neutral-500">{t('slaas.noData')}</td></tr>}
+            {passes.length === 0 && <tr><td colSpan={5} className="py-3 text-neutral-500">{t('slaas.noData')}</td></tr>}
             {passes.map((p) => (
               <tr key={p.id} className="border-b border-neutral-100">
                 <td className="py-2 font-medium">{pickRelated(p.access_visitors) ?? '—'}</td>
@@ -262,6 +285,11 @@ export default function AccessVisitors() {
                   <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${p.status === 'active' ? 'bg-green-100 text-green-800' : p.status === 'revoked' ? 'bg-red-100 text-red-800' : 'bg-neutral-100 text-neutral-600'}`}>
                     {p.status === 'active' ? t('slaas.passActive') : p.status === 'revoked' ? t('slaas.passRevoked') : p.status === 'used' ? t('slaas.passUsed') : t('slaas.passExpired')}
                   </span>
+                </td>
+                <td className="py-2 text-right">
+                  {p.status === 'active' && (
+                    <button type="button" onClick={() => void revokePass(p.id)} className="btn-outline text-xs px-3 py-1 text-red-700 border-red-200">{t('slaas.revoke')}</button>
+                  )}
                 </td>
               </tr>
             ))}

@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/server/audit/writeAuditLog';
 import { captureEvent } from '@/server/analytics/eventCapture';
 import { resolveTenant } from '@/server/tenant/resolveTenant';
 import { getCurrentOccupancy } from '@/server/slaas/repository';
+import { getCurrentAcademicPeriod } from '@/server/slaas/academicPeriod';
 
 const ManualBody = z.discriminatedUnion('action', [
   z.object({
@@ -72,6 +73,7 @@ export const POST = withHandler<ManualBodyType>({
       if (!patron) return { data: { ok: false, error: 'USER_NOT_FOUND' }, status: 404 };
       if (patron.status !== 'active') return { data: { ok: false, error: 'INACTIVE_ACCOUNT' }, status: 403 };
 
+      const period = await getCurrentAcademicPeriod();
       const { data: inserted, error } = await supabase
         .from('access_visits')
         .insert({
@@ -81,6 +83,8 @@ export const POST = withHandler<ManualBodyType>({
           patron_id: body.patronId,
           status: 'checked_in',
           entry_method: 'manual',
+          academic_session: period.session,
+          semester: period.semester,
         })
         .select('id, status, checked_in_at, checked_out_at, duration_minutes')
         .single();

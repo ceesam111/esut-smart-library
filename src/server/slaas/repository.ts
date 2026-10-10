@@ -4,7 +4,8 @@ import { captureEvent } from '@/server/analytics/eventCapture';
 import { DEFAULT_TENANT_ID } from '@/server/tenant/resolveTenant';
 import { computeOccupancy, type OccupancySnapshot } from './occupancy';
 import { decideScan, type ScanMode, type VisitState } from './visitState';
-import { hashForStorage, verifyCredential, type QrClaims } from './qr';
+import { hashForStorage, verifyCredential, verifyVisitorPass, type QrClaims, type VisitorPassClaims } from './qr';
+import { getCurrentAcademicPeriod } from './academicPeriod';
 
 export interface BranchRecord {
   id: string;
@@ -67,6 +68,7 @@ export interface ScanResult {
     department: string | null;
     facultyCode: string | null;
   } | null;
+  visitor: { id: string; fullName: string } | null;
   occupancy: OccupancySnapshot | null;
   timestamp: string;
 }
@@ -168,19 +170,30 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
   if (!branch || !branch.active) {
     return {
       ok: false, event: 'DENIED', errorCode: 'BRANCH_NOT_FOUND',
-      visit: null, identity: null, occupancy: null, timestamp: nowIso,
+      visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
     };
   }
 
-  const verification = verifyCredential(input.token, Math.floor(now / 1000));
+  const nowSec = Math.floor(now / 1000);
+  const verification = verifyCredential(input.token, nowSec);
   if (!verification.ok) {
+    const visitorVerification = verifyVisitorPass(input.token, nowSec);
+    if (visitorVerification.ok) {
+      return processVisitorPassScan(input, branch, now, nowIso, visitorVerification.claims);
+    }
+    if (visitorVerification.reason === 'expired' && verification.reason !== 'expired') {
+      return {
+        ok: false, event: 'DENIED', errorCode: 'EXPIRED_QR',
+        visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
+      };
+    }
     const code: ScanErrorCode =
       verification.reason === 'expired' ? 'EXPIRED_QR'
       : verification.reason === 'bad_signature' || verification.reason === 'wrong_version' || verification.reason === 'wrong_audience' ? 'INVALID_QR'
       : 'INVALID_QR';
     return {
       ok: false, event: 'DENIED', errorCode: code,
-      visit: null, identity: null, occupancy: null, timestamp: nowIso,
+      visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
     };
   }
 
@@ -189,13 +202,13 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
   if (!identity || identity.id !== claims.sub) {
     return {
       ok: false, event: 'DENIED', errorCode: 'INVALID_QR',
-      visit: null, identity: null, occupancy: null, timestamp: nowIso,
+      visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
     };
   }
   if (identity.status === 'revoked') {
     return {
       ok: false, event: 'DENIED', errorCode: 'REVOKED_QR',
-      visit: null, identity: null, occupancy: null, timestamp: nowIso,
+      visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
     };
   }
 
@@ -203,13 +216,13 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
   if (!patron) {
     return {
       ok: false, event: 'DENIED', errorCode: 'USER_NOT_FOUND',
-      visit: null, identity: null, occupancy: null, timestamp: nowIso,
+      visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
     };
   }
   if (patron.status !== 'active') {
     return {
       ok: false, event: 'DENIED', errorCode: 'INACTIVE_ACCOUNT',
-      visit: null, identity: null, occupancy: null, timestamp: nowIso,
+      visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
     };
   }
 
@@ -238,7 +251,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
     return {
       ok: false, event: 'DUPLICATE', errorCode: 'DUPLICATE',
       visit: openVisit ? { id: openVisit.id, status: 'checked_in', checked_in_at: openVisit.checked_in_at, checked_out_at: null, duration_minutes: null } : null,
-      identity: toIdentitySummary(identity, patron), occupancy, timestamp: nowIso,
+      identity: toIdentitySummary(identity, patron), visitor: null, occupancy, timestamp: nowIso,
     };
   }
 
@@ -252,17 +265,18 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
     const code: ScanErrorCode = decision.reason === 'not_currently_inside' ? 'NOT_CURRENTLY_INSIDE' : 'ACCESS_DENIED';
     return {
       ok: false, event: 'DENIED', errorCode: code,
-      visit: null, identity: toIdentitySummary(identity, patron), occupancy, timestamp: nowIso,
+      visit: null, identity: toIdentitySummary(identity, patron), visitor: null, occupancy, timestamp: nowIso,
     };
   }
 
   if (decision.action === 'CHECK_IN') {
+    const period = await getCurrentAcademicPeriod(new Date(now));
     const { data: inserted, error: insertError } = await supabase
       .from('access_visits')
       .insert({
         tenant_id: branch.tenant_id, access_identity_id: identity.id, branch_id: branch.id,
         patron_id: identity.patron_id, status: 'checked_in', entry_method: 'qr',
-        checked_in_at: nowIso, academic_session: null, semester: null, is_observed: true,
+        checked_in_at: nowIso, academic_session: period.session, semester: period.semester, is_observed: true,
       })
       .select('id, status, checked_in_at, checked_out_at, duration_minutes')
       .single();
@@ -274,7 +288,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
         return {
           ok: false, event: 'DUPLICATE', errorCode: 'DUPLICATE',
           visit: currentOpen ? { id: currentOpen.id, status: 'checked_in', checked_in_at: currentOpen.checked_in_at, checked_out_at: null, duration_minutes: null } : null,
-          identity: toIdentitySummary(identity, patron), occupancy: occ, timestamp: nowIso,
+          identity: toIdentitySummary(identity, patron), visitor: null, occupancy: occ, timestamp: nowIso,
         };
       }
       throw new Error(insertError.message);
@@ -298,7 +312,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
     return {
       ok: true, event: 'CHECK_IN', errorCode: null,
       visit: { id: inserted.id, status: inserted.status, checked_in_at: inserted.checked_in_at, checked_out_at: null, duration_minutes: null },
-      identity: toIdentitySummary(identity, patron), occupancy, timestamp: nowIso,
+      identity: toIdentitySummary(identity, patron), visitor: null, occupancy, timestamp: nowIso,
     };
   }
 
@@ -307,7 +321,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
       const occ = await getCurrentOccupancy(branch.id);
       return {
         ok: false, event: 'DENIED', errorCode: 'NOT_CURRENTLY_INSIDE',
-        visit: null, identity: toIdentitySummary(identity, patron), occupancy: occ, timestamp: nowIso,
+        visit: null, identity: toIdentitySummary(identity, patron), visitor: null, occupancy: occ, timestamp: nowIso,
       };
     }
     const durationMinutes = Math.max(0, Math.round((now - new Date(openVisit.checked_in_at).getTime()) / 60000));
@@ -324,7 +338,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
         const occ = await getCurrentOccupancy(branch.id);
         return {
           ok: false, event: 'DUPLICATE', errorCode: 'DUPLICATE',
-          visit: null, identity: toIdentitySummary(identity, patron), occupancy: occ, timestamp: nowIso,
+          visit: null, identity: toIdentitySummary(identity, patron), visitor: null, occupancy: occ, timestamp: nowIso,
         };
       }
       throw new Error(updateError.message);
@@ -344,13 +358,13 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
     return {
       ok: true, event: 'CHECK_OUT', errorCode: null,
       visit: { id: updated.id, status: updated.status, checked_in_at: updated.checked_in_at, checked_out_at: updated.checked_out_at, duration_minutes: updated.duration_minutes },
-      identity: toIdentitySummary(identity, patron), occupancy, timestamp: nowIso,
+      identity: toIdentitySummary(identity, patron), visitor: null, occupancy, timestamp: nowIso,
     };
   }
 
   return {
     ok: false, event: 'DENIED', errorCode: 'SYSTEM_ERROR',
-    visit: null, identity: null, occupancy: null, timestamp: nowIso,
+    visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
   };
 }
 
@@ -378,4 +392,196 @@ async function recordAccessEvent(
     patron_id: e.patronId, visitor_id: e.visitorId ?? null, branch_id: e.branchId,
     event_type: e.eventType, event_source: e.eventSource, metadata: e.metadata,
   });
+}
+
+interface VisitorPassRecord {
+  id: string;
+  visitor_id: string;
+  branch_id: string;
+  tenant_id: string | null;
+  valid_until: string;
+  status: string;
+  access_visitors: { full_name: string } | Array<{ full_name: string }> | null;
+}
+
+async function processVisitorPassScan(
+  input: ProcessScanInput,
+  branch: BranchRecord,
+  now: number,
+  nowIso: string,
+  claims: VisitorPassClaims,
+): Promise<ScanResult> {
+  const supabase = getSupabaseAdminClient();
+  const denied = (errorCode: ScanErrorCode, visitor: { id: string; fullName: string } | null, event: 'DENIED' | 'DUPLICATE' = 'DENIED', visit: ScanResult['visit'] = null): ScanResult => ({
+    ok: false, event, errorCode, visit, identity: null, visitor, occupancy: null, timestamp: nowIso,
+  });
+
+  const { data, error: passError } = await supabase
+    .from('access_visitor_passes')
+    .select('id, visitor_id, branch_id, tenant_id, valid_until, status, access_visitors(full_name)')
+    .eq('secure_token_hash', hashForStorage(input.token))
+    .maybeSingle();
+  if (passError) throw new Error(passError.message);
+  const pass = data as VisitorPassRecord | null;
+  const embed = pass && (Array.isArray(pass.access_visitors) ? pass.access_visitors[0] : pass.access_visitors);
+  const visitor = pass ? { id: pass.visitor_id, fullName: embed?.full_name ?? 'Visitor' } : null;
+
+  if (!pass || pass.visitor_id !== claims.sub) return denied('INVALID_QR', visitor);
+  if (pass.status === 'revoked') return denied('REVOKED_QR', visitor);
+  if (pass.status === 'expired') return denied('EXPIRED_QR', visitor);
+  if (new Date(pass.valid_until).getTime() < now) {
+    await supabase.from('access_visitor_passes').update({ status: 'expired' }).eq('id', pass.id).eq('status', 'active');
+    return denied('EXPIRED_QR', visitor);
+  }
+  if (pass.branch_id !== branch.id) {
+    await recordAccessEvent(supabase, {
+      tenantId: branch.tenant_id, identityId: null, visitId: null, patronId: null,
+      visitorId: pass.visitor_id, branchId: branch.id,
+      eventType: 'DENIED', eventSource: 'visitor_pass',
+      metadata: { reason: 'branch_mismatch', pass_branch_id: pass.branch_id }, nowIso,
+    });
+    const occupancy = await getCurrentOccupancy(branch.id);
+    return { ...denied('ACCESS_DENIED', visitor), occupancy };
+  }
+
+  const [{ data: openVisit }, { data: lastEvent }] = await Promise.all([
+    supabase.from('access_visits').select('id, checked_in_at').eq('visitor_id', pass.visitor_id).eq('status', 'checked_in').maybeSingle(),
+    supabase.from('access_events').select('created_at').eq('visitor_id', pass.visitor_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  ]);
+
+  const decision = decideScan({
+    currentState: openVisit ? 'INSIDE' : 'OUTSIDE',
+    mode: input.mode,
+    debounceMs: 5000,
+    lastEventAtMs: lastEvent ? new Date(lastEvent.created_at).getTime() : null,
+    nowMs: now,
+  });
+
+  if (decision.action === 'DUPLICATE') {
+    await recordAccessEvent(supabase, {
+      tenantId: branch.tenant_id, identityId: null, visitId: openVisit?.id ?? null, patronId: null,
+      visitorId: pass.visitor_id, branchId: branch.id,
+      eventType: 'DUPLICATE_SCAN', eventSource: 'visitor_pass',
+      metadata: { reason: decision.reason }, nowIso,
+    });
+    const occupancy = await getCurrentOccupancy(branch.id);
+    const visit = openVisit
+      ? { id: openVisit.id, status: 'checked_in', checked_in_at: openVisit.checked_in_at, checked_out_at: null, duration_minutes: null }
+      : null;
+    return { ...denied('DUPLICATE', visitor, 'DUPLICATE', visit), occupancy };
+  }
+
+  if (decision.action === 'DENIED') {
+    await recordAccessEvent(supabase, {
+      tenantId: branch.tenant_id, identityId: null, visitId: null, patronId: null,
+      visitorId: pass.visitor_id, branchId: branch.id,
+      eventType: 'DENIED', eventSource: 'visitor_pass',
+      metadata: { reason: decision.reason }, nowIso,
+    });
+    const occupancy = await getCurrentOccupancy(branch.id);
+    const errorCode: ScanErrorCode = decision.reason === 'not_currently_inside' ? 'NOT_CURRENTLY_INSIDE' : 'ACCESS_DENIED';
+    return { ...denied(errorCode, visitor), occupancy };
+  }
+
+  if (decision.action === 'CHECK_IN') {
+    const period = await getCurrentAcademicPeriod(new Date(now));
+    const { data: inserted, error: insertError } = await supabase
+      .from('access_visits')
+      .insert({
+        tenant_id: pass.tenant_id || branch.tenant_id,
+        access_identity_id: null,
+        branch_id: branch.id,
+        patron_id: null,
+        visitor_id: pass.visitor_id,
+        visitor_pass_id: pass.id,
+        status: 'checked_in',
+        entry_method: 'visitor_pass',
+        checked_in_at: nowIso,
+        academic_session: period.session,
+        semester: period.semester,
+        is_observed: true,
+      })
+      .select('id, status, checked_in_at, checked_out_at, duration_minutes')
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        const occupancy = await getCurrentOccupancy(branch.id);
+        const currentOpen = await supabase
+          .from('access_visits').select('id, checked_in_at')
+          .eq('visitor_id', pass.visitor_id).eq('status', 'checked_in').maybeSingle();
+        const visit = currentOpen.data
+          ? { id: currentOpen.data.id, status: 'checked_in', checked_in_at: currentOpen.data.checked_in_at, checked_out_at: null, duration_minutes: null }
+          : null;
+        return { ...denied('DUPLICATE', visitor, 'DUPLICATE', visit), occupancy };
+      }
+      throw new Error(insertError.message);
+    }
+
+    await recordAccessEvent(supabase, {
+      tenantId: branch.tenant_id, identityId: null, visitId: inserted.id, patronId: null,
+      visitorId: pass.visitor_id, branchId: branch.id,
+      eventType: 'VISITOR_ENTRY', eventSource: 'visitor_pass', metadata: { pass_id: pass.id }, nowIso,
+    });
+    await writeAuditLog({
+      tenantId: branch.tenant_id, actorUserId: input.operatorUserId, actorRole: input.actorRole,
+      action: 'access.visitor_entry', entityType: 'access_visits', entityId: inserted.id,
+      afterData: { visitor_id: pass.visitor_id, branch_id: branch.id }, metadata: { source: 'visitor_pass' },
+    });
+    const occupancy = await getCurrentOccupancy(branch.id);
+    await captureEvent({
+      event_type: 'library_visit', user_id: null, event_category: 'ACCESS',
+      entity_type: 'access_visit', entity_id: inserted.id,
+      metadata: { branch_id: branch.id, action: 'visitor_check_in', visitor: true },
+    });
+    return {
+      ok: true, event: 'CHECK_IN', errorCode: null,
+      visit: { id: inserted.id, status: inserted.status, checked_in_at: inserted.checked_in_at, checked_out_at: null, duration_minutes: null },
+      identity: null, visitor, occupancy, timestamp: nowIso,
+    };
+  }
+
+  if (!openVisit) {
+    const occupancy = await getCurrentOccupancy(branch.id);
+    return { ...denied('NOT_CURRENTLY_INSIDE', visitor), occupancy };
+  }
+  const durationMinutes = Math.max(0, Math.round((now - new Date(openVisit.checked_in_at).getTime()) / 60000));
+  const { data: updated, error: updateError } = await supabase
+    .from('access_visits')
+    .update({ status: 'checked_out', checked_out_at: nowIso, exit_method: 'visitor_pass', duration_minutes: durationMinutes })
+    .eq('id', openVisit.id)
+    .eq('status', 'checked_in')
+    .select('id, status, checked_in_at, checked_out_at, duration_minutes')
+    .single();
+
+  if (updateError) {
+    if (updateError.code === 'PGRST116') {
+      const occupancy = await getCurrentOccupancy(branch.id);
+      return { ...denied('DUPLICATE', visitor, 'DUPLICATE'), occupancy };
+    }
+    throw new Error(updateError.message);
+  }
+
+  await recordAccessEvent(supabase, {
+    tenantId: branch.tenant_id, identityId: null, visitId: updated.id, patronId: null,
+    visitorId: pass.visitor_id, branchId: branch.id,
+    eventType: 'VISITOR_EXIT', eventSource: 'visitor_pass',
+    metadata: { duration_minutes: durationMinutes }, nowIso,
+  });
+  await writeAuditLog({
+    tenantId: branch.tenant_id, actorUserId: input.operatorUserId, actorRole: input.actorRole,
+    action: 'access.visitor_exit', entityType: 'access_visits', entityId: updated.id,
+    afterData: { checked_out_at: nowIso, duration_minutes: durationMinutes }, metadata: { source: 'visitor_pass' },
+  });
+  const occupancy = await getCurrentOccupancy(branch.id);
+  await captureEvent({
+    event_type: 'library_visit', user_id: null, event_category: 'ACCESS',
+    entity_type: 'access_visit', entity_id: updated.id,
+    metadata: { branch_id: branch.id, action: 'visitor_check_out', visitor: true },
+  });
+  return {
+    ok: true, event: 'CHECK_OUT', errorCode: null,
+    visit: { id: updated.id, status: updated.status, checked_in_at: updated.checked_in_at, checked_out_at: updated.checked_out_at, duration_minutes: updated.duration_minutes },
+    identity: null, visitor, occupancy, timestamp: nowIso,
+  };
 }
