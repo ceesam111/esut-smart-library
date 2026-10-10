@@ -40,16 +40,18 @@ export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+const STATIC_IAT = 0;
+const STATIC_EXP = 4102444800;
+
 export function generateStaticCredential(accessIdentityId: string): string {
-  const nonce = randomBytes(NONCE_BYTES).toString('base64url');
   const payload: QrClaims = {
     v: TOKEN_VERSION,
     sub: accessIdentityId,
     iss: 'esut-library',
     aud: 'esut-access-gate',
-    iat: nowSeconds(),
-    exp: nowSeconds() + 365 * 24 * 3600,
-    jti: nonce,
+    iat: STATIC_IAT,
+    exp: STATIC_EXP,
+    jti: `static-${createHmac('sha256', getSecret()).update(`static:${accessIdentityId}`).digest('hex').slice(0, 32)}`,
   };
   return signClaims(payload);
 }

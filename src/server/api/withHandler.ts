@@ -49,6 +49,10 @@ export function withHandler<TBody = unknown, TQuery = unknown, TParams extends R
       const tenant = options.tenantFrom ? await options.tenantFrom(ctx) : {};
       const log = childLogger({ requestId, method: request.method, path: request.nextUrl.pathname, tenantId: tenant.tenantId ?? null, tenantSlug: tenant.tenantSlug ?? null });
       const result = await options.handler({ ...ctx, log });
+      if (result instanceof Response) {
+        log.http('request completed', { status: result.status, durationMs: Date.now() - startedAt });
+        return result;
+      }
       const status = typeof result === 'object' && result !== null && 'data' in result ? (result as { status?: number }).status ?? 200 : 200;
       const data = typeof result === 'object' && result !== null && 'data' in result ? (result as { data: unknown }).data : result;
       log.http('request completed', { status, durationMs: Date.now() - startedAt });
