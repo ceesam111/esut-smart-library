@@ -18,13 +18,15 @@ type RegisterBodyType = z.infer<typeof RegisterBody>;
 
 export const GET = withHandler({
   async handler({ request }) {
-    await requireRole(request, LIBRARY_ADMIN_ROLES);
+    const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
+    const tenant = await resolveTenant(ctx.user.id);
     const supabase = getSupabaseAdminClient();
     const [{ data: visitors }, { data: passes }] = await Promise.all([
-      supabase.from('access_visitors').select('id, full_name, organization, purpose, host_department, created_at').order('created_at', { ascending: false }).limit(100),
+      supabase.from('access_visitors').select('id, full_name, organization, purpose, host_department, created_at').eq('tenant_id', tenant.tenantId).order('created_at', { ascending: false }).limit(100),
       supabase
         .from('access_visitor_passes')
         .select('id, visitor_id, branch_id, valid_from, valid_until, status, issued_by, created_at, access_visitors(full_name), library_branches(name)')
+        .eq('tenant_id', tenant.tenantId)
         .order('created_at', { ascending: false })
         .limit(100),
     ]);

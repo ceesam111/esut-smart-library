@@ -27,6 +27,7 @@ export const PATCH = withHandler<RevokeBodyType>({
       .from('library_access_identities')
       .select('id, status, patron_id')
       .eq('id', body.identityId)
+      .eq('tenant_id', tenant.tenantId)
       .maybeSingle();
     if (!existing) return { data: { ok: false, error: 'IDENTITY_NOT_FOUND' }, status: 404 };
     if (existing.status === 'revoked') return { data: { ok: true, alreadyRevoked: true, identityId: existing.id } };
@@ -60,10 +61,19 @@ export const POST = withHandler<BodyType>({
     const tenant = await resolveTenant(ctx.user.id);
     const supabase = getSupabaseAdminClient();
 
+    const { data: patronRow } = await supabase
+      .from('patrons')
+      .select('id')
+      .eq('id', body.patronId)
+      .eq('tenant_id', tenant.tenantId)
+      .maybeSingle();
+    if (!patronRow) return { data: { ok: false, error: 'PATRON_NOT_FOUND' }, status: 404 };
+
     const { data: active } = await supabase
       .from('library_access_identities')
       .select('id')
       .eq('patron_id', body.patronId)
+      .eq('tenant_id', tenant.tenantId)
       .eq('status', 'active')
       .maybeSingle();
 

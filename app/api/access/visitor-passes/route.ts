@@ -50,6 +50,7 @@ export const PATCH = withHandler<RevokeBodyType>({
       .from('access_visitor_passes')
       .select('id, status, visitor_id, branch_id')
       .eq('id', body.passId)
+      .eq('tenant_id', tenant.tenantId)
       .maybeSingle();
     if (!existing) return { data: { ok: false, error: 'PASS_NOT_FOUND' }, status: 404 };
     if (existing.status === 'revoked') return { data: { ok: true, alreadyRevoked: true, passId: existing.id } };

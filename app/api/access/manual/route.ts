@@ -6,7 +6,7 @@ import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { writeAuditLog } from '@/server/audit/writeAuditLog';
 import { captureEvent } from '@/server/analytics/eventCapture';
 import { resolveTenant } from '@/server/tenant/resolveTenant';
-import { getCurrentOccupancy } from '@/server/slaas/repository';
+import { getCurrentOccupancy, getBranchById } from '@/server/slaas/repository';
 import { getCurrentAcademicPeriod } from '@/server/slaas/academicPeriod';
 
 const ManualBody = z.discriminatedUnion('action', [
@@ -41,6 +41,7 @@ export const POST = withHandler<ManualBodyType>({
       const { data, error } = await supabase
         .from('patrons')
         .select('id, full_name, patron_category, department, faculty_code, status, patron_id, matric_number, staff_id')
+        .eq('tenant_id', tenant.tenantId)
         .or(`full_name.ilike.${like},patron_id.ilike.${like},matric_number.ilike.${like},staff_id.ilike.${like}`)
         .limit(20);
       if (error) throw new Error(error.message);
@@ -57,10 +58,16 @@ export const POST = withHandler<ManualBodyType>({
     }
 
     if (body.action === 'check_in') {
+      const branch = await getBranchById(body.branchId);
+      if (!branch || !branch.active || branch.tenant_id !== tenant.tenantId) {
+        return { data: { ok: false, error: 'BRANCH_NOT_FOUND' }, status: 404 };
+      }
+
       const { data: identity } = await supabase
         .from('library_access_identities')
         .select('id')
         .eq('patron_id', body.patronId)
+        .eq('tenant_id', tenant.tenantId)
         .eq('status', 'active')
         .maybeSingle();
       if (!identity) return { data: { ok: false, error: 'NO_ACTIVE_IDENTITY' }, status: 409 };
@@ -69,6 +76,7 @@ export const POST = withHandler<ManualBodyType>({
         .from('patrons')
         .select('id, status, full_name, patron_category, department, faculty_code')
         .eq('id', body.patronId)
+        .eq('tenant_id', tenant.tenantId)
         .maybeSingle();
       if (!patron) return { data: { ok: false, error: 'USER_NOT_FOUND' }, status: 404 };
       if (patron.status !== 'active') return { data: { ok: false, error: 'INACTIVE_ACCOUNT' }, status: 403 };
@@ -141,10 +149,16 @@ export const POST = withHandler<ManualBodyType>({
       };
     }
 
+    const outBranch = await getBranchById(body.branchId);
+    if (!outBranch || outBranch.tenant_id !== tenant.tenantId) {
+      return { data: { ok: false, error: 'BRANCH_NOT_FOUND' }, status: 404 };
+    }
+
     const { data: visit } = await supabase
       .from('access_visits')
       .select('id, status, checked_in_at, patron_id')
       .eq('id', body.visitId)
+      .eq('tenant_id', tenant.tenantId)
       .maybeSingle();
     if (!visit) return { data: { ok: false, error: 'VISIT_NOT_FOUND' }, status: 404 };
     if (visit.status !== 'checked_in') return { data: { ok: false, error: 'NOT_CURRENTLY_INSIDE' }, status: 409 };

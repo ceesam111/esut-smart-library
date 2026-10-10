@@ -24,6 +24,7 @@ export async function correctVisit(input: CorrectVisitInput): Promise<Correction
     .from('access_visits')
     .select('id, status, checked_in_at, checked_out_at, duration_minutes, patron_id, branch_id, tenant_id')
     .eq('id', input.visitId)
+    .eq('tenant_id', input.tenantId)
     .maybeSingle();
   if (fetchError || !current) return { ok: false, error: 'VISIT_NOT_FOUND', visit: null };
 

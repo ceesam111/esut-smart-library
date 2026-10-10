@@ -158,6 +158,7 @@ export interface ProcessScanInput {
   idempotencyKey: string;
   operatorUserId: string;
   actorRole: string | null;
+  tenantId: string;
   workstationId?: string | null;
   nowMs?: number;
 }
@@ -167,7 +168,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
   const nowIso = new Date(now).toISOString();
 
   const branch = await getBranchById(input.branchId);
-  if (!branch || !branch.active) {
+  if (!branch || !branch.active || branch.tenant_id !== input.tenantId) {
     return {
       ok: false, event: 'DENIED', errorCode: 'BRANCH_NOT_FOUND',
       visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
@@ -199,7 +200,7 @@ export async function processScan(input: ProcessScanInput): Promise<ScanResult> 
 
   const claims: QrClaims = verification.claims;
   const identity = await getActiveIdentityByToken(input.token);
-  if (!identity || identity.id !== claims.sub) {
+  if (!identity || identity.id !== claims.sub || identity.tenant_id !== input.tenantId) {
     return {
       ok: false, event: 'DENIED', errorCode: 'INVALID_QR',
       visit: null, identity: null, visitor: null, occupancy: null, timestamp: nowIso,
@@ -427,6 +428,7 @@ async function processVisitorPassScan(
   const visitor = pass ? { id: pass.visitor_id, fullName: embed?.full_name ?? 'Visitor' } : null;
 
   if (!pass || pass.visitor_id !== claims.sub) return denied('INVALID_QR', visitor);
+  if (pass.tenant_id && pass.tenant_id !== input.tenantId) return denied('ACCESS_DENIED', visitor);
   if (pass.status === 'revoked') return denied('REVOKED_QR', visitor);
   if (pass.status === 'expired') return denied('EXPIRED_QR', visitor);
   if (new Date(pass.valid_until).getTime() < now) {

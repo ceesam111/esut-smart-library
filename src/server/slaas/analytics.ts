@@ -5,6 +5,7 @@ export interface PeriodFilter {
   from: string;
   to: string;
   branchId?: string;
+  tenantId?: string;
 }
 
 export interface BranchUtilization {
@@ -36,6 +37,7 @@ export async function getSlaasAnalytics(filter: PeriodFilter): Promise<SlaasAnal
     .gte('checked_in_at', filter.from)
     .lte('checked_in_at', filter.to);
   if (filter.branchId) query = query.eq('branch_id', filter.branchId);
+  if (filter.tenantId) query = query.eq('tenant_id', filter.tenantId);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -107,6 +109,7 @@ async function computePeakOccupancy(filter: PeriodFilter): Promise<number> {
     .or(`checked_out_at.is.null,checked_out_at.gte.${filter.from}`)
     .limit(10000);
   if (filter.branchId) q = q.eq('branch_id', filter.branchId);
+  if (filter.tenantId) q = q.eq('tenant_id', filter.tenantId);
   const { data, error } = await q;
   if (error) return 0;
   const rows = (data ?? []) as Array<{ checked_in_at: string; checked_out_at: string | null }>;

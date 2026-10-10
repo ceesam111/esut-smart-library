@@ -33,9 +33,20 @@ export async function issueVisitorPass(input: IssuePassInput): Promise<VisitorPa
     .from('access_visitors')
     .select('id, full_name, tenant_id')
     .eq('id', input.visitorId)
+    .eq('tenant_id', input.tenantId)
     .maybeSingle();
   if (visitorError || !visitor) {
     return { ok: false, error: 'VISITOR_NOT_FOUND', pass: null, credential: null };
+  }
+
+  const { data: branch } = await supabase
+    .from('library_branches')
+    .select('id, active, tenant_id')
+    .eq('id', input.branchId)
+    .eq('tenant_id', input.tenantId)
+    .maybeSingle();
+  if (!branch || !branch.active) {
+    return { ok: false, error: 'BRANCH_NOT_FOUND', pass: null, credential: null };
   }
 
   const validFrom = new Date();

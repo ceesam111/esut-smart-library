@@ -21,11 +21,13 @@ type BranchBodyType = z.infer<typeof BranchBody>;
 
 export const GET = withHandler({
   async handler({ request }) {
-    await requireRole(request, [...LIBRARY_ADMIN_ROLES]);
+    const ctx = await requireRole(request, [...LIBRARY_ADMIN_ROLES]);
+    const tenant = await resolveTenant(ctx.user.id);
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from('library_branches')
       .select('id, code, name, location, timezone, capacity, capacity_mode, warn_threshold_pct, active, created_at, updated_at')
+      .eq('tenant_id', tenant.tenantId)
       .order('name', { ascending: true });
     if (error) throw new Error(error.message);
     return { data: data ?? [] };
