@@ -524,3 +524,38 @@ blocked-external list).
 Arcjet active without blocking normal pages, search E2E 24/24, unit gates re-run after the
 Zenodo `User-Agent` fix — tsc 0, lint 0/0, vitest 766/766. `.env*` stay gitignored; in
 Coolify these six keys must also be added to the runtime environment (DEPLOYMENT.md list).
+
+**Post-revalidation CI/deploy verification (2026-10-11)**: first full GitHub Actions runs
+were red; three root causes found and fixed, all verified locally before push:
+
+1. **Extraction sandbox on Linux** — `extractWorkerEntry.ts` loaded `./engine` with an
+   extensionless dynamic import; under Node's native type-stripping loader (Linux CI,
+   `node:22` Docker) that fails with `Cannot find module '.../engine'`, failing all 10
+   extraction tests in CI while passing on Windows (tsx hooks). Fixed with explicit
+   `.ts` specifiers through the worker-loaded chain (`extractWorkerEntry`, `engine`,
+   `docxText`, `ocr`) + `allowImportingTsExtensions` in `tsconfig.json`
+   (commit `8b6cd80`); re-verified by spawning the worker with no loader (outcome
+   `COMPLETE`) and vitest extraction 15/15.
+2. **Hardcoded Windows paths in CI scripts** — `scripts/scan-secrets.mjs` and
+   `scripts/sast-scan.mjs` used a fixed `C:\Users\LENOVO\...` project root, so on
+   runners `git ls-files` returned nothing (`FATAL: no tracked files`, exit 2). Fixed to
+   script-relative `PROJECT_ROOT` with `path.join` reads (commit `2c15d52`).
+3. **SAST self-match** — the scanner's own rule strings matched the `eslint-disable`
+   rule; baselined `scripts/sast-scan.mjs::eslint-disable`, following the existing
+   `scripts/parse-ai-tools.mjs` precedent (file::rule keys, line numbers not stored).
+
+Outcome: **CI Quality Gates fully green** — run `38117721363` (2026-10-11), 2m47s, all
+steps passed: tsc, eslint, vitest (92/92 files), production build, npm audit (0
+critical), secrets scan (1017 files, 0 findings), SAST scan (0 findings). Earlier CI
+"green" claims in older docs were **local-only**; this is the first green hosted run.
+
+Still red: **Build & Push Docker Image** — image builds (login + build pass) but push
+fails verbatim with `denied: permission_denied: read_package` for
+`ghcr.io/ceesam111/esut-smart-library:latest` (runs `38115223682`, `38117016800`,
+`38117721367`). Cause: that package exists as a **private package not connected to this
+repository**, so the workflow `GITHUB_TOKEN` (`packages: write`) cannot access it —
+probes: anonymous token request returns 401 for this name vs 403 for a random name;
+package-link API returns 404; local `gh` token lacks `read:packages`. This needs the
+package owner (GitHub web UI: package settings → connect this repository with
+read/write Actions access, or delete/rename the stale package), then re-run the
+workflow; Coolify deployment follows per `DEPLOYMENT.md`.
