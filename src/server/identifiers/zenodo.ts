@@ -15,6 +15,7 @@ export class ZenodoDoiProvider implements DoiProvider {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.ZENODO_TOKEN}`,
+          'User-Agent': 'ESUT-Smart-Library/1.0 (https://esutlibrary.edu.ng)',
         },
         body: JSON.stringify({
           metadata: {
