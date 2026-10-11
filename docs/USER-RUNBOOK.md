@@ -559,3 +559,15 @@ package-link API returns 404; local `gh` token lacks `read:packages`. This needs
 package owner (GitHub web UI: package settings → connect this repository with
 read/write Actions access, or delete/rename the stale package), then re-run the
 workflow; Coolify deployment follows per `DEPLOYMENT.md`.
+
+**GHCR resolved (2026-10-11)**: owner granted the local `gh` session `write:packages`
+via the official device flow (token in keyring, never shown in chat), then connected
+the package to the repository in the GitHub web UI — no REST endpoint exists for
+this connection (verified against the current GitHub REST Packages docs; a test
+workflow step using the assumed endpoint returned 404 and was removed in `2167b53`).
+First fully green release pipeline: CI Quality Gates `38122415687` **success** + Build
+& Push Docker Image `38122415650` **success** on `2167b53`; image
+`ghcr.io/ceesam111/esut-smart-library:latest` published 2026-10-11T07:46:34Z
+(verified via package-versions API: tag `latest`). Remaining deployment step:
+Coolify must pull this image and receive the runtime environment variables per
+`DEPLOYMENT.md` (including the six API keys applied above).
