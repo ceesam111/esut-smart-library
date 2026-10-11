@@ -8,5 +8,6 @@
   "src/server/reports/xlsx.ts::eslint-disable",
   "src/server/thesis/submitThesis.ts::eslint-disable",
   "src/config/aiTools.data.ts::eslint-disable",
-  "scripts/parse-ai-tools.mjs::eslint-disable"
+  "scripts/parse-ai-tools.mjs::eslint-disable",
+  "scripts/sast-scan.mjs::eslint-disable"
 ]

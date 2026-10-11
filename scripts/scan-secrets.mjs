@@ -1,7 +1,9 @@
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PROJECT_ROOT = 'C:\\Users\\LENOVO\\Desktop\\DWC_Platform_2.5_Idea_Project_Intake_Stitch\\Projects\\ESUT SMART LIBRARY';
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const RULES = [
   { name: 'aws-access-key-id', re: /\bAKIA[0-9A-Z]{16}\b/ },
@@ -37,7 +39,7 @@ function envValues() {
   const values = [];
   let raw;
   try {
-    raw = readFileSync(`${PROJECT_ROOT}\\.env.local`, 'utf8');
+    raw = readFileSync(join(PROJECT_ROOT, '.env.local'), 'utf8');
   } catch {
     return values;
   }
@@ -64,7 +66,7 @@ for (const rel of files) {
   if (SKIP_EXT.test(rel) || SKIP_FILES.has(rel)) continue;
   let content;
   try {
-    const stat = readFileSync(`${PROJECT_ROOT}\\${rel.replace(/\//g, '\\')}`);
+    const stat = readFileSync(join(PROJECT_ROOT, rel));
     if (stat.length > 2 * 1024 * 1024) continue;
     content = stat.toString('utf8');
   } catch {

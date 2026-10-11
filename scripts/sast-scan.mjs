@@ -1,7 +1,9 @@
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PROJECT_ROOT = 'C:\\Users\\LENOVO\\Desktop\\DWC_Platform_2.5_Idea_Project_Intake_Stitch\\Projects\\ESUT SMART LIBRARY';
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const CHECKS = [
   { name: 'eslint-disable', re: /eslint-disable/ },
@@ -31,7 +33,7 @@ function trackedFiles() {
 const findings = [];
 let baseline;
 try {
-  baseline = JSON.parse(readFileSync(`${PROJECT_ROOT}\\scripts\\.sast-baseline.json`, 'utf8'));
+  baseline = JSON.parse(readFileSync(join(PROJECT_ROOT, 'scripts', '.sast-baseline.json'), 'utf8'));
 } catch {
   baseline = [];
 }
@@ -46,7 +48,7 @@ for (const rel of files) {
   if (!SOURCE_EXT.test(rel) || SKIP_EXT.test(rel) || SKIP_FILES.has(rel)) continue;
   let content;
   try {
-    const buf = readFileSync(`${PROJECT_ROOT}\\${rel.replace(/\//g, '\\')}`);
+    const buf = readFileSync(join(PROJECT_ROOT, rel));
     if (buf.length > 1024 * 1024) continue;
     content = buf.toString('utf8');
   } catch {
