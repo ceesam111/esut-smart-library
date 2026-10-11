@@ -25,7 +25,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
+      - name: Compute stamp
+        id: stamp
+        run: echo "stamp=$(date -u +%Y%m%d-%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push app
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -34,4 +38,26 @@ jobs:
             NEXT_PUBLIC_SUPABASE_URL=https://rnnjspkdhojoigncdgmy.supabase.co
             NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJubmpzcGtkaG9qb2lnbmNkZ215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MTQ3NTEsImV4cCI6MjEwNDM5MDc1MX0.AQB1LBmLVuvMFT66ez-9LTLj5R8jofXhc5GGR8tKsBY
             NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_g_qPBuwhIOs3Z3GJ66OZnw_ZgUvxWKP
-          tags: ghcr.io/ceesam111/esut-smart-library:latest
+          tags: |
+            ghcr.io/ceesam111/esut-smart-library:latest
+            ghcr.io/ceesam111/esut-smart-library:${{ steps.stamp.outputs.stamp }}
+
+      - name: Build and push worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.worker
+          push: true
+          tags: |
+            ghcr.io/ceesam111/esut-smart-library:worker-latest
+            ghcr.io/ceesam111/esut-smart-library:worker-${{ steps.stamp.outputs.stamp }}
+
+      - name: Build and push sip2
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.sip2
+          push: true
+          tags: |
+            ghcr.io/ceesam111/esut-smart-library:sip2-latest
+            ghcr.io/ceesam111/esut-smart-library:sip2-${{ steps.stamp.outputs.stamp }}
