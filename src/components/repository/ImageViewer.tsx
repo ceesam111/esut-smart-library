@@ -6,11 +6,11 @@ interface Props {
   onClose: () => void;
 }
 
-const IMAGE_EXTS = /\.(jpg|jpeg|png|gif|tiff?|webp|bmp)(\?.*)?$/i;
+const IMAGE_EXTS = /\.(jpg|jpeg|png|gif|tiff?|webp|bmp)$/i;
 
 export function isImageFile(url: string | null | undefined): boolean {
   if (!url) return false;
-  return IMAGE_EXTS.test(url);
+  return IMAGE_EXTS.test(url.split(/[?#]/)[0]);
 }
 
 export default function ImageViewer({ imageUrl, onClose }: Props) {

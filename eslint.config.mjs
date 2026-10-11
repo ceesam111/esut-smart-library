@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
+import security from "eslint-plugin-security";
 import globals from "globals";
 
 const eslintConfig = [
@@ -41,6 +42,20 @@ const eslintConfig = [
       "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
+    },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}", "worker/**/*.ts", "sip2/**/*.ts", "middleware.ts"],
+    plugins: { security },
+    rules: {
+      "security/detect-eval-with-expression": "error",
+      "security/detect-child-process": "error",
+      "security/detect-unsafe-regex": "error",
+      "security/detect-buffer-noassert": "error",
+      "security/detect-new-buffer": "error",
+      "security/detect-pseudoRandomBytes": "error",
+      "security/detect-bidi-characters": "error",
+      "security/detect-invisible-characters": "error",
     },
   },
   {

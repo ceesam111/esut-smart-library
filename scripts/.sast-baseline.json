@@ -1,0 +1,12 @@
+[
+  "src/app-pages/AILibrarian.tsx::eslint-disable",
+  "src/app-pages/Wellbeing.tsx::eslint-disable",
+  "src/app-pages/admin/Accounts.tsx::eslint-disable",
+  "src/components/ai/AILibrarianWidget.tsx::eslint-disable",
+  "src/components/wellbeing/games/AmbientSounds.tsx::eslint-disable",
+  "src/components/wellbeing/games/MemoryGame.tsx::eslint-disable",
+  "src/server/reports/xlsx.ts::eslint-disable",
+  "src/server/thesis/submitThesis.ts::eslint-disable",
+  "src/config/aiTools.data.ts::eslint-disable",
+  "scripts/parse-ai-tools.mjs::eslint-disable"
+]

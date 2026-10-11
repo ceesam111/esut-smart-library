@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync} from 'fs';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
-import { execSync, spawn } from 'child_process';
+import { execSync, execFileSync, spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import { setGlobalDispatcher, Agent } from 'undici';
 
@@ -328,7 +328,7 @@ async function restartServer() {
   const before = findListeningPid('3000');
   if (before) {
     try {
-      execSync(`taskkill /PID ${before} /T /F`, { stdio: 'ignore' });
+      execFileSync('taskkill', ['/PID', String(before), '/T', '/F'], { stdio: 'ignore' });
     } catch {
       /* already gone */
     }
@@ -756,8 +756,9 @@ async function runPerf(token, userId) {
     }
     usedTxnIds.push(...txns.map((t) => t.client_txn_id));
 
+    const { token: batchToken } = await signIn(OPERATOR_EMAIL);
     const t0 = Date.now();
-    const res = await syncBatch(token, { device_id: 'e2e14-perf', label: 'E2E Perf Desk', branch: 'main', transactions: txns });
+    const res = await syncBatch(batchToken, { device_id: 'e2e14-perf', label: 'E2E Perf Desk', branch: 'main', transactions: txns });
     const body = await res.json().catch(() => ({}));
     const ms = Date.now() - t0;
     const applied = body.applied ?? 0;
@@ -781,6 +782,10 @@ async function runPerf(token, userId) {
       `ms=${ms} status=${res.status} applied=${applied}/${size} already=${already} conflicts=${body.conflicts ?? 0} rejected=${body.rejected ?? 0} retryable=${body.retryable ?? 0}${res.status === 200 ? '' : ` err=${body.error ?? body.message ?? ''}`}`,
     );
     console.log(`PERF size=${size} ms=${ms} status=${res.status} applied=${applied} tps=${((size / ms) * 1000).toFixed(2)}`);
+    if (!ok && Array.isArray(body.results)) {
+      const bad = body.results.filter((r) => r.status !== 'APPLIED' && r.status !== 'ALREADY_APPLIED').slice(0, 5);
+      for (const b of bad) console.log(`PERF-FAIL-DETAIL size=${size} seq=${b.local_seq} status=${b.status} code=${b.conflict_code ?? ''} msg=${String(b.message ?? '').slice(0, 160)}`);
+    }
     offset += size;
   }
   return allApplied;

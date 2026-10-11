@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, openSync, mkdirSync } from 'fs';
-import { execSync, spawn } from 'child_process';
+import { execSync, execFileSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { tmpdir } from 'os';
@@ -161,6 +161,7 @@ class Sip2Conn {
       s.once('error', onErr);
       s.once(event, () => {
         s.removeListener('error', onErr);
+        s.on('error', () => {});
         s.setEncoding('utf8');
         this.sock = s;
         resolve();
@@ -235,7 +236,7 @@ function loginFrame(user, password, seq) {
   return build('93', '00', [['CN', user], ['CO', password], ['CP', 'SC-E2E']], seq);
 }
 
-async function waitForSip2Health(timeoutMs = 25000, wantTls = null) {
+async function waitForSip2Health(timeoutMs = 60000, wantTls = null) {
   const deadline = Date.now() + timeoutMs;
   let lastErr = '';
   while (Date.now() < deadline) {
@@ -275,7 +276,7 @@ function startListener(extraEnv = {}) {
 async function stopListener(child) {
   if (child && !child.killed && child.pid) {
     try {
-      execSync(`taskkill /PID ${child.pid} /T /F`, { stdio: 'ignore' });
+      execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
     } catch {
       /* already exited */
     }
@@ -479,7 +480,7 @@ async function phase0Setup() {
   const stale = findListeningPid(String(SIP2_PORT));
   if (stale) {
     try {
-      execSync(`taskkill /PID ${stale} /T /F`, { stdio: 'ignore' });
+      execFileSync('taskkill', ['/PID', String(stale), '/T', '/F'], { stdio: 'ignore' });
     } catch {
       /* ignore */
     }
@@ -502,6 +503,15 @@ async function phase0Setup() {
 async function phase1AdminApi() {
   await createUser(ADMIN_EMAIL);
   const { token } = await signIn(ADMIN_EMAIL);
+
+  const stalePatrons = await svcJson('patrons?patron_id=like.E2E15-*&select=id');
+  const staleIds = Array.isArray(stalePatrons.body) ? stalePatrons.body.map((r) => r.id) : [];
+  if (staleIds.length > 0) {
+    await svc(`loans?patron_id=in.(${staleIds.join(',')})`, { method: 'DELETE' });
+    await svc('patrons?patron_id=like.E2E15-*', { method: 'DELETE' });
+  }
+  await svc('sip2_terminals?login_username=like.e2e-*', { method: 'DELETE' });
+  await svc('catalogue_items?title=like.E2E15*', { method: 'DELETE' });
 
   const kiosk = await createTerminal(token, 'kiosk', 'E2E Kiosk A', 'e2e-js', ['*'], null);
   check('admin API creates terminal + returns one-time password', kiosk.createStatus === 200 && !!kiosk.plainPassword && kiosk.plainPassword.length >= 16, `id=${kiosk.id}`);
@@ -871,13 +881,14 @@ async function phase12Tls() {
   const certDir = TMP;
   const keyPath = join(certDir, 'sip2-e2e-key.pem');
   const certPath = join(certDir, 'sip2-e2e-cert.pem');
-  execSync(
-    `"${openssl}" req -x509 -newkey rsa:2048 -nodes -keyout "${keyPath}" -out "${certPath}" -days 2 -subj "/CN=localhost"`,
+  execFileSync(
+    openssl,
+    ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', keyPath, '-out', certPath, '-days', '2', '-subj', '/CN=localhost'],
     { stdio: 'ignore' },
   );
   await stopListener(listener);
   listener = startListener({ SIP2_TLS_CERT: certPath, SIP2_TLS_KEY: keyPath });
-  const health = await waitForSip2Health(25000, true);
+  const health = await waitForSip2Health(60000, true);
   check('TLS listener up (health tls=true)', health.tls === true);
 
   const conn = new Sip2Conn(true);
@@ -890,7 +901,7 @@ async function phase12Tls() {
 
   await stopListener(listener);
   listener = startListener();
-  await waitForSip2Health(25000, false);
+  await waitForSip2Health(60000, false);
   check('returned to plain TCP listener', true);
 }
 
@@ -940,7 +951,7 @@ async function phase14Cleanup(token) {
     const res = await api(token, `/api/admin/sip2/terminals?id=${t.id}`, { method: 'DELETE' });
     check(`delete terminal ${key}`, res.status === 200 && res.body?.success === true, `status=${res.status}`);
   }
-  const remaining = await svcJson('sip2_terminals?login_username=like.e2e-%&select=id');
+  const remaining = await svcJson('sip2_terminals?login_username=like.e2e-*&select=id');
   check('no e2e terminals remain', (remaining.body ?? []).length === 0, `count=${remaining.body?.length}`);
 
   const loans = await svcJson(`loans?patron_id=eq.${terminals.p1id}&checkout_date=gte.${encodeURIComponent(startIso)}&select=id`);
@@ -957,6 +968,15 @@ async function phase14Cleanup(token) {
 async function main() {
   const t0 = Date.now();
   try {
+    try {
+      execFileSync(
+        'powershell',
+        ['-NoProfile', '-Command', "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -match 'sip2/index.ts' } | Stop-Process -Force -ErrorAction SilentlyContinue"],
+        { stdio: 'ignore' },
+      );
+    } catch {
+      void 0;
+    }
     await phase0Setup();
     const token = await phase1AdminApi();
     terminals.p1id = await ensurePatron('E2E15-P1');

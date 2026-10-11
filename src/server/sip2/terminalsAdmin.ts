@@ -53,7 +53,7 @@ function normalizeOperations(value: unknown): string[] {
 
 function normalizeCidr(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
-  if (typeof value !== 'string' || !/^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/.test(value.trim())) {
+  if (typeof value !== 'string' || !/^\d+\.\d+\.\d+\.\d+\/\d+$/.test(value.trim())) {
     throw new Error('Invalid CIDR.');
   }
   const [prefix, bits] = value.trim().split('/');

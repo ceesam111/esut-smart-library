@@ -37,3 +37,9 @@ jobs:
 
       - name: Security audit
         run: npm audit --omit=dev --audit-level=critical
+
+      - name: Secrets scan
+        run: npm run scan:secrets
+
+      - name: SAST scan
+        run: npm run scan:sast

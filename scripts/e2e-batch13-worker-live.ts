@@ -107,9 +107,10 @@ await preClean();
 fixtureUserId = await createFixtureUser('e2e-worker@invalid.invalid');
 check('created fixture user', !!fixtureUserId, fixtureUserId ?? 'failed');
 
-const catalogue = await svc('catalogue_items?select=id&limit=1').then((r) => r.json());
+const catalogue = await svc('catalogue_items?select=id&limit=2').then((r) => r.json());
 const catalogueItemId = Array.isArray(catalogue) && catalogue[0]?.id ? catalogue[0].id : null;
-check('found catalogue item for loan fixture', !!catalogueItemId, catalogueItemId ?? 'none');
+const dueSoonItemId = Array.isArray(catalogue) && catalogue[1]?.id ? catalogue[1].id : null;
+check('found catalogue item for loan fixture', !!catalogueItemId && !!dueSoonItemId, `${catalogueItemId ?? 'none'} / ${dueSoonItemId ?? 'none'}`);
 
 const patronInsert = await svc('patrons', {
   method: 'POST',
@@ -126,7 +127,7 @@ const patronRows = await patronInsert.json().catch(() => []);
 const patronId: string | null = Array.isArray(patronRows) && patronRows[0]?.id ? patronRows[0].id : null;
 check('created fixture patron (reserved .invalid email)', patronInsert.status === 201 && !!patronId, `status=${patronInsert.status} id=${patronId ?? JSON.stringify(patronRows).slice(0, 200)}`);
 
-if (patronId && catalogueItemId) {
+if (patronId && catalogueItemId && dueSoonItemId) {
   const overdueDue = new Date(Date.now() - 4 * 86_400_000).toISOString().split('T')[0];
   const dueSoonDue = new Date(Date.now() + 1 * 86_400_000).toISOString().split('T')[0];
   const overdueInsert = await svc('loans', {
@@ -137,13 +138,13 @@ if (patronId && catalogueItemId) {
   overdueLoanId = Array.isArray(overdueRows) && overdueRows[0]?.id ? overdueRows[0].id : null;
   const dueSoonInsert = await svc('loans', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify({ patron_id: patronId, catalogue_item_id: catalogueItemId, due_date: dueSoonDue, checkout_date: new Date().toISOString().split('T')[0] }),
+    body: JSON.stringify({ patron_id: patronId, catalogue_item_id: dueSoonItemId, due_date: dueSoonDue, checkout_date: new Date().toISOString().split('T')[0] }),
   });
   const dueSoonRows = await dueSoonInsert.json().catch(() => []);
   dueSoonLoanId = Array.isArray(dueSoonRows) && dueSoonRows[0]?.id ? dueSoonRows[0].id : null;
   check('created overdue + due-soon loans', !!overdueLoanId && !!dueSoonLoanId, `overdue=${overdueLoanId} dueSoon=${dueSoonLoanId}`);
 } else {
-  check('created overdue + due-soon loans', false, 'missing patron or catalogue item');
+  check('created overdue + due-soon loans', false, 'missing patron or catalogue items');
 }
 
 // ── Enqueue notice jobs ──────────────────────────────────────────────────
