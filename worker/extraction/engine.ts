@@ -1,7 +1,7 @@
-import { extractPdfText, normalize } from './pdfText';
-import { extractDocxText, extractOdtText } from './docxText';
-import { resolveOcrEngine } from './ocr';
-import { runSandboxed } from './sandbox';
+import { extractPdfText, normalize } from './pdfText.ts';
+import { extractDocxText, extractOdtText } from './docxText.ts';
+import { resolveOcrEngine } from './ocr.ts';
+import { runSandboxed } from './sandbox.ts';
 import {
   DEFAULT_EXTRACTION_LIMITS,
   MIME_CSV,
@@ -14,7 +14,7 @@ import {
   isSupportedMimeType,
   type ExtractionLimits,
   type ExtractionOutcome,
-} from './types';
+} from './types.ts';
 
 export interface EngineOptions {
   limits?: ExtractionLimits;

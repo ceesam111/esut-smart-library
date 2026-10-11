@@ -27,7 +27,7 @@ export function resolveOcrEngine(): OcrResolution {
       engine: {
         name: `tesseract:${lang}`,
         async recognize(bytes, mimeType) {
-          const { recognizeWithTesseract } = await import('./tesseractOcr');
+          const { recognizeWithTesseract } = await import('./tesseractOcr.ts');
           return recognizeWithTesseract(bytes, mimeType, { binary, lang });
         },
       },
@@ -45,7 +45,7 @@ export function resolveOcrEngine(): OcrResolution {
       engine: {
         name: `http:${new URL(endpoint).host}`,
         async recognize(bytes, mimeType) {
-          const { recognizeWithHttp } = await import('./httpOcr');
+          const { recognizeWithHttp } = await import('./httpOcr.ts');
           return recognizeWithHttp(bytes, mimeType, { endpoint, apiKey });
         },
       },

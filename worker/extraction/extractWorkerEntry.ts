@@ -17,7 +17,7 @@ async function run(message: SandboxRequest): Promise<void> {
 
   let outcome: ExtractionOutcome;
   try {
-    const { runExtraction } = await import('./engine');
+    const { runExtraction } = await import('./engine.ts');
     outcome = await runExtraction(Buffer.from(message.bytes), message.mimeType, message.limits);
   } catch (error) {
     outcome = {

@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { normalize } from './pdfText';
+import { normalize } from './pdfText.ts';
 import type { ExtractionLimits, ExtractionOutcome } from './types';
 
 const MAX_DOCX_ENTRIES = 5000;
