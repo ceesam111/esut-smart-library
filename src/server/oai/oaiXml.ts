@@ -20,8 +20,18 @@ export function resolveAuthority(baseUrl: string): string {
   }
 }
 
+function stripControlChars(value: string): string {
+  let out = '';
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    if (code < 32 && code !== 9 && code !== 10 && code !== 13) continue;
+    out += value[i];
+  }
+  return out;
+}
+
 export function xmlEscape(value: unknown): string {
-  return String(value ?? '')
+  return stripControlChars(String(value ?? ''))
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -82,6 +92,14 @@ async function signPayload(payload: string, secret: string): Promise<string> {
   return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
 
+function toBase64Utf8(value: string): string {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(value)));
+}
+
+function fromBase64Utf8(value: string): string {
+  return new TextDecoder().decode(Uint8Array.from(atob(value), (char) => char.charCodeAt(0)));
+}
+
 export async function buildToken(
   context: { offset: number; prefix: string; from?: string | null; until?: string | null; set?: string | null },
   now: number,
@@ -98,7 +116,7 @@ export async function buildToken(
   };
   const canonical = `${payload.offset}:${payload.prefix}:${payload.from ?? ''}:${payload.until ?? ''}:${payload.set ?? ''}:${payload.expires}`;
   const hmac = await signPayload(canonical, secret);
-  return btoa(JSON.stringify({ ...payload, hmac }));
+  return toBase64Utf8(JSON.stringify({ ...payload, hmac }));
 }
 
 export async function verifyToken(
@@ -107,7 +125,7 @@ export async function verifyToken(
   secret: string,
 ): Promise<{ offset: number; prefix: string; from: string | null; until: string | null; set: string | null } | null> {
   try {
-    const decoded = JSON.parse(atob(token)) as Partial<TokenPayload>;
+    const decoded = JSON.parse(fromBase64Utf8(token)) as Partial<TokenPayload>;
     if (typeof decoded.offset !== 'number' || typeof decoded.prefix !== 'string' || typeof decoded.expires !== 'number') return null;
     if (decoded.expires < now) return null;
     const canonical = `${decoded.offset}:${decoded.prefix}:${decoded.from ?? ''}:${decoded.until ?? ''}:${decoded.set ?? ''}:${decoded.expires}`;

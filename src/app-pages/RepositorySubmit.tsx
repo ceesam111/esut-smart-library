@@ -231,9 +231,14 @@ export default function RepositorySubmit() {
 
       // Create initial version
       try {
+        const { data: versionSession } = await supabase.auth.getSession();
+        const versionHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (versionSession.session) {
+          versionHeaders.Authorization = `Bearer ${versionSession.session.access_token}`;
+        }
         await fetch('/api/repository/versions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: versionHeaders,
           body: JSON.stringify({ item_id: inserted.id, file_url: fileUrl, change_note: 'Initial deposit' }),
         });
       } catch { /* non-blocking */ }

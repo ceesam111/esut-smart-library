@@ -2,9 +2,11 @@ import arcjet, { detectBot, shield } from '@arcjet/next';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const sensitivePrefixes = ['/api/auth', '/api/generate-questions', '/api/admin/catalogue/enrich-catalogue', '/api/admin/harvest', '/api/resource-requests/external', '/api/ai/', '/api/public/hooks/'];
+const sensitivePrefixes = ['/api/auth', '/api/generate-questions', '/api/admin/catalogue/enrich-catalogue', '/api/admin/harvest', '/api/resource-requests/external', '/api/ai/', '/api/public/hooks/', '/api/repository', '/api/oai'];
 const sensitiveExact = new Set(['/api/search/resources']);
 const csrfExemptPrefixes = ['/api/ai/', '/api/security/turnstile/', '/api/registration/'];
+const noindexPrefixes = ['/admin', '/dashboard', '/supervisor', '/reset-password', '/thesis/submit', '/thesis/status'];
+const facetedPaths = new Set(['/search/global', '/catalogue', '/catalog', '/repository', '/theses', '/categories', '/databases']);
 const devBuckets = new Map<string, { count: number; resetAt: number }>();
 
 const ajKey = process.env.ARCJET_KEY || process.env.ARC_JET || '';
@@ -48,6 +50,7 @@ function isSensitive(request: NextRequest) {
 function shouldUseArcjet(request: NextRequest) {
   const path = request.nextUrl.pathname;
   if (sensitiveExact.has(path)) return false;
+  if (path.startsWith('/api/oai')) return false;
   return sensitivePrefixes.some((prefix) => path.startsWith(prefix));
 }
 
@@ -69,6 +72,13 @@ function devRateLimit(request: NextRequest) {
   bucket.count += 1;
   if (bucket.count > max) return Math.ceil((bucket.resetAt - now) / 1000);
   return null;
+}
+
+function shouldNoindex(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  if (noindexPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return true;
+  if (request.nextUrl.search && facetedPaths.has(path)) return true;
+  return false;
 }
 
 function applySecurityHeaders(response: NextResponse, id: string) {
@@ -141,6 +151,9 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next({ request: { headers: request.headers } });
+  if (shouldNoindex(request)) {
+    response.headers.set('x-robots-tag', 'noindex, follow');
+  }
   if (request.nextUrl.pathname.startsWith('/api/')) {
     const origin = request.headers.get('origin');
     if (origin && isAllowedOrigin(request, origin)) {

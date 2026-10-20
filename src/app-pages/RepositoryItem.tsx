@@ -241,7 +241,7 @@ export default function RepositoryItem() {
       ? item.authors.map((a: AuthorEntry) => (typeof a === 'string' ? a : a.name ?? '')).join(', ')
       : String(item.authors ?? 'Unknown');
     const { title, year, doi } = item;
-    const ref = doi ? `https://doi.org/${doi}` : `${window.location.origin}/repository/${item.handle ?? id}`;
+    const ref = doi ? `https://doi.org/${doi}` : `${window.location.origin}/repository/${item.id ?? id}`;
     switch (style) {
       case 'apa': return `${authors} (${year ?? 'n.d.'}). ${title}. Retrieved from ${ref}`;
       case 'harvard': return `${authors}, ${year ?? 'n.d.'}. ${title}. Available at: ${ref}`;
@@ -823,6 +823,24 @@ export default function RepositoryItem() {
                     <button onClick={handleCopyCitation} className="btn-outline text-sm">
                       {copied ? t('repositoryItem.copiedToClipboard') : t('repositoryItem.copyCitation')}
                     </button>
+                    {item.status === 'published' && item.visibility === 'global' && (
+                      <div className="flex gap-2 pt-1">
+                        <a
+                          href={`/api/repository/${encodeURIComponent(item.id)}/citation?format=bibtex`}
+                          className="btn-outline text-sm"
+                          download
+                        >
+                          BibTeX
+                        </a>
+                        <a
+                          href={`/api/repository/${encodeURIComponent(item.id)}/citation?format=ris`}
+                          className="btn-outline text-sm"
+                          download
+                        >
+                          RIS
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -186,7 +186,7 @@ describe('OAI-PMH verbs', () => {
         protocolVersion: '2.0',
         deletedRecord: 'no',
         granularity: 'YYYY-MM-DDThh:mm:ssZ',
-        earliestDatestamp: '2023-01-02',
+        earliestDatestamp: '2023-01-02T00:00:00Z',
       },
     });
     const result = await handleOaiRequest({ verb: 'Identify' }, context);
@@ -196,8 +196,23 @@ describe('OAI-PMH verbs', () => {
     expect(result.xml).toContain(`<baseURL>${context.baseUrl}</baseURL>`);
     expect(result.xml).toContain('<deletedRecord>no</deletedRecord>');
     expect(result.xml).toContain('<granularity>YYYY-MM-DDThh:mm:ssZ</granularity>');
-    expect(result.xml).toContain('<earliestDatestamp>2023-01-02</earliestDatestamp>');
+    expect(result.xml).toContain('<earliestDatestamp>2023-01-02T00:00:00Z</earliestDatestamp>');
     expect(isWellFormed(result.xml)).toBe(true);
+  });
+
+  it('Identify rejects stray arguments per spec', async () => {
+    const result = await handleOaiRequest({ verb: 'Identify', metadataPrefix: 'oai_dc' }, makeContext());
+    expect(result.errorCode).toBe('badArgument');
+  });
+
+  it('resumptionToken must be used alone', async () => {
+    const result = await handleOaiRequest({ verb: 'ListRecords', metadataPrefix: 'oai_dc', resumptionToken: 'x' }, makeContext());
+    expect(result.errorCode).toBe('badArgument');
+  });
+
+  it('missing verb omits the verb attribute on the request element', async () => {
+    const result = await handleOaiRequest({}, makeContext());
+    expect(result.xml).not.toContain('verb="missing"');
   });
 
   it('ListMetadataFormats advertises oai_dc, datacite and marcxml', async () => {
@@ -497,5 +512,34 @@ describe('OAI-PMH XML conformance', () => {
     const result = await handleOaiRequest({ verb: 'ListRecords', metadataPrefix: 'oai_dc' }, context);
     expect(isWellFormed(result.xml)).toBe(true);
     expect(result.xml).not.toMatch(/<dc:title>[^<]*<[^/]/);
+  });
+});
+
+describe('OAI-PMH strict argument validation', () => {
+  const identifier = 'oai:example.edu.ng:11111111-1111-1111-1111-111111111111';
+
+  it('GetRecord rejects from, until and set', async () => {
+    const withSet = await handleOaiRequest({ verb: 'GetRecord', metadataPrefix: 'oai_dc', identifier, set: 'type:article' }, makeContext());
+    expect(withSet.errorCode).toBe('badArgument');
+    const withFrom = await handleOaiRequest({ verb: 'GetRecord', metadataPrefix: 'oai_dc', identifier, from: '2024-01-01' }, makeContext());
+    expect(withFrom.errorCode).toBe('badArgument');
+    const withUntil = await handleOaiRequest({ verb: 'GetRecord', metadataPrefix: 'oai_dc', identifier, until: '2024-01-01' }, makeContext());
+    expect(withUntil.errorCode).toBe('badArgument');
+  });
+
+  it('ListIdentifiers and ListRecords reject identifier', async () => {
+    const identifiers = await handleOaiRequest({ verb: 'ListIdentifiers', metadataPrefix: 'oai_dc', identifier }, makeContext());
+    expect(identifiers.errorCode).toBe('badArgument');
+    const records = await handleOaiRequest({ verb: 'ListRecords', metadataPrefix: 'oai_dc', identifier }, makeContext());
+    expect(records.errorCode).toBe('badArgument');
+  });
+
+  it('resumption tokens round-trip set values outside Latin-1', async () => {
+    const context = makeContext();
+    const set = 'type:тезис';
+    const token = await buildToken({ offset: 100, prefix: 'oai_dc', from: null, until: null, set }, context.now, context.secret);
+    const verified = await verifyToken(token, context.now, context.secret);
+    expect(verified?.set).toBe(set);
+    expect(verified?.offset).toBe(100);
   });
 });

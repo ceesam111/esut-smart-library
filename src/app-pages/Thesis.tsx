@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+
+interface RecentThesis {
+  id: string;
+  title: string;
+  submission_type: string;
+  reference_no: string | null;
+  programme: string | null;
+  created_at: string;
+}
+
+interface ThesisListPayload {
+  success?: boolean;
+  data?: { items: RecentThesis[]; total: number };
+}
 
 const SUBMISSION_TYPES = [
   { id: 'Undergraduate Long Essay', label: 'Undergraduate Long Essay', description: 'Undergraduate long essay submissions', icon: '📄' },
@@ -25,24 +38,28 @@ export default function Thesis() {
 
   useEffect(() => {
     void (async () => {
-      const [{ data: theses }, { data: recentData }] = await Promise.all([
-        supabase.from('theses').select('submission_type').eq('status', 'published'),
-        supabase.from('theses').select('id, title, submission_type, reference_no, programme, created_at')
-          .eq('status', 'published').order('created_at', { ascending: false }).limit(6),
-      ]);
+      try {
+        const response = await fetch('/api/theses?size=100', { headers: { accept: 'application/json' } });
+        const payload = (await response.json()) as ThesisListPayload;
+        const items = payload.success && payload.data ? payload.data.items : [];
 
-      const typeMap: Record<string, number> = {};
-      (theses ?? []).forEach((t: { submission_type: string | null }) => {
-        const k = t.submission_type ?? 'Other';
-        typeMap[k] = (typeMap[k] ?? 0) + 1;
-      });
-      const byType = Object.entries(typeMap)
-        .map(([type, count]) => ({ type, count }))
-        .sort((a, b) => b.count - a.count);
+        const typeMap: Record<string, number> = {};
+        items.forEach((entry) => {
+          const k = entry.submission_type || 'Other';
+          typeMap[k] = (typeMap[k] ?? 0) + 1;
+        });
+        const byType = Object.entries(typeMap)
+          .map(([type, count]) => ({ type, count }))
+          .sort((a, b) => b.count - a.count);
 
-      setStats({ total: theses?.length ?? 0, byType });
-      setRecent(recentData ?? []);
-      setLoading(false);
+        setStats({ total: payload.data?.total ?? items.length, byType });
+        setRecent(items.slice(0, 6));
+      } catch {
+        setStats({ total: 0, byType: [] });
+        setRecent([]);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 

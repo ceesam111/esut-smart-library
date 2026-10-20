@@ -46,10 +46,11 @@ export type OaiParams = {
 const COLS = 'id,title,authors,abstract,keywords,item_type,type,doi,handle,license,embargo_until,year,faculty_code,department,language,created_at,updated_at,status,visibility';
 
 function envelope(verb: string, body: string, params: string, context: OaiRequestContext): string {
+  const verbAttr = verb && verb !== 'missing' ? ` verb="${xmlEscape(verb)}"` : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
   <responseDate>${utcDatestamp(new Date(context.now).toISOString())}</responseDate>
-  <request verb="${xmlEscape(verb)}"${params ? ` ${params}` : ''}>${xmlEscape(context.baseUrl)}</request>
+  <request${verbAttr}${params ? ` ${params}` : ''}>${xmlEscape(context.baseUrl)}</request>
   ${body}
 </OAI-PMH>`;
 }
@@ -116,6 +117,18 @@ export async function handleOaiRequest(params: OaiParams, context: OaiRequestCon
   const set = params.set ?? '';
   const resumptionToken = params.resumptionToken ?? '';
 
+  const hasAny = (...values: Array<string | null | undefined>) => values.some((value) => Boolean(value));
+
+  if ((verb === 'Identify' || verb === 'ListSets') && hasAny(prefix, from, until, identifier, set, resumptionToken)) {
+    return errorResponse('badArgument', `${verb} does not accept arguments.`, verb, context);
+  }
+  if (verb === 'ListMetadataFormats' && hasAny(prefix, from, until, set, resumptionToken)) {
+    return errorResponse('badArgument', 'ListMetadataFormats accepts only an optional identifier.', verb, context);
+  }
+  if (hasAny(resumptionToken) && hasAny(prefix, from, until, set, identifier)) {
+    return errorResponse('badArgument', 'resumptionToken must be used alone.', verb, context);
+  }
+
   if (verb === 'Identify') {
     return {
       xml: envelope('Identify', `<Identify>
@@ -171,6 +184,9 @@ export async function handleOaiRequest(params: OaiParams, context: OaiRequestCon
   }
 
   if (verb === 'GetRecord') {
+    if (hasAny(from, until, set)) {
+      return errorResponse('badArgument', 'GetRecord does not accept from, until, or set.', verb, context);
+    }
     if (!isMetadataPrefix(prefix)) {
       return errorResponse('cannotDisseminateFormat', `metadataPrefix "${prefix}" is not supported. Supported: ${SUPPORTED_METADATA_PREFIXES.join(', ')}.`, verb, context);
     }
@@ -197,6 +213,9 @@ export async function handleOaiRequest(params: OaiParams, context: OaiRequestCon
   }
 
   if (verb === 'ListIdentifiers' || verb === 'ListRecords') {
+    if (identifier) {
+      return errorResponse('badArgument', `${verb} does not accept identifier.`, verb, context);
+    }
     return handleListVerb(verb, { prefix, from, until, set, resumptionToken }, context);
   }
 
@@ -307,7 +326,7 @@ async function handleListVerb(
     ? await buildToken({ offset: nextOffset, prefix, from: from || null, until: until || null, set: set || null }, context.now, context.secret)
     : '';
   const tokenElement = tokenValue
-    ? `  <resumptionToken completeListSize="${totalCount ?? ''}" cursor="${nextOffset}" expiration="${context.now + TOKEN_TTL_MS}">${tokenValue}</resumptionToken>`
+    ? `  <resumptionToken completeListSize="${totalCount ?? ''}" cursor="${nextOffset}" expiration="${utcDatestamp(new Date(context.now + TOKEN_TTL_MS).toISOString())}">${tokenValue}</resumptionToken>`
     : '';
   const requestParams = tokenValue
     ? `resumptionToken="${tokenValue}"`

@@ -143,11 +143,13 @@ export default function AdminTheses() {
       }).eq('id', selected.id);
 
       // 4. Workflow record
+      const { data: publishSession } = await supabase.auth.getSession();
       await supabase.from('thesis_workflow').insert({
         thesis_id: selected.id,
         stage: 'published',
         action: 'approved_by_committee',
         notes: doi ? `Published with DOI: ${doi}` : 'Published without DOI',
+        acted_by: publishSession?.session?.user.id ?? null,
       });
 
       setPublishResult({ ok: true, doi });
@@ -175,11 +177,13 @@ export default function AdminTheses() {
       updated_at: new Date().toISOString(),
     }).eq('id', selected.id);
 
+    const { data: returnSession } = await supabase.auth.getSession();
     await supabase.from('thesis_workflow').insert({
       thesis_id: selected.id,
       stage: 'returned_to_student',
       action: 'returned_by_committee',
       notes: returnNotes.trim(),
+      acted_by: returnSession?.session?.user.id ?? null,
     });
 
     if (submitterEmail) {

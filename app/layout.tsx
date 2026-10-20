@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import '../src/styles.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://virtuallibrary.esut.edu.ng'),
   title: 'ESUT Smart Library',
   description:
     'The official digital library platform of Enugu State University of Science and Technology — powering research, catalogues, repositories, AI-librarian services, and academic resources.',
@@ -28,12 +29,6 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" id="theme-color" content="#6B1D2A" />
         <link rel="manifest" href="/api/manifest" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body>{children}</body>
     </html>

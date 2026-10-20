@@ -1,22 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { institutionConfig } from '@config/institution.config';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useI18n } from '@/lib/i18n';
 
 interface ThesisItem {
   id: string;
   title: string;
-  authors: string;
-  supervisor: string | null;
+  student_name: string | null;
+  supervisor: string;
   faculty: string | null;
   department: string | null;
-  degree_level: string | null;
-  graduation_year: number | null;
+  programme: string | null;
+  degree: string;
+  year: number;
   abstract: string | null;
-  keywords: string | null;
-  status: string;
+  keywords: string[];
+  session: string | null;
+  reference_no: string | null;
   created_at: string;
+}
+
+interface ThesisListResponse {
+  success: boolean;
+  data?: { items: ThesisItem[]; total: number };
+  error?: string;
 }
 
 const DEGREE_LEVELS = ['All Levels', 'PhD', 'Masters', 'PGD', 'B.Ed', 'B.Sc', 'B.A', 'Undergraduate'];
@@ -28,9 +36,11 @@ const SORT_OPTIONS = [
 
 export default function ThesisListing() {
   usePageTitle('Theses, Projects & Dissertations');
+  const { t } = useI18n();
   const [items, setItems] = useState<ThesisItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -42,23 +52,26 @@ export default function ThesisListing() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      let query = supabase
-        .from('theses')
-        .select('id, title, authors, supervisor, faculty, department, degree_level, graduation_year, abstract, keywords, status, created_at', { count: 'exact' })
-        .eq('status', 'approved')
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      setLoadError(false);
+      const query = new URLSearchParams({ page: String(page), size: String(PAGE_SIZE), sort });
+      if (search) query.set('q', search);
+      if (degreeFilter !== 'All Levels') query.set('degree', degreeFilter);
 
-      if (search) query = query.ilike('title', `%${search}%`);
-      if (degreeFilter !== 'All Levels') query = query.eq('degree_level', degreeFilter);
-
-      if (sort === 'year_desc') query = query.order('graduation_year', { ascending: false }).order('created_at', { ascending: false });
-      else if (sort === 'year_asc') query = query.order('graduation_year', { ascending: true });
-      else if (sort === 'title_asc') query = query.order('title', { ascending: true });
-
-    const { data, count } = await query;
-    setItems(data ?? []);
-    setTotal(count ?? 0);
-      setLoading(false);
+      try {
+        const response = await fetch(`/api/theses?${query.toString()}`, { headers: { accept: 'application/json' } });
+        const payload = (await response.json()) as ThesisListResponse;
+        if (!response.ok || !payload.success || !payload.data) {
+          throw new Error(payload.error ?? 'Thesis listing request failed.');
+        }
+        setItems(payload.data.items);
+        setTotal(payload.data.total);
+      } catch {
+        setItems([]);
+        setTotal(0);
+        setLoadError(true);
+      } finally {
+        setLoading(false);
+      }
     };
     void load();
   }, [page, search, degreeFilter, sort]);
@@ -111,7 +124,7 @@ export default function ThesisListing() {
               <input
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
-                placeholder="Search by title, author, or keyword..."
+                placeholder="Search by title, supervisor, degree, or keyword..."
                 className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -170,6 +183,10 @@ export default function ThesisListing() {
               <div key={i} className="h-14 bg-neutral-100 rounded-xl animate-pulse" />
             ))}
           </div>
+        ) : loadError ? (
+          <div role="alert" className="text-center py-16 bg-white border border-neutral-100 rounded-2xl">
+            <p className="text-neutral-600 font-medium">{t('thesisListing.loadFailed')}</p>
+          </div>
         ) : items.length === 0 ? (
           <div className="text-center py-20 bg-white border border-neutral-100 rounded-2xl">
             <div className="text-5xl mb-4">📚</div>
@@ -195,9 +212,8 @@ export default function ThesisListing() {
                 </thead>
                 <tbody className="divide-y divide-neutral-50">
                   {items.map((item, idx) => (
-                    <>
+                    <Fragment key={item.id}>
                       <tr
-                        key={item.id}
                         className="hover:bg-neutral-50 transition-colors cursor-pointer"
                         onClick={() => setExpanded(expanded === item.id ? null : item.id)}
                       >
@@ -206,24 +222,24 @@ export default function ThesisListing() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-semibold text-neutral-900 line-clamp-2 leading-snug">{item.title}</span>
-                          <div className="md:hidden mt-1 text-xs text-neutral-500">{item.authors}</div>
+                          <div className="md:hidden mt-1 text-xs text-neutral-500">{item.student_name ?? item.programme ?? ''}</div>
                         </td>
                         <td className="px-4 py-3 text-neutral-600 hidden md:table-cell max-w-[180px]">
-                          <span className="line-clamp-2">{item.authors}</span>
+                          <span className="line-clamp-2">{item.student_name ?? '—'}</span>
                         </td>
                         <td className="px-4 py-3 text-neutral-500 hidden lg:table-cell text-xs">
                           <div>{item.faculty}</div>
                           {item.department && <div className="text-neutral-400">{item.department}</div>}
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
-                          {item.degree_level && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${degreeBadge(item.degree_level)}`}>
-                              {item.degree_level}
+                          {item.degree && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${degreeBadge(item.degree)}`}>
+                              {item.degree}
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-neutral-500 text-xs hidden sm:table-cell">
-                          {item.graduation_year ?? '—'}
+                          {item.year ?? '—'}
                         </td>
                         <td className="px-4 py-3">
                           <svg
@@ -258,16 +274,28 @@ export default function ThesisListing() {
                                     <span className="text-neutral-800">{item.department}</span>
                                   </div>
                                 )}
-                                {item.graduation_year && (
+                                {item.programme && (
                                   <div>
-                                    <span className="font-medium text-neutral-500">Year: </span>
-                                    <span className="text-neutral-800">{item.graduation_year}</span>
+                                    <span className="font-medium text-neutral-500">Programme: </span>
+                                    <span className="text-neutral-800">{item.programme}</span>
                                   </div>
                                 )}
-                                {item.degree_level && (
+                                {item.year && (
+                                  <div>
+                                    <span className="font-medium text-neutral-500">Year: </span>
+                                    <span className="text-neutral-800">{item.year}</span>
+                                  </div>
+                                )}
+                                {item.degree && (
                                   <div>
                                     <span className="font-medium text-neutral-500">Degree: </span>
-                                    <span className="text-neutral-800">{item.degree_level}</span>
+                                    <span className="text-neutral-800">{item.degree}</span>
+                                  </div>
+                                )}
+                                {item.session && (
+                                  <div>
+                                    <span className="font-medium text-neutral-500">Session: </span>
+                                    <span className="text-neutral-800">{item.session}</span>
                                   </div>
                                 )}
                               </div>
@@ -281,11 +309,11 @@ export default function ThesisListing() {
                                 </div>
                               )}
 
-                              {item.keywords && (
+                              {item.keywords && item.keywords.length > 0 && (
                                 <div className="mb-4">
                                   <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-2">Keywords</h4>
                                   <div className="flex flex-wrap gap-2">
-                                    {item.keywords.split(',').map(kw => kw.trim()).filter(Boolean).map(kw => (
+                                    {item.keywords.map(kw => (
                                       <span key={kw} className="text-xs bg-white border border-neutral-200 text-neutral-600 px-2.5 py-1 rounded-full">
                                         {kw}
                                       </span>
@@ -296,7 +324,7 @@ export default function ThesisListing() {
 
                               <div className="flex gap-3">
                                 <Link
-                                  to={`/thesis`}
+                                  to={`/theses/${item.id}`}
                                   className="btn-primary text-xs px-4 py-2"
                                 >
                                   View Full Record
@@ -312,7 +340,7 @@ export default function ThesisListing() {
                           </td>
                         </tr>
                       )}
-                    </>
+                      </Fragment>
                   ))}
                 </tbody>
               </table>

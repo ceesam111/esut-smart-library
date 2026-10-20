@@ -112,11 +112,13 @@ export default function SupervisorTheses() {
     }).eq('id', selected.id);
 
     if (!error) {
+      const { data: sessionData } = await supabase.auth.getSession();
       await supabase.from('thesis_workflow').insert({
         thesis_id: selected.id,
         stage: newStatus,
         action: action === 'approve' ? 'approved_by_supervisor' : 'returned_by_supervisor',
         notes: notes.trim() || null,
+        acted_by: sessionData.session?.user.id ?? null,
       });
 
       await syncWorkflow(

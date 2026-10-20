@@ -9,6 +9,7 @@ import { extractRepositoryText } from './extraction';
 import { produceSearchReindex, reindexSearch } from './searchIndex';
 import { overdueNoticeWorker, dueSoonNoticeWorker } from './notices';
 import { scheduledReportWorker } from './scheduledReports';
+import { visibilityDiagnosticsWorker } from './visibility';
 
 export const handlers: Record<string, AgentJobHandler> = {
   'catalogue.enrich': enrichCatalogue,
@@ -29,6 +30,7 @@ export const handlers: Record<string, AgentJobHandler> = {
   'notices.overdue': overdueNoticeWorker,
   'notices.dueSoon': dueSoonNoticeWorker,
   'reports.scheduledRun': scheduledReportWorker,
+  'visibility.diagnostics': visibilityDiagnosticsWorker,
 };
 
 export function getHandler(jobType: string) {

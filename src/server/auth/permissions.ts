@@ -22,6 +22,12 @@ export const LIBRARY_ADMIN_ROLES: FoundationRole[] = [
 
 export const GLOBAL_ADMIN_ROLES: FoundationRole[] = ['super_admin', 'librarian', 'admin'];
 
+export const VISIBILITY_ADMIN_ROLES: FoundationRole[] = [
+  ...LIBRARY_ADMIN_ROLES,
+  'ir_admin',
+  'dept_ir_officer',
+];
+
 export const ACCOUNT_MANAGER_ROLES: FoundationRole[] = ['super_admin', 'librarian', 'admin'];
 
 /**

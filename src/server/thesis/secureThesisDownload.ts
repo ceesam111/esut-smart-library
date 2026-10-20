@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { getSignedDownloadUrl } from '@/server/storage/b2Client';
+import { isThesisFileEmbargoed } from './publicThesis';
 
 /**
  * Thesis file download authorization.
@@ -32,25 +33,36 @@ export async function createThesisDownload(
 ): Promise<ThesisDownloadResult> {
   const supabase = getSupabaseAdminClient();
 
-  const { data: thesis, error } = await supabase
+  const { data, error } = await supabase
     .from('theses')
-    .select('id, file_url, status, visibility, submitter_id, patron_id')
+    .select('id, file_url, status, submitter_id, patron_id, embargo_enabled, embargo_period_months, approval_date, created_at')
     .eq('id', thesisId)
     .maybeSingle();
 
-  if (error || !thesis) return { reason: 'not_found' };
+  if (error || !data) return { reason: 'not_found' };
+  const thesis = data as {
+    id: string;
+    file_url: string | null;
+    status: string;
+    submitter_id: string | null;
+    patron_id: string | null;
+    embargo_enabled: boolean;
+    embargo_period_months: number | null;
+    approval_date: string | null;
+    created_at: string;
+  };
   if (!thesis.file_url) return { reason: 'no_file' };
 
-  if (thesis.submitter_id === userId) return sign(thesis.file_url as string);
+  if (thesis.submitter_id === userId) return sign(thesis.file_url);
 
-  if (userRoles.some((role) => STAFF_ROLES.includes(role))) return sign(thesis.file_url as string);
+  if (userRoles.some((role) => STAFF_ROLES.includes(role))) return sign(thesis.file_url);
 
   const { data: patron } = await supabase
     .from('patrons')
     .select('id')
     .eq('user_id', userId)
     .maybeSingle();
-  if (patron?.id && thesis.patron_id === patron.id) return sign(thesis.file_url as string);
+  if (patron?.id && thesis.patron_id === patron.id) return sign(thesis.file_url);
 
   const { data: supervisors } = await supabase
     .from('thesis_supervisors')
@@ -62,11 +74,11 @@ export async function createThesisDownload(
       (row) => (row.supervisor_email ?? '').toLowerCase() === userEmail.toLowerCase(),
     )
   ) {
-    return sign(thesis.file_url as string);
+    return sign(thesis.file_url);
   }
 
-  if (thesis.status === 'published' && thesis.visibility === 'global') {
-    return sign(thesis.file_url as string);
+  if (thesis.status === 'published' && !isThesisFileEmbargoed(thesis)) {
+    return sign(thesis.file_url);
   }
 
   return { reason: 'forbidden' };

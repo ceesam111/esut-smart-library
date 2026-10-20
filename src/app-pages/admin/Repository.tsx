@@ -166,18 +166,21 @@ export default function AdminRepository() {
     }
   };
 
-  const updateStatus = async (newStatus: string) => {
-    if (!selected) return;
+  const updateStatus = async (newStatus: string): Promise<boolean> => {
+    if (!selected) return false;
     setActionLoading(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('repository_items')
       .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', selected.id);
-    if (!error) {
+      .eq('id', selected.id)
+      .select('id');
+    const updated = !error && (data?.length ?? 0) > 0;
+    if (updated) {
       setSelected(prev => prev ? { ...prev, status: newStatus } : null);
       await fetchItems();
     }
     setActionLoading(false);
+    return updated;
   };
 
   const handleApproveAndPublish = async () => {
@@ -201,11 +204,15 @@ export default function AdminRepository() {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (message.includes('ZENODO_TOKEN')) {
-        await updateStatus('published');
-        setZenodoResult({ ok: true, doi: '' });
-        if (submitterEmail) {
-          const html = emailRepositoryPublished(selected.title, '');
-          await sendEmail(submitterEmail, submitterName || submitterEmail, 'Your submission has been published', html);
+        const updated = await updateStatus('published');
+        if (!updated) {
+          setZenodoResult({ ok: false, error: 'The record update was rejected. Refresh and try again.' });
+        } else {
+          setZenodoResult({ ok: true, doi: '' });
+          if (submitterEmail) {
+            const html = emailRepositoryPublished(selected.title, '');
+            await sendEmail(submitterEmail, submitterName || submitterEmail, 'Your submission has been published', html);
+          }
         }
       } else {
         setZenodoResult({ ok: false, error: message });
@@ -218,11 +225,12 @@ export default function AdminRepository() {
   const handleReject = async () => {
     if (!selected || !rejectReason.trim()) return;
     setActionLoading(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('repository_items')
       .update({ status: 'rejected', rejection_reason: rejectReason.trim(), updated_at: new Date().toISOString() })
-      .eq('id', selected.id);
-    if (!error) {
+      .eq('id', selected.id)
+      .select('id');
+    if (!error && (data?.length ?? 0) > 0) {
       if (submitterEmail) {
         const html = emailRepositoryRejected(selected.title, rejectReason.trim());
         await sendEmail(submitterEmail, submitterName || submitterEmail, 'Update on your repository submission', html);

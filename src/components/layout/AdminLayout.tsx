@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useI18n, type TranslationKey } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDashboardLabel, roleCan, type Feature } from '@/config/roles.config';
-import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
+import { LIBRARY_ADMIN_ROLES, VISIBILITY_ADMIN_ROLES } from '@/server/auth/permissions';
 
 const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -62,6 +62,7 @@ const adminNav: { groupKey: TranslationKey; items: NavItem[] }[] = [
   { groupKey: 'admin.reporting', items: [
     { labelKey: 'admin.reports',            href: '/admin/reports',               icon: '📋' },
     { labelKey: 'admin.webometrics',        href: '/admin/webometrics',           icon: '🌐', show: institutionConfig.features.webometrics },
+    { labelKey: 'admin.visibilityIndexing', href: '/admin/visibility',            icon: '🧭', roles: VISIBILITY_ADMIN_ROLES },
     { labelKey: 'admin.dataMigration',     href: '/admin/migration',             icon: '🔄' },
   ]},
   { groupKey: 'admin.consortium', items: [

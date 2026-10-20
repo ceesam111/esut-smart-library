@@ -118,6 +118,7 @@ const AdminContentEngine  = lazy(() => import('@/pages/admin/ContentEngine'));
 const AdminAgents         = lazy(() => import('@/pages/admin/Agents'));
 const AdminPreservation   = lazy(() => import('@/pages/admin/Preservation'));
 const AdminAnalytics      = lazy(() => import('@/pages/admin/Analytics'));
+const AdminVisibility     = lazy(() => import('@/pages/admin/Visibility'));
 const AdminResearchers    = lazy(() => import('@/pages/admin/ResearcherProfiles'));
 const AdminWebometrics    = lazy(() => import('@/pages/admin/Webometrics'));
 const AdminCalendar       = lazy(() => import('@/pages/admin/Calendar'));
@@ -153,6 +154,7 @@ const LecturerReadingLists = lazy(() => import('@/pages/lecturer/ReadingLists'))
 const AITools              = lazy(() => import('@/pages/AITools'));
 const AcademicIntegrity    = lazy(() => import('@/pages/AcademicIntegrity'));
 const ThesisListing        = lazy(() => import('@/pages/ThesisListing'));
+const ThesisDetail         = lazy(() => import('@/pages/ThesisDetail'));
 
 function PageLoader() {
   return (
@@ -211,6 +213,7 @@ export default function App() {
             <Route path="/ai-tools" element={<AITools />} />
             <Route path="/academic-integrity" element={<AcademicIntegrity />} />
             <Route path="/theses" element={<ThesisListing />} />
+            <Route path="/theses/:id" element={<ThesisDetail />} />
             <Route path="/lecturers" element={<Lecturers />} />
             <Route path="/lecturers/:slug" element={<LecturerPublicProfile />} />
             <Route path="/library/:slug" element={<LibraryBranch />} />
@@ -298,6 +301,7 @@ export default function App() {
             <Route path="/admin/agents" element={<AdminAgents />} />
             <Route path="/admin/preservation" element={<AdminPreservation />} />
             <Route path="/admin/analytics" element={<FeatureRoute feature="analytics"><AdminAnalytics /></FeatureRoute>} />
+            <Route path="/admin/visibility" element={<AdminVisibility />} />
             <Route path="/admin/researchers" element={<FeatureRoute feature="researcherProfiles"><AdminResearchers /></FeatureRoute>} />
             <Route path="/admin/webometrics" element={<FeatureRoute feature="webometrics"><AdminWebometrics /></FeatureRoute>} />
             <Route path="/admin/calendar" element={<AdminCalendar />} />
