@@ -30,8 +30,8 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **provider:** Clarivate / ProQuest
 - **subjects:** Multidisciplinary
 - **description:** A major multidisciplinary research platform providing access to scholarly journals, dissertations and theses, newspapers, magazines, ebooks, reports, working papers, case studies, primary sources and other academic content. The exact collections and full-text access available depend on ESUT Library's licensed ProQuest subscriptions.
-- **url:** https://explore.proquest.com/
-- **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fexplore.proquest.com%2F
+- **url:** https://www.proquest.com/?accountid=189761
+- **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fwww.proquest.com%2F
 - **access_type:** Institutional Subscription
 - **access_note:** Access depends on ESUT Library's active ProQuest subscriptions and institutional authentication.
 - **verified_date:** 2026-10-23

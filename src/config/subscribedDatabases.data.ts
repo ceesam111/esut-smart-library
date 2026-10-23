@@ -17,9 +17,9 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
     accessType: 'Institutional Subscription',
     accessCode: 'SUBSCRIBED',
     accessNote: "Access depends on ESUT Library's active ProQuest subscriptions and institutional authentication.",
-    url: 'https://explore.proquest.com/',
+    url: 'https://www.proquest.com/?accountid=189761',
     imageUrl:
-      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fexplore.proquest.com%2F',
+      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fwww.proquest.com%2F',
     isExternal: true,
     status: 'active',
     verifiedDate: '2026-10-23',
