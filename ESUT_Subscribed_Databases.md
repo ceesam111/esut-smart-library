@@ -30,11 +30,11 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **provider:** Clarivate / ProQuest
 - **subjects:** Multidisciplinary
 - **description:** A major multidisciplinary research platform providing access to scholarly journals, dissertations and theses, newspapers, magazines, ebooks, reports, working papers, case studies, primary sources and other academic content. The exact collections and full-text access available depend on ESUT Library's licensed ProQuest subscriptions.
-- **url:** https://www.proquest.com/
-- **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fwww.proquest.com%2F
+- **url:** https://explore.proquest.com/
+- **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fexplore.proquest.com%2F
 - **access_type:** Institutional Subscription
 - **access_note:** Access depends on ESUT Library's active ProQuest subscriptions and institutional authentication.
-- **verified_date:** 2026-09-23
+- **verified_date:** 2026-10-23
 
 ### 2. Hinari — Access to Research for Health
 
@@ -46,7 +46,7 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Fhinari
 - **access_type:** Institutional Access
 - **access_note:** Research4Life entitlement varies by institution, country and publisher.
-- **verified_date:** 2026-09-23
+- **verified_date:** 2026-10-23
 
 ### 3. AGORA — Access to Global Online Research in Agriculture
 
@@ -58,7 +58,7 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fagora.research4life.org%2F
 - **access_type:** Institutional Access
 - **access_note:** Research4Life entitlement varies by institution, country and publisher.
-- **verified_date:** 2026-09-23
+- **verified_date:** 2026-10-23
 
 ### 4. OARE — Online Access to Research in the Environment
 
@@ -70,7 +70,7 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Foare
 - **access_type:** Institutional Access
 - **access_note:** Research4Life entitlement varies by institution, country and publisher.
-- **verified_date:** 2026-09-23
+- **verified_date:** 2026-10-23
 
 ### 5. ARDI — Access to Research for Development and Innovation
 
@@ -78,11 +78,11 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **provider:** Research4Life / World Intellectual Property Organization (WIPO)
 - **subjects:** Science, Technology, Engineering, Innovation, Applied Research, Development
 - **description:** Research4Life's development and innovation programme providing scientific and technical literature that supports research capacity, innovation and participation in the global knowledge economy.
-- **url:** https://ardi.research4life.org/
-- **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fardi.research4life.org%2F
+- **url:** https://portal.research4life.org/content/ardi
+- **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Fardi
 - **access_type:** Institutional Access
 - **access_note:** Research4Life entitlement varies by institution, country and publisher.
-- **verified_date:** 2026-09-23
+- **verified_date:** 2026-10-23
 
 ### 6. GOALI — Global Online Access to Legal Information
 
@@ -94,7 +94,7 @@ Place a clearly visible **WhatsApp the Librarian** button beside or directly bel
 - **image_url:** https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Fgoali
 - **access_type:** Institutional Access
 - **access_note:** Research4Life entitlement varies by institution, country and publisher.
-- **verified_date:** 2026-09-23
+- **verified_date:** 2026-10-23
 
 ## Research4Life Structure
 

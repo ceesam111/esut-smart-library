@@ -17,12 +17,12 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
     accessType: 'Institutional Subscription',
     accessCode: 'SUBSCRIBED',
     accessNote: "Access depends on ESUT Library's active ProQuest subscriptions and institutional authentication.",
-    url: 'https://www.proquest.com/',
+    url: 'https://explore.proquest.com/',
     imageUrl:
-      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fwww.proquest.com%2F',
+      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fexplore.proquest.com%2F',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-23',
+    verifiedDate: '2026-10-23',
   },
   {
     id: 'hinari',
@@ -41,7 +41,7 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
       'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Fhinari',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-23',
+    verifiedDate: '2026-10-23',
   },
   {
     id: 'agora',
@@ -60,7 +60,7 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
       'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fagora.research4life.org%2F',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-23',
+    verifiedDate: '2026-10-23',
   },
   {
     id: 'oare',
@@ -79,7 +79,7 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
       'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Foare',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-23',
+    verifiedDate: '2026-10-23',
   },
   {
     id: 'ardi',
@@ -93,12 +93,12 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
     accessType: 'Institutional Access',
     accessCode: 'SUBSCRIBED',
     accessNote: 'Research4Life entitlement varies by institution, country and publisher.',
-    url: 'https://ardi.research4life.org/',
+    url: 'https://portal.research4life.org/content/ardi',
     imageUrl:
-      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fardi.research4life.org%2F',
+      'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Fardi',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-23',
+    verifiedDate: '2026-10-23',
   },
   {
     id: 'goali',
@@ -117,7 +117,7 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
       'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fportal.research4life.org%2Fcontent%2Fgoali',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-23',
+    verifiedDate: '2026-10-23',
   },
   {
     id: 'ebscohost',
@@ -137,6 +137,6 @@ export const SUBSCRIBED_DATABASES: LibraryResource[] = [
       'https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fteras.ng',
     isExternal: true,
     status: 'active',
-    verifiedDate: '2026-09-25',
+    verifiedDate: '2026-10-23',
   },
 ];
