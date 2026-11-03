@@ -31,6 +31,7 @@ const ResearcherProfile    = lazy(() => import('@/pages/ResearcherProfile'));
 const Databases            = lazy(() => import('@/pages/Databases'));
 const SubscribedDatabases  = lazy(() => import('@/pages/SubscribedDatabases'));
 const OpenAccessDatabases  = lazy(() => import('@/pages/OpenAccessDatabases'));
+const AccreditationResources = lazy(() => import('@/pages/AccreditationResources'));
 const AILibrarian          = lazy(() => import('@/pages/AILibrarian'));
 const CourseReserves       = lazy(() => import('@/pages/CourseReserves'));
 const Thesis               = lazy(() => import('@/pages/Thesis'));
@@ -118,6 +119,7 @@ const AdminContentEngine  = lazy(() => import('@/pages/admin/ContentEngine'));
 const AdminAgents         = lazy(() => import('@/pages/admin/Agents'));
 const AdminPreservation   = lazy(() => import('@/pages/admin/Preservation'));
 const AdminAnalytics      = lazy(() => import('@/pages/admin/Analytics'));
+const AdminAccreditationEvidence = lazy(() => import('@/pages/admin/AccreditationEvidence'));
 const AdminVisibility     = lazy(() => import('@/pages/admin/Visibility'));
 const AdminResearchers    = lazy(() => import('@/pages/admin/ResearcherProfiles'));
 const AdminWebometrics    = lazy(() => import('@/pages/admin/Webometrics'));
@@ -197,6 +199,8 @@ export default function App() {
             <Route path="/databases" element={<Databases />} />
             <Route path="/subscribed-databases" element={<SubscribedDatabases />} />
             <Route path="/open-access-databases" element={<OpenAccessDatabases />} />
+            <Route path="/accreditation-resources" element={<AccreditationResources />} />
+            <Route path="/accreditation-resources/:slug" element={<AccreditationResources />} />
             <Route path="/ai-librarian" element={<AILibrarian />} />
             <Route path="/course-reserves" element={<FeatureRoute feature="courseReserves"><CourseReserves /></FeatureRoute>} />
             <Route path="/thesis" element={<FeatureRoute feature="thesisPortal"><Thesis /></FeatureRoute>} />
@@ -301,6 +305,7 @@ export default function App() {
             <Route path="/admin/agents" element={<AdminAgents />} />
             <Route path="/admin/preservation" element={<AdminPreservation />} />
             <Route path="/admin/analytics" element={<FeatureRoute feature="analytics"><AdminAnalytics /></FeatureRoute>} />
+            <Route path="/admin/accreditation-evidence" element={<FeatureRoute feature="accreditationEvidence"><AdminAccreditationEvidence /></FeatureRoute>} />
             <Route path="/admin/visibility" element={<AdminVisibility />} />
             <Route path="/admin/researchers" element={<FeatureRoute feature="researcherProfiles"><AdminResearchers /></FeatureRoute>} />
             <Route path="/admin/webometrics" element={<FeatureRoute feature="webometrics"><AdminWebometrics /></FeatureRoute>} />

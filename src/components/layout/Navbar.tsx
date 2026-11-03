@@ -64,6 +64,7 @@ function getNavItems(t: (key: TranslationKey) => string) {
         { label: t('nav.askLexis'),            href: '/ai-librarian' },
         { label: t('nav.aiToolsDirectory'),    href: '/ai-tools' },
         { label: t('nav.federatedSearch'),    href: '/search/global' },
+        { label: t('nav.accreditationResources'), href: '/accreditation-resources' },
         { label: t('nav.subscribedDatabases'), href: '/subscribed-databases' },
         { label: t('nav.openAccessDatabases'), href: '/open-access-databases' },
         { label: t('nav.licensedDatabases'),   href: '/databases' },
