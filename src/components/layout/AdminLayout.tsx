@@ -61,6 +61,7 @@ const adminNav: { groupKey: TranslationKey; items: NavItem[] }[] = [
   ]},
   { groupKey: 'admin.reporting', items: [
     { labelKey: 'admin.reports',            href: '/admin/reports',               icon: '📋' },
+    { labelKey: 'admin.accreditationEvidence', href: '/admin/accreditation-evidence', icon: '🎓', show: institutionConfig.features.accreditationEvidence },
     { labelKey: 'admin.webometrics',        href: '/admin/webometrics',           icon: '🌐', show: institutionConfig.features.webometrics },
     { labelKey: 'admin.visibilityIndexing', href: '/admin/visibility',            icon: '🧭', roles: VISIBILITY_ADMIN_ROLES },
     { labelKey: 'admin.dataMigration',     href: '/admin/migration',             icon: '🔄' },

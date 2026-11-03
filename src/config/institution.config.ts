@@ -120,5 +120,6 @@ export const institutionConfig = {
     researcherProfiles: true,
     webometrics:        false,
     analytics:          true,
+    accreditationEvidence: true,
   },
 };

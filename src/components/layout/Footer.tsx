@@ -23,6 +23,7 @@ const SERVICES_LINKS: { label: TranslationKey; href: string }[] = [
   { label: 'footer.subscribedDatabases', href: '/subscribed-databases' },
   { label: 'footer.openAccessDatabases', href: '/open-access-databases' },
   { label: 'footer.databaseAccess', href: '/databases' },
+  { label: 'footer.accreditationResources', href: '/accreditation-resources' },
   { label: 'footer.tutorialGuides', href: '/tutorial' },
   { label: 'footer.privacyPolicy', href: '/privacy' },
   { label: 'footer.terms', href: '/terms' },
