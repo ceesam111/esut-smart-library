@@ -81,7 +81,7 @@ function shouldNoindex(request: NextRequest) {
   return false;
 }
 
-function applySecurityHeaders(response: NextResponse, id: string) {
+function applySecurityHeaders(request: NextRequest, response: NextResponse, id: string) {
   response.headers.set('x-request-id', id);
   response.headers.set('x-content-type-options', 'nosniff');
   response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
@@ -89,13 +89,22 @@ function applySecurityHeaders(response: NextResponse, id: string) {
   response.headers.set('x-frame-options', 'DENY');
   response.headers.set('content-security-policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; child-src https://challenges.cloudflare.com; worker-src 'self' blob:; media-src 'self' blob: data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   if (process.env.NODE_ENV === 'production') response.headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains; preload');
+  if (!request.cookies.get('csrf-token')?.value && !response.cookies.has('csrf-token')) {
+    response.cookies.set('csrf-token', crypto.randomUUID(), {
+      path: '/',
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 604800,
+    });
+  }
   return response;
 }
 
 function corsResponse(request: NextRequest, id: string) {
   const origin = request.headers.get('origin');
   if (!isAllowedOrigin(request, origin)) {
-    return applySecurityHeaders(NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Origin not allowed.', requestId: id } }, { status: 403 }), id);
+    return applySecurityHeaders(request, NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Origin not allowed.', requestId: id } }, { status: 403 }), id);
   }
   if (request.method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 204 });
@@ -104,7 +113,7 @@ function corsResponse(request: NextRequest, id: string) {
     response.headers.set('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     response.headers.set('access-control-allow-headers', 'authorization,content-type,x-csrf-token,x-request-id,x-requested-with');
     response.headers.set('access-control-max-age', '600');
-    return applySecurityHeaders(response, id);
+    return applySecurityHeaders(request, response, id);
   }
   return null;
 }
@@ -128,25 +137,25 @@ export async function middleware(request: NextRequest) {
   if (cors) return cors;
 
   if (request.nextUrl.pathname.startsWith('/api/') && !isAllowedOrigin(request, request.headers.get('origin'))) {
-    return applySecurityHeaders(NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Origin not allowed.', requestId: id } }, { status: 403 }), id);
+    return applySecurityHeaders(request, NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Origin not allowed.', requestId: id } }, { status: 403 }), id);
   }
 
   if (csrfFailure(request)) {
-    return applySecurityHeaders(NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'CSRF check failed.', requestId: id } }, { status: 403 }), id);
+    return applySecurityHeaders(request, NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'CSRF check failed.', requestId: id } }, { status: 403 }), id);
   }
 
   const retryAfter = devRateLimit(request);
   if (retryAfter) {
     const response = NextResponse.json({ success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.', requestId: id } }, { status: 429 });
     response.headers.set('retry-after', String(retryAfter));
-    return applySecurityHeaders(response, id);
+    return applySecurityHeaders(request, response, id);
   }
 
   if (aj && shouldUseArcjet(request)) {
     const decision = await aj.protect(request);
     if (decision.isDenied()) {
       const status = decision.reason.isRateLimit() ? 429 : 403;
-      return applySecurityHeaders(NextResponse.json({ success: false, error: { code: status === 429 ? 'RATE_LIMITED' : 'FORBIDDEN', message: status === 429 ? 'Too many requests.' : 'Request blocked.', requestId: id } }, { status }), id);
+      return applySecurityHeaders(request, NextResponse.json({ success: false, error: { code: status === 429 ? 'RATE_LIMITED' : 'FORBIDDEN', message: status === 429 ? 'Too many requests.' : 'Request blocked.', requestId: id } }, { status }), id);
     }
   }
 
@@ -161,7 +170,7 @@ export async function middleware(request: NextRequest) {
       response.headers.set('vary', 'Origin');
     }
   }
-  return applySecurityHeaders(response, id);
+  return applySecurityHeaders(request, response, id);
 }
 
 export const config = {
