@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import BackButton from '@/components/BackButton';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -165,6 +165,7 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
   const [coverage, setCoverage] = useState<CoverageResponseData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoSwitchedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -189,7 +190,28 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
       sort,
     })
       .then((data) => {
-        if (!cancelled) setResources(data);
+        if (cancelled) return;
+        setResources(data);
+        const trimmed = query.trim();
+        if (
+          trimmed &&
+          data.matchedTotal > 0 &&
+          data.total === 0 &&
+          autoSwitchedForRef.current !== trimmed
+        ) {
+          const nextTab = tabs.find((entry) => {
+            const nextTypes = TAB_TYPE_MAP[entry.id];
+            return (
+              nextTypes !== null &&
+              data.typeFacets.some((facet) => nextTypes.includes(facet.type) && facet.count > 0)
+            );
+          });
+          if (nextTab && nextTab.id !== tab) {
+            autoSwitchedForRef.current = trimmed;
+            setTab(nextTab.id);
+            setPage(1);
+          }
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load resources.');
@@ -200,7 +222,7 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
     return () => {
       cancelled = true;
     };
-  }, [slug, tab, query, yearFrom, yearTo, fullTextOnly, source, page, sort]);
+  }, [slug, tabs, tab, query, yearFrom, yearTo, fullTextOnly, source, page, sort]);
 
   useEffect(() => {
     if (!slug || tab !== 'subjects') return;
@@ -237,6 +259,24 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
   };
 
   const totalPages = resources ? Math.max(1, Math.ceil(resources.total / resources.pageSize)) : 1;
+  const activeTabLabel = tabs.find((entry) => entry.id === tab)?.label ?? 'this category';
+  const emptyStateTab =
+    resources && resources.matchedTotal > 0
+      ? tabs.find((entry) => {
+          if (entry.id === tab) return false;
+          const nextTypes = TAB_TYPE_MAP[entry.id];
+          return (
+            nextTypes !== null &&
+            resources.typeFacets.some((facet) => nextTypes.includes(facet.type) && facet.count > 0)
+          );
+        })
+      : undefined;
+  const emptyStateTabCount =
+    emptyStateTab && resources
+      ? resources.typeFacets
+          .filter((facet) => (TAB_TYPE_MAP[emptyStateTab.id] ?? []).includes(facet.type))
+          .reduce((sum, facet) => sum + facet.count, 0)
+      : 0;
   const databases = slug
     ? catalogue.databases.filter(
         (db) => db.programmeSlugs === 'all' || db.programmeSlugs.includes(slug),
@@ -519,9 +559,12 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
           {resources ? (
             <>
               <p className="text-sm text-neutral-500 mb-4">
-                {resources.total} resource{resources.total === 1 ? '' : 's'}
+                {resources.matchedTotal} resource{resources.matchedTotal === 1 ? '' : 's'}
                 {query.trim() ? ` matching “${query.trim()}”` : ''}
                 {slug ? ' in this programme' : ' across all programmes'}
+                {resources.total !== resources.matchedTotal
+                  ? ` — ${resources.total} in ${activeTabLabel}`
+                  : ''}
               </p>
               {resources.capped ? (
                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4">
@@ -530,10 +573,37 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
                 </p>
               ) : null}
               {resources.items.length === 0 ? (
-                <p className="text-sm text-neutral-500 border border-neutral-200 rounded-lg px-4 py-6 text-center bg-white">
-                  No resources match the current filters. Try widening the year range or clearing
-                  the source filter.
-                </p>
+                <div className="text-sm text-neutral-500 border border-neutral-200 rounded-lg px-4 py-6 text-center bg-white">
+                  {resources.matchedTotal === 0 ? (
+                    <p>
+                      {query.trim()
+                        ? `No resources match “${query.trim()}”.`
+                        : 'No resources match the current filters.'}{' '}
+                      Try a shorter search term, or widen the year range.
+                    </p>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <p>
+                        No resources in {activeTabLabel} — {resources.matchedTotal} matching{' '}
+                        {resources.matchedTotal === 1 ? 'resource is' : 'resources are'} available in
+                        other categories.
+                      </p>
+                      {emptyStateTab ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTab(emptyStateTab.id);
+                            setPage(1);
+                          }}
+                          className="px-4 py-2 rounded-lg font-semibold text-white"
+                          style={{ backgroundColor: '#1F3A5F' }}
+                        >
+                          Go to {emptyStateTab.label} ({emptyStateTabCount})
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {resources.items.map((item) => (

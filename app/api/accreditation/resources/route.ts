@@ -9,6 +9,7 @@ import { resourceTypeLabel } from '@/lib/accreditationLabels';
 import { ApiError } from '@/server/api/errors';
 import { withHandler } from '@/server/api/withHandler';
 import { loadLocalRecords } from '@/server/accreditation/localRecords';
+import { applyPortalFilters } from '@/server/accreditation/portalFilters';
 import { providerSummary } from '@/server/accreditation/providers';
 import type { ScholarlyResourceRow } from '@/server/accreditation/types';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
@@ -50,16 +51,6 @@ const clampInt = (value: number, min: number, max: number): number =>
 const EXTERNAL_COLUMNS =
   'id,source_provider,resource_type,title,creators,publisher,publication_year,doi,subject_headings,abstract_text,landing_page_url,full_text_url,access_state,open_access,verification_status,verification_checked_at,relevance_score,matched_terms';
 
-const matchesQuery = (item: PortalResourceItem, needle: string): boolean => {
-  const lower = needle.toLowerCase();
-  return (
-    item.title.toLowerCase().includes(lower) ||
-    item.creators.some((creator) => creator.toLowerCase().includes(lower)) ||
-    (item.abstract?.toLowerCase().includes(lower) ?? false) ||
-    item.subjects.some((subject) => subject.toLowerCase().includes(lower))
-  );
-};
-
 export const GET = withHandler({
   querySchema: resourcesQuerySchema,
   handler: async ({ query }) => {
@@ -87,6 +78,8 @@ export const GET = withHandler({
     const fullTextOnly = parsed.fulltext_only === 'true';
     const page = parsed.page ?? 1;
     const pageSize = clampInt(parsed.page_size ?? DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
+    const needle = parsed.q?.trim() || null;
+    const rowCap = needle ? undefined : EXTERNAL_ROW_CAP + 1;
 
     const supabase = getSupabaseAdminClient();
     const { rows: fetchedRows, error } = await fetchAllPaged<ScholarlyResourceRow>(
@@ -103,10 +96,10 @@ export const GET = withHandler({
         if (fullTextOnly) statement = statement.not('full_text_url', 'is', null);
         return statement;
       },
-      { maxRows: EXTERNAL_ROW_CAP + 1 },
+      rowCap === undefined ? {} : { maxRows: rowCap },
     );
     if (error && !isMissingSchemaError(error)) throw new Error(error.message);
-    const externalCapped = fetchedRows.length > EXTERNAL_ROW_CAP;
+    const externalCapped = rowCap !== undefined && fetchedRows.length > EXTERNAL_ROW_CAP;
     const externalRows = externalCapped ? fetchedRows.slice(0, EXTERNAL_ROW_CAP) : fetchedRows;
 
     const providerLabels = new Map(providerSummary().map((entry) => [entry.id, entry.displayName]));
@@ -137,38 +130,18 @@ export const GET = withHandler({
     const base = [...externalItems, ...local.items].filter(
       (item) => item.year !== null && item.year >= yearFrom && item.year <= yearTo,
     );
-    const needle = parsed.q?.trim();
-    const searched = needle ? base.filter((item) => matchesQuery(item, needle)) : base;
     const fullTexted = fullTextOnly
-      ? searched.filter((item) => item.fullTextUrl !== null)
-      : searched;
-    const typeFiltered =
-      requestedTypes.length > 0
-        ? fullTexted.filter((item) => requestedTypes.includes(item.resourceType))
-        : fullTexted;
-    const sourceFiltered = source
-      ? typeFiltered.filter((item) =>
-          LOCAL_TYPES.includes(source)
-            ? item.recordSource === source
-            : item.sourceProvider === source,
-        )
-      : typeFiltered;
+      ? base.filter((item) => item.fullTextUrl !== null)
+      : base;
+    const { results, matchedTotal, typeCounts, providerCounts } = applyPortalFilters({
+      base: fullTexted,
+      needle,
+      types: requestedTypes,
+      source,
+      localTypes: LOCAL_TYPES,
+    });
 
-    const providerCounts = new Map<string, { label: string; count: number }>();
-    for (const item of typeFiltered) {
-      const providerKey = item.sourceProvider ?? item.recordSource;
-      const existing = providerCounts.get(providerKey);
-      providerCounts.set(providerKey, {
-        label: item.sourceLabel,
-        count: (existing?.count ?? 0) + 1,
-      });
-    }
-    const typeCounts = new Map<string, number>();
-    for (const item of fullTexted) {
-      typeCounts.set(item.resourceType, (typeCounts.get(item.resourceType) ?? 0) + 1);
-    }
-
-    const sorted = [...sourceFiltered];
+    const sorted = [...results];
     if (parsed.sort === 'year_desc') {
       sorted.sort((left, right) => (right.year ?? 0) - (left.year ?? 0));
     } else {
@@ -182,17 +155,18 @@ export const GET = withHandler({
     const start = (page - 1) * pageSize;
     const response: ResourcesResponseData = {
       total: sorted.length,
+      matchedTotal,
       externalTotal: sorted.filter((item) => item.recordSource === 'external').length,
       localTotal: sorted.filter((item) => item.recordSource !== 'external').length,
       page,
       pageSize,
       capped: externalCapped,
       items: sorted.slice(start, start + pageSize),
-      providerFacets: [...providerCounts.entries()]
-        .map(([provider, entry]) => ({ provider, label: entry.label, count: entry.count }))
+      providerFacets: providerCounts
+        .map((entry) => ({ provider: entry.provider, label: entry.label, count: entry.count }))
         .sort((left, right) => right.count - left.count || left.provider.localeCompare(right.provider)),
-      typeFacets: [...typeCounts.entries()]
-        .map(([type, count]) => ({ type, label: resourceTypeLabel(type), count }))
+      typeFacets: typeCounts
+        .map((entry) => ({ type: entry.type, label: resourceTypeLabel(entry.type), count: entry.count }))
         .sort((left, right) => right.count - left.count || left.type.localeCompare(right.type)),
     };
     return { data: response };

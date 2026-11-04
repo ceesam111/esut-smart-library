@@ -66,6 +66,7 @@ export interface ResourceQuery {
 
 export interface ResourcesResponseData {
   total: number;
+  matchedTotal: number;
   externalTotal: number;
   localTotal: number;
   page: number;

@@ -4,7 +4,7 @@ export interface PagedQueryPage {
 }
 
 export interface PagedQueryOptions {
-  maxRows: number;
+  maxRows?: number;
   pageSize?: number;
 }
 
@@ -20,7 +20,10 @@ export const fetchAllPaged = async <T>(
   options: PagedQueryOptions,
 ): Promise<PagedQueryResult<T>> => {
   const pageSize = Math.max(1, Math.floor(options.pageSize ?? DEFAULT_PAGE_SIZE));
-  const maxRows = Math.max(0, Math.floor(options.maxRows));
+  const maxRows =
+    options.maxRows === undefined
+      ? Number.MAX_SAFE_INTEGER
+      : Math.max(0, Math.floor(options.maxRows));
   const rows: T[] = [];
   let from = 0;
   for (;;) {

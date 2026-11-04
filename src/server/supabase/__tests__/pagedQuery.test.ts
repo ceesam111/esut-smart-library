@@ -94,4 +94,13 @@ describe('fetchAllPaged', () => {
     expect(result.rows).toEqual([]);
     expect(calls.length).toBe(1);
   });
+
+  it('pages to exhaustion when maxRows is omitted', async () => {
+    const { fetchPage, calls } = fakeServer(range(2500));
+    const result = await fetchAllPaged<number>(fetchPage, {});
+    expect(result.error).toBeNull();
+    expect(result.rows).toHaveLength(2500);
+    expect(result.rows[2499]).toBe(2499);
+    expect(calls.length).toBe(4);
+  });
 });
