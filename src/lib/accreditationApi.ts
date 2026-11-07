@@ -62,6 +62,7 @@ export interface ResourceQuery {
   page?: number;
   pageSize?: number;
   sort?: 'relevance' | 'year_desc';
+  autoExtend?: boolean;
 }
 
 export interface ResourcesResponseData {
@@ -72,6 +73,10 @@ export interface ResourcesResponseData {
   page: number;
   pageSize: number;
   capped: boolean;
+  effectiveYearFrom: number;
+  effectiveYearTo: number;
+  expanded: boolean;
+  liveTotal: number;
   items: PortalResourceItem[];
   providerFacets: Array<{ provider: string; label: string; count: number }>;
   typeFacets: Array<{ type: string; label: string; count: number }>;
@@ -193,6 +198,7 @@ const buildResourceUrl = (query: ResourceQuery): string => {
   if (query.types && query.types.length > 0) params.set('type', query.types.join(','));
   if (query.fullTextOnly) params.set('fulltext_only', 'true');
   if (query.source) params.set('source', query.source);
+  if (query.autoExtend) params.set('auto_extend', 'true');
   params.set('page', String(query.page ?? 1));
   params.set('page_size', String(query.pageSize ?? 20));
   params.set('sort', query.sort ?? 'relevance');

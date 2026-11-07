@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import BackButton from '@/components/BackButton';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -155,8 +155,14 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
   const paramQuery = searchParams.get('q') ?? '';
   const [queryInput, setQueryInput] = useState(initialQuery ?? paramQuery);
   const [query, setQuery] = useState(initialQuery ?? paramQuery);
-  const [yearFrom, setYearFrom] = useState(catalogue.yearFrom);
-  const [yearTo, setYearTo] = useState(catalogue.yearTo);
+  const defaultYearTo = Math.max(catalogue.yearTo, new Date().getFullYear());
+  const defaultYearFrom = defaultYearTo - 4;
+  const [yearFrom, setYearFrom] = useState(defaultYearFrom);
+  const [yearTo, setYearTo] = useState(defaultYearTo);
+  const [yearFromDraft, setYearFromDraft] = useState(String(defaultYearFrom));
+  const [yearToDraft, setYearToDraft] = useState(String(defaultYearTo));
+  const [yearsCustom, setYearsCustom] = useState(false);
+  const [yearNotice, setYearNotice] = useState<{ from: number; total: number } | null>(null);
   const [source, setSource] = useState('');
   const [fullTextOnly, setFullTextOnly] = useState(false);
   const [sort, setSort] = useState<'relevance' | 'year_desc'>('relevance');
@@ -182,6 +188,7 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
       q: query.trim() || undefined,
       yearFrom,
       yearTo,
+      autoExtend: yearsCustom ? undefined : true,
       types,
       fullTextOnly: fullTextOnly || undefined,
       source: source || undefined,
@@ -192,6 +199,9 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
       .then((data) => {
         if (cancelled) return;
         setResources(data);
+        setYearNotice(
+          data.expanded ? { from: data.effectiveYearFrom, total: data.matchedTotal } : null,
+        );
         const trimmed = query.trim();
         if (
           trimmed &&
@@ -222,7 +232,7 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
     return () => {
       cancelled = true;
     };
-  }, [slug, tabs, tab, query, yearFrom, yearTo, fullTextOnly, source, page, sort]);
+  }, [slug, tabs, tab, query, yearFrom, yearTo, yearsCustom, fullTextOnly, source, page, sort]);
 
   useEffect(() => {
     if (!slug || tab !== 'subjects') return;
@@ -248,6 +258,28 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
     event.preventDefault();
     setQuery(queryInput);
     setPage(1);
+  };
+
+  const commitYears = () => {
+    const nextFrom = Number.parseInt(yearFromDraft, 10);
+    const nextTo = Number.parseInt(yearToDraft, 10);
+    if (!Number.isInteger(nextFrom) || !Number.isInteger(nextTo)) {
+      setYearFromDraft(String(yearFrom));
+      setYearToDraft(String(yearTo));
+      return;
+    }
+    const low = Math.min(Math.max(nextFrom, 1900), 2100);
+    const high = Math.min(Math.max(nextTo, 1900), 2100);
+    const normalizedFrom = Math.min(low, high);
+    const normalizedTo = Math.max(low, high);
+    setYearFromDraft(String(normalizedFrom));
+    setYearToDraft(String(normalizedTo));
+    if (normalizedFrom !== yearFrom || normalizedTo !== yearTo) {
+      setYearFrom(normalizedFrom);
+      setYearTo(normalizedTo);
+      setPage(1);
+    }
+    setYearsCustom(normalizedFrom !== defaultYearFrom || normalizedTo !== defaultYearTo);
   };
 
   const tabCount = (id: TabId): number | null => {
@@ -282,12 +314,6 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
         (db) => db.programmeSlugs === 'all' || db.programmeSlugs.includes(slug),
       )
     : catalogue.databases;
-
-  const yearOptions = useMemo(() => {
-    const options: number[] = [];
-    for (let year = catalogue.yearFrom; year <= catalogue.yearTo; year += 1) options.push(year);
-    return options;
-  }, [catalogue.yearFrom, catalogue.yearTo]);
 
   return (
     <div>
@@ -340,42 +366,59 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
         {tab !== 'databases' && tab !== 'subjects' ? (
           <div className="flex flex-wrap gap-3 items-center">
             <label className="text-sm text-neutral-600 flex items-center gap-2">
-              Year
-              <select
-                value={yearFrom}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setYearFrom(value);
-                  if (value > yearTo) setYearTo(value);
-                  setPage(1);
+              Years
+              <input
+                type="number"
+                min={1900}
+                max={2100}
+                inputMode="numeric"
+                value={yearFromDraft}
+                onChange={(event) => setYearFromDraft(event.target.value)}
+                onBlur={commitYears}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    commitYears();
+                  }
                 }}
-                className="border border-neutral-300 rounded-lg px-2 py-1.5 text-sm bg-white"
+                className="border border-neutral-300 rounded-lg px-2 py-1.5 text-sm bg-white w-20"
                 aria-label="From year"
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+              />
               –
-              <select
-                value={yearTo}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setYearTo(value);
-                  if (value < yearFrom) setYearFrom(value);
-                  setPage(1);
+              <input
+                type="number"
+                min={1900}
+                max={2100}
+                inputMode="numeric"
+                value={yearToDraft}
+                onChange={(event) => setYearToDraft(event.target.value)}
+                onBlur={commitYears}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    commitYears();
+                  }
                 }}
-                className="border border-neutral-300 rounded-lg px-2 py-1.5 text-sm bg-white"
+                className="border border-neutral-300 rounded-lg px-2 py-1.5 text-sm bg-white w-20"
                 aria-label="To year"
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+              />
+              {yearsCustom ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setYearFromDraft(String(defaultYearFrom));
+                    setYearToDraft(String(defaultYearTo));
+                    setYearFrom(defaultYearFrom);
+                    setYearTo(defaultYearTo);
+                    setYearsCustom(false);
+                    setPage(1);
+                  }}
+                  className="text-xs font-semibold hover:underline"
+                  style={{ color: '#8A6A00' }}
+                >
+                  Reset
+                </button>
+              ) : null}
             </label>
             <label className="text-sm text-neutral-600 flex items-center gap-2">
               Source
@@ -430,6 +473,14 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
         <div className="border border-amber-300 bg-amber-50 text-amber-800 rounded-lg px-4 py-3 text-sm mb-6">
           {error}
         </div>
+      ) : null}
+
+      {yearNotice ? (
+        <p className="text-sm text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-4 py-2 mb-6">
+          Nothing matched in {yearFrom}–{yearTo}, so the search extended back to{' '}
+          {yearNotice.from} and found {yearNotice.total} resource
+          {yearNotice.total === 1 ? '' : 's'}, including live open-access sources.
+        </p>
       ) : null}
 
       {tab === 'databases' ? (
@@ -564,6 +615,9 @@ function ResourceExplorer({ catalogue, slug, programme, initialQuery }: Explorer
                 {slug ? ' in this programme' : ' across all programmes'}
                 {resources.total !== resources.matchedTotal
                   ? ` — ${resources.total} in ${activeTabLabel}`
+                  : ''}
+                {resources.liveTotal > 0
+                  ? ` — ${resources.liveTotal} from live open-access sources`
                   : ''}
               </p>
               {resources.capped ? (
@@ -757,9 +811,9 @@ export default function AccreditationResources() {
         <h1 className="text-3xl font-bold text-neutral-900 mb-2">Accreditation Resource Portal</h1>
         <p className="text-neutral-500 max-w-2xl">
           Curated digital resources for all {catalogue.programmes.length} programmes seeking NUC
-          accreditation in 2026. Resources are published from {catalogue.yearFrom} onward, with
-          full-text links verified where possible. {catalogue.databases.length} academic databases
-          are available.
+          accreditation in 2026. Searches cover the last five years by default, extend further
+          back automatically when nothing matches, and include live open-access ebooks, articles
+          and journals alongside the {catalogue.databases.length} academic databases listed here.
         </p>
       </div>
 
