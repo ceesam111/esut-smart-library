@@ -5,10 +5,10 @@ import { TermsCheckbox, SubmitButton } from './StudentForm';
 import { GENDERS, LIBRARY_SECTIONS, ALL_LIBRARY_BRANCHES } from '@/config/roles.config';
 import { institutionConfig } from '@config/institution.config';
 import { registerAccount, type RegisterResult } from '@/lib/registration';
+import { useToast } from '@/lib/useToast';
 
 export default function LibrarianForm({ onSuccess }: { onSuccess: (result: RegisterResult) => void }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [f, setF] = useState({
@@ -16,13 +16,13 @@ export default function LibrarianForm({ onSuccess }: { onSuccess: (result: Regis
     password: '', confirm: '', staffId: '', profQual: '', section: '', branch: ALL_LIBRARY_BRANCHES[0],
   });
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const { show } = useToast();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    setError('');
-    if (f.password !== f.confirm) return setError('Passwords do not match.');
-    if (f.password.length < 8) return setError('Password must be at least 8 characters.');
-    if (!agreed) return setError('Please agree to the Terms and Privacy Policy.');
+    if (f.password !== f.confirm) return show('Passwords do not match.', { variant: 'destructive' });
+    if (f.password.length < 8) return show('Password must be at least 8 characters.', { variant: 'destructive' });
+    if (!agreed) return show('Please agree to the Terms and Privacy Policy.', { variant: 'destructive' });
     setLoading(true);
     let res: RegisterResult;
     try {
@@ -45,13 +45,12 @@ export default function LibrarianForm({ onSuccess }: { onSuccess: (result: Regis
     } finally {
       setLoading(false);
     }
-    if (!res.ok) return setError(res.error ?? 'Registration failed.');
+    if (!res.ok) return show(res.error ?? 'Registration failed.', { variant: 'destructive' });
     onSuccess(res);
   }
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {error && <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
       <div className="px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
         Librarian accounts require approval by a Super Administrator before access is granted.
       </div>
@@ -72,7 +71,7 @@ export default function LibrarianForm({ onSuccess }: { onSuccess: (result: Regis
       {institutionConfig.libraryMode === 'multi' && (
         <Field label="Library Branch" required><SelectInput value={f.branch} onChange={(v) => set('branch', v)} options={ALL_LIBRARY_BRANCHES} required /></Field>
       )}
-      <ProfilePhotoInput value={profilePhotoUrl} onChange={setProfilePhotoUrl} onError={setError} />
+      <ProfilePhotoInput value={profilePhotoUrl} onChange={setProfilePhotoUrl} onError={(msg) => show(msg, { variant: 'destructive' })} />
       <TermsCheckbox agreed={agreed} setAgreed={setAgreed} />
       <SubmitButton loading={loading} />
     </form>

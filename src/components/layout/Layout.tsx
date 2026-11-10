@@ -5,6 +5,7 @@ import Footer from './Footer';
 import AILibrarianWidget from '@/components/ai/AILibrarianWidget';
 import CookieConsent from '@/components/CookieConsent';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
+import { Toaster } from '@/components/ui/sonner';
 import { useI18n, type TranslationKey } from '@/lib/i18n';
 import { institutionConfig } from '@config/institution.config';
 
@@ -62,6 +63,7 @@ export default function Layout() {
       <AILibrarianWidget />
       <CookieConsent />
       <PWAInstallBanner />
+      <Toaster position="top-right" richColors />
 
       {/* Floating click-to-call — mobile only */}
       <a

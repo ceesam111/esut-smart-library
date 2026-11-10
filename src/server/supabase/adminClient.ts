@@ -5,10 +5,12 @@ let cached: SupabaseClient | null = null;
 /**
  * Server-side Supabase client that always acts as the service role.
  *
- * PostgREST headers are pinned to the service key because `supabase.auth`
- * session changes would otherwise replace `Authorization` with a user's access
- * token and turn every later write into an RLS failure for the lifetime of the
- * process. Auth endpoints are left untouched so user JWTs still work there.
+ * Every request (PostgREST and GoTrue auth admin API) is pinned to the
+ * service-role key so that a prior `signInWithPassword()` on this client can
+ * never replace `Authorization` with a user's access token and downgrade
+ * later writes to `authenticated` (RLS failures for the lifetime of the
+ * process). Auth endpoints still accept user JWTs where the route itself
+ * calls them, but this shared client always presents the service key.
  */
 export function getSupabaseAdminClient() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,16 +21,11 @@ export function getSupabaseAdminClient() {
   }
 
   if (!cached) {
-    const restBase = `${url.replace(/\/$/, '')}/rest`;
     const pinnedFetch: typeof fetch = (input, init) => {
-      const target = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (target.startsWith(`${restBase}/`) && target !== `${restBase}/`) {
-        const headers = new Headers(init?.headers);
-        headers.set('apikey', serviceRoleKey);
-        headers.set('Authorization', `Bearer ${serviceRoleKey}`);
-        return fetch(input, { ...init, headers, cache: 'no-store' });
-      }
-      return fetch(input, { ...init, cache: 'no-store' });
+      const headers = new Headers(init?.headers);
+      headers.set('apikey', serviceRoleKey);
+      headers.set('Authorization', `Bearer ${serviceRoleKey}`);
+      return fetch(input, { ...init, headers, cache: 'no-store' });
     };
 
     cached = createClient(url, serviceRoleKey, {

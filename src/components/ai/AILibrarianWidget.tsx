@@ -4,6 +4,7 @@ import LyriaMessageContent from '@/components/ai/LyriaMessageContent';
 import { institutionConfig } from '@config/institution.config';
 import { SUPABASE_PUBLISHABLE_KEY, supabaseFunctionUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n';
+import { useToast } from '@/lib/useToast';
 
 const LIBRARIAN_NAME = 'Lexis';
 const GOLD = '#D4A017';
@@ -155,6 +156,7 @@ export default function AILibrarianWidget() {
   const abortRef                  = useRef<AbortController | null>(null);
   const { speak, stop, speaking, supported: ttsSupported } = useSpeech();
   const { t } = useI18n();
+  const { show } = useToast();
 
   const wa = `https://wa.me/${institutionConfig.whatsappNumber.replace(/\D/g, '')}`;
   const tel = `tel:${institutionConfig.contactPhone}`;
@@ -236,7 +238,16 @@ export default function AILibrarianWidget() {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
 
-      const finalAnswer = accumulated || "I'm temporarily unavailable. Please try again shortly.";
+      const finalAnswer = accumulated || "";
+      if (!finalAnswer) {
+        show("The AI librarian is temporarily unavailable. Please try again shortly.", { variant: 'destructive' });
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { ...updated[updated.length - 1], content: "I'm temporarily unable to answer right now. Please try again shortly." };
+          return updated;
+        });
+        return;
+      }
       const showReferral = shouldSuggestReferral(stripMarkdown(finalAnswer));
       const finalContent = showReferral
         ? finalAnswer + '\n\nIf you would like to speak with a human librarian, please use the button below.'
@@ -252,20 +263,20 @@ export default function AILibrarianWidget() {
     } catch (err) {
       const name = err instanceof Error ? err.name : undefined;
       if (name !== 'AbortError') {
-        const errMsg = "I'm temporarily unavailable. Please try again shortly.";
+        show("The AI librarian is temporarily unavailable. Please try again shortly.", { variant: 'destructive' });
         setMessages((prev) => {
           const updated = [...prev];
-          updated[updated.length - 1] = { ...updated[updated.length - 1], content: errMsg };
+          updated[updated.length - 1] = { ...updated[updated.length - 1], content: "I'm temporarily unable to answer right now. Please try again shortly." };
           return updated;
         });
-        if (voiceMode) speak(errMsg);
+        if (voiceMode) speak("I'm temporarily unable to answer right now. Please try again shortly.");
       }
     } finally {
       setStreaming(false);
       setReplyStatus(t('a11y.aiReplyStatus'));
       abortRef.current = null;
     }
-  }, [messages, streaming, voiceMode, speak, stop, t]);
+  }, [messages, streaming, voiceMode, speak, stop, t, show]);
 
   const clearChat = () => {
     abortRef.current?.abort();
