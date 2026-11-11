@@ -1,4 +1,5 @@
 export const ALLOWED_AI_PURPOSES = [
+  'reference_chat',
   'catalogue_metadata_conflict_resolution',
   'subject_classification',
   'abstract_cleanup',

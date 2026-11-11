@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +70,11 @@ const SAMPLE_CONTEXT: Record<string, unknown> = {
   workflow_status: 'approved',
 };
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function NoticesPage() {
   const { t } = useI18n();
   const [templates, setTemplates] = useState<NoticeTemplate[]>([]);
@@ -96,7 +102,7 @@ export default function NoticesPage() {
 
   const fetchTemplates = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/notices/templates');
+      const res = await fetch('/api/admin/notices/templates', { headers: await authHeaders() });
       const data = await res.json();
       if (data.success) {
         setTemplates(data.templates);
@@ -120,7 +126,7 @@ export default function NoticesPage() {
     try {
       const res = await fetch('/api/admin/notices/templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'preview', template: selectedTemplate, context: SAMPLE_CONTEXT }),
       });
       const data = await res.json();
@@ -138,7 +144,7 @@ export default function NoticesPage() {
     try {
       const res = await fetch('/api/admin/notices/test-send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           noticeType: selectedTemplate.notice_type,
           channel: 'email',
@@ -165,7 +171,7 @@ export default function NoticesPage() {
     try {
       const res = await fetch('/api/admin/notices/templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           action: 'update',
           templateId: selectedTemplate.id,
@@ -199,7 +205,7 @@ export default function NoticesPage() {
     try {
       const res = await fetch('/api/admin/notices/templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'toggle', templateId, enabled }),
       });
       const data = await res.json();
@@ -216,7 +222,7 @@ export default function NoticesPage() {
     try {
       const res = await fetch('/api/admin/notices/templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'duplicate', templateId: template.id, newName: `${template.name}${t('notices.copySuffix')}` }),
       });
       const data = await res.json();

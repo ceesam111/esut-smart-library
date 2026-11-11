@@ -124,9 +124,13 @@ export default function Approvals() {
   }, [authLoading, can, fetchAudit, fetchQueue, isSuperAdmin, tab]);
 
   async function approve(p: PendingPatron) {
+    if (!p || !p.id) {
+      setMsg('Approval failed: missing application ID.');
+      return;
+    }
     setWorking(p.id); setMsg('');
     try {
-      await authFetch(`/api/admin/patron-approvals/${p.id}/approve`, { method: 'POST', body: '{}' });
+      await authFetch(`/api/admin/patron-approvals/${encodeURIComponent(p.id)}/approve`, { method: 'POST', body: '{}' });
       setRows((r) => r.filter((x) => x.id !== p.id));
       setMsg(`Approved ${p.full_name}.`);
     } catch (error) {
@@ -137,6 +141,10 @@ export default function Approvals() {
   }
 
   async function reject(p: PendingPatron) {
+    if (!p.id) {
+      setMsg('Rejection failed: missing application ID.');
+      return;
+    }
     setWorking(p.id); setMsg('');
     try {
       await authFetch(`/api/admin/patron-approvals/${p.id}/reject`, { method: 'POST', body: '{}' });

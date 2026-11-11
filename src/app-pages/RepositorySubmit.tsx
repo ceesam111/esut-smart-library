@@ -5,6 +5,7 @@ import { institutionConfig } from '@config/institution.config';
 import BackButton from '@/components/BackButton';
 import { roleCan } from '@/config/roles.config';
 import { useAuth } from '@/hooks/useAuth';
+import { validateOrcidId } from '@/lib/identity/orcid';
 
 const ITEM_TYPES = [
   'Undergraduate Long Essay', 'Final Year Project', 'Research Paper', 'Conference Paper',
@@ -32,6 +33,7 @@ async function validateOrcid(orcid: string): Promise<{ valid: boolean; name: str
     const cleaned = orcid.replace(/-/g, '').replace(/\s/g, '');
     if (cleaned.length !== 16) return { valid: false, name: '' };
     const formatted = `${cleaned.slice(0,4)}-${cleaned.slice(4,8)}-${cleaned.slice(8,12)}-${cleaned.slice(12,16)}`;
+    if (validateOrcidId(formatted) === null) return { valid: false, name: '' };
     const res = await fetch(`https://pub.orcid.org/v3.0/${formatted}/record`, {
       headers: { Accept: 'application/json' },
     });
@@ -44,6 +46,11 @@ async function validateOrcid(orcid: string): Promise<{ valid: boolean; name: str
     return { valid: false, name: '' };
   }
 }
+
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
 
 export default function RepositorySubmit() {
   const navigate = useNavigate();
@@ -186,7 +193,7 @@ export default function RepositorySubmit() {
       try {
         const mintRes = await fetch('/api/identifiers/mint', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
           body: JSON.stringify({ action: 'doi', title: title.trim(), creators: authorsJson.map(a => a.name), year: parseInt(year) }),
         });
         if (mintRes.ok) {
@@ -195,7 +202,7 @@ export default function RepositorySubmit() {
         }
         const handleRes = await fetch('/api/identifiers/mint', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
           body: JSON.stringify({ action: 'handle', year: parseInt(year) }),
         });
         if (handleRes.ok) {
@@ -223,6 +230,9 @@ export default function RepositorySubmit() {
         status: 'submitted',
         submitter_id: user.id,
         faculty_code: patron?.faculty_code ?? null,
+        orcid_ids: authorsJson
+          .map((author) => author.orcid ?? '')
+          .filter((id) => validateOrcidId(id) !== null),
         doi,
         handle,
       }).select('id').single();

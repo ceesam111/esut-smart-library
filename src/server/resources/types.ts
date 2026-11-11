@@ -45,7 +45,7 @@ export interface LocalSearchResult {
   source_url?: string | null;
   cover_image?: string | null;
   score: number;
-  result_type: 'catalogue';
+  result_type: 'catalogue' | 'repository';
 }
 
 export interface DiscoveryPolicy {

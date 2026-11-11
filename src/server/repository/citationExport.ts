@@ -1,3 +1,5 @@
+import { repositoryItemUrl } from '@/server/seo/scholarlyMetadata';
+
 export interface CitationInput {
   id: string;
   handle: string | null;
@@ -13,6 +15,7 @@ export interface CitationInput {
   created_at: string | null;
   department: string | null;
   faculty_code: string | null;
+  landing_path?: string | null;
 }
 
 function names(value: unknown): string[] {
@@ -33,7 +36,7 @@ function yearOf(item: CitationInput): string {
 }
 
 function landingUrl(item: CitationInput): string {
-  return `${(process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://virtuallibrary.esut.edu.ng').replace(/\/+$/, '')}/repository/${encodeURIComponent(item.id)}`;
+  return repositoryItemUrl({ id: item.id, landing_path: item.landing_path ?? undefined });
 }
 
 function bibtexKey(item: CitationInput): string {

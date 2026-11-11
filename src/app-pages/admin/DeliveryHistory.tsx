@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,11 @@ const STATUS_COLORS: Record<string, string> = {
   SUPPRESSED: 'outline',
 };
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function DeliveryHistoryPage() {
   const [history, setHistory] = useState<DeliveryRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +54,7 @@ export default function DeliveryHistoryPage() {
       const params = new URLSearchParams({ limit: '50' });
       if (filterStatus !== 'all') params.set('status', filterStatus);
       if (filterChannel !== 'all') params.set('channel', filterChannel);
-      const res = await fetch(`/api/admin/notices/test-send?${params}`);
+      const res = await fetch(`/api/admin/notices/test-send?${params}`, { headers: await authHeaders() });
       const data = await res.json();
       if (data.success) {
         setHistory(data.history);
@@ -69,7 +75,7 @@ export default function DeliveryHistoryPage() {
     try {
       const res = await fetch('/api/admin/notices/test-send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'retry', deliveryId: id }),
       });
       const data = await res.json();

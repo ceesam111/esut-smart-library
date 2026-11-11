@@ -12,16 +12,39 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
   const [error, setError]     = useState('');
+  const [lastSendTime, setLastSendTime] = useState<number | null>(null);
+  const RESET_COOLDOWN_MS = 120000; // 2 minute cooldown between reset requests
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // Client-side rate limit: prevent rapid reset requests
+    const now = Date.now();
+    if (lastSendTime && now - lastSendTime < RESET_COOLDOWN_MS) {
+      const remaining = Math.ceil((RESET_COOLDOWN_MS - (now - lastSendTime)) / 1000);
+      setLoading(false);
+      setError(`Please wait ${remaining} second(s) before requesting another reset link.`);
+      return;
+    }
+
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
-    if (err) { setError(err.message); } else { setSent(true); }
+    if (err) {
+      const msg = err.message || 'Failed to send reset email.';
+      // Provide a user-friendly message for rate limit errors
+      if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many')) {
+        setError('Too many reset requests. Please wait a few minutes before trying again.');
+      } else {
+        setError(msg);
+      }
+    } else {
+      setSent(true);
+      setLastSendTime(Date.now());
+    }
   }
 
   return (

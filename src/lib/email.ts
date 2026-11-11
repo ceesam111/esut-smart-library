@@ -136,13 +136,13 @@ export async function sendWelcomeEmail(
       <tr><td style="padding:6px 12px;color:#64748b;font-size:14px">Patron ID</td><td style="padding:6px 12px;font-weight:700;font-family:monospace;color:#6B1D2A;font-size:15px">${patron.patron_id}</td></tr>
       ${patron.faculty_name ? `<tr><td style="padding:6px 12px;color:#64748b;font-size:14px">Faculty</td><td style="padding:6px 12px;color:#1e293b;font-size:14px">${patron.faculty_name}</td></tr>` : ''}
     </table>
-    <a href="https://esutlibrary.edu.ng/dashboard/library-card" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View Your Library Card</a>
+    <a href="${BRAND.domainUrl}/dashboard/library-card" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View Your Library Card</a>
     <p style="color:#374151;margin-top:20px"><strong>Getting started:</strong></p>
     <ul style="color:#374151;line-height:1.8">
-      <li>Browse the <a href="https://esutlibrary.edu.ng/catalogue" style="color:#6B1D2A">online catalogue</a></li>
-      <li>Check your <a href="https://esutlibrary.edu.ng/dashboard/reading-lists" style="color:#6B1D2A">course reading lists</a></li>
-      <li>Search <a href="https://esutlibrary.edu.ng/search/global" style="color:#6B1D2A">250M+ academic works</a> from global databases</li>
-      <li>Submit your research to the <a href="https://esutlibrary.edu.ng/repository/submit" style="color:#6B1D2A">institutional repository</a></li>
+      <li>Browse the <a href="${BRAND.domainUrl}/catalogue" style="color:#6B1D2A">online catalogue</a></li>
+      <li>Check your <a href="${BRAND.domainUrl}/dashboard/reading-lists" style="color:#6B1D2A">course reading lists</a></li>
+      <li>Search <a href="${BRAND.domainUrl}/search/global" style="color:#6B1D2A">250M+ academic works</a> from global databases</li>
+      <li>Submit your research to the <a href="${BRAND.domainUrl}/repository/submit" style="color:#6B1D2A">institutional repository</a></li>
     </ul>
   `);
   await send(patron.email, patron.full_name, 'Welcome to ESUT Library', html, proof);
@@ -195,7 +195,7 @@ export async function sendLoanDueReminder(
       <thead><tr style="background:#f8fafc"><th style="padding:10px 12px;text-align:left;color:#64748b;font-size:13px">Item</th><th style="padding:10px 12px;text-align:left;color:#64748b;font-size:13px">Due Date</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p style="color:#374151">Please return items to the library circulation desk or <a href="https://esutlibrary.edu.ng/dashboard/loans" style="color:#6B1D2A">renew online</a> before the due date to avoid fines.</p>
+    <p style="color:#374151">Please return items to the library circulation desk or <a href="${BRAND.domainUrl}/dashboard/loans" style="color:#6B1D2A">renew online</a> before the due date to avoid fines.</p>
   `);
   await send(patron.email, patron.full_name, 'Library Items Due Soon', html);
 }
@@ -247,7 +247,7 @@ export async function sendRepositoryApproved(
     <p style="color:#374151">Dear <strong>${submitter.full_name}</strong>, congratulations! Your work has been approved and is now live in the ESUT Digital Repository.</p>
     <p style="color:#1e293b;font-weight:600;font-size:16px">${item.title}</p>
     ${doiBlock}
-    <a href="https://esutlibrary.edu.ng/repository/${item.id}" style="display:inline-block;background:#166534;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View in Repository</a>
+    <a href="${BRAND.domainUrl}/repository/${item.id}" style="display:inline-block;background:#166534;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View in Repository</a>
     <p style="color:#374151;margin-top:16px">Share your work with colleagues and cite it using the DOI. Thank you for contributing to open academic knowledge at ESUT.</p>
   `);
   await send(submitter.email, submitter.full_name, 'Your Submission Has Been Published', html);
@@ -268,7 +268,7 @@ export async function sendRepositoryReturned(
       <p style="margin:0 0 6px;font-weight:700;color:#92400e;font-size:13px">Revision Notes from Librarian</p>
       <p style="margin:0;color:#78350f">${notes}</p>
     </div>
-    <a href="https://esutlibrary.edu.ng/repository/submit" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Resubmit</a>
+    <a href="${BRAND.domainUrl}/repository/submit" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Resubmit</a>
   `);
   await send(submitter.email, submitter.full_name, `Revision Requested — ${item.title}`, html);
 }
@@ -309,7 +309,7 @@ export async function sendThesisStatusUpdate(
       ${info.next ? `<p style="margin:6px 0 0;color:#0369a1;font-size:13px">${info.next}</p>` : ''}
     </div>
     ${notesBlock}
-    <a href="https://esutlibrary.edu.ng/thesis/status" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Check Status</a>
+    <a href="${BRAND.domainUrl}/thesis/status" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">Check Status</a>
   `);
   await send(student.email, student.full_name, `Thesis/Project Update — Stage ${info.step} of 4 — ${thesis.reference_no}`, html);
 }
@@ -334,7 +334,7 @@ export async function sendHighDemandAlert(
       <li>Request additional copies via acquisitions</li>
       <li>Contact the lecturer to provide alternative online access</li>
     </ul>
-    <a href="https://esutlibrary.edu.ng/admin/catalogue/${item.id}" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View in Admin Catalogue</a>
+    <a href="${BRAND.domainUrl}/admin/catalogue/${item.id}" style="display:inline-block;background:#6B1D2A;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;margin:8px 0">View in Admin Catalogue</a>
   `);
   await send(librarian.email, librarian.full_name, `High Demand Alert — ${item.title}`, html);
 }

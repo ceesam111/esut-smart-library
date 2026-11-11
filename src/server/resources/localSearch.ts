@@ -24,17 +24,37 @@ export function classifyLocalQuality(results: LocalSearchResult[]) {
 
 export async function searchLocalResources(input: { tenantId: string; query: string; limit?: number }) {
   const q = input.query.trim();
+  const limit = input.limit ?? 25;
   const supabase = getSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from('catalogue_items')
-    .select('id,title,authors,isbn,doi,publisher,year,subjects,source_url,cover_image')
-    .eq('tenant_id', input.tenantId)
-    .textSearch('search_vector', q, { type: 'websearch' })
-    .limit(input.limit ?? 25);
-  if (error) {
-    if (isMissingSchemaError(error)) return { results: [], quality: 'none' as const, schemaAvailable: false };
-    throw new Error(error.message);
+  const embargoGate = `embargo_until.is.null,embargo_until.lte.${new Date().toISOString()}`;
+  const [catalogue, repository] = await Promise.all([
+    supabase
+      .from('catalogue_items')
+      .select('id,title,authors,isbn,doi,publisher,year,subjects,source_url,cover_image')
+      .eq('tenant_id', input.tenantId)
+      .textSearch('search_vector', q, { type: 'websearch' })
+      .limit(limit),
+    supabase
+      .from('repository_items')
+      .select('id,title,authors,doi,year,item_type,keywords,language')
+      .eq('status', 'published')
+      .eq('visibility', 'global')
+      .or(embargoGate)
+      .textSearch('search_vector', q, { type: 'websearch' })
+      .limit(limit),
+  ]);
+  if (catalogue.error) {
+    if (isMissingSchemaError(catalogue.error)) return { results: [], quality: 'none' as const, schemaAvailable: false };
+    throw new Error(catalogue.error.message);
   }
-  const results = (data ?? []).map((row) => ({ ...row, score: scoreRow(row, q), result_type: 'catalogue' as const })).sort((a, b) => b.score - a.score);
+  if (repository.error && !isMissingSchemaError(repository.error)) throw new Error(repository.error.message);
+  const catalogueResults = (catalogue.data ?? []).map((row) => ({ ...row, score: scoreRow(row, q), result_type: 'catalogue' as const }));
+  const repositoryResults = repository.error
+    ? []
+    : (repository.data ?? []).map((row) => {
+        const withSubjects = { ...row, subjects: row.keywords ?? null };
+        return { ...withSubjects, score: scoreRow(withSubjects, q), result_type: 'repository' as const };
+      });
+  const results = [...catalogueResults, ...repositoryResults].sort((a, b) => b.score - a.score);
   return { results, quality: classifyLocalQuality(results), schemaAvailable: true };
 }

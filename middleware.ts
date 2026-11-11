@@ -1,5 +1,6 @@
 import arcjet, { detectBot, shield } from '@arcjet/next';
 import { NextResponse, type NextRequest } from 'next/server';
+import { FALLBACK_BASE } from '@/server/seo/scholarlyMetadata';
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const sensitivePrefixes = ['/api/auth', '/api/generate-questions', '/api/admin/catalogue/enrich-catalogue', '/api/admin/harvest', '/api/resource-requests/external', '/api/ai/', '/api/public/hooks/', '/api/repository', '/api/oai'];
@@ -27,7 +28,7 @@ function requestId(request: NextRequest) {
 function allowedOrigins() {
   return new Set([
     process.env.APP_BASE_URL,
-    process.env.NEXT_PUBLIC_APP_BASE_URL,
+    FALLBACK_BASE,
     ...(process.env.CORS_ALLOWED_ORIGINS || '').split(',').map((item) => item.trim()).filter(Boolean),
   ].filter(Boolean) as string[]);
 }

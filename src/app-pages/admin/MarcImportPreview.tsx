@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
+
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
 
 interface ImportBatch {
   id: string;
@@ -50,7 +56,8 @@ export default function MarcImportPreview() {
   const [showOverlay, setShowOverlay] = useState(false);
 
   useEffect(() => {
-    fetch('/api/catalogue/marc-import')
+    authHeaders()
+      .then(headers => fetch('/api/catalogue/marc-import', { headers }))
       .then(r => r.ok ? r.json() : { batches: [] })
       .then(data => setBatches(data.batches ?? []))
       .catch(() => {});
@@ -59,7 +66,8 @@ export default function MarcImportPreview() {
   useEffect(() => {
     if (!selectedBatch) return;
     setLoading(true);
-    fetch(`/api/catalogue/marc-import?batchId=${selectedBatch.id}`)
+    authHeaders()
+      .then(headers => fetch(`/api/catalogue/marc-import?batchId=${selectedBatch.id}`, { headers }))
       .then(r => r.ok ? r.json() : { records: [] })
       .then(data => setRecords(data.records ?? []))
       .catch(() => {})

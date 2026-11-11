@@ -102,6 +102,7 @@ interface LocalSearchRow {
   source_url?: string | null;
   cover_image?: string | null;
   item_type?: string | null;
+  result_type?: 'catalogue' | 'repository';
 }
 
 interface ExternalSearchActions {
@@ -259,7 +260,7 @@ export default function GlobalSearch() {
       year: item.year ?? null,
       abstract: '',
       doi: item.doi ?? null,
-      url: item.source_url ?? `/catalogue/${item.id}`,
+      url: item.result_type === 'repository' ? `/repository/${item.id}` : item.source_url ?? `/catalogue/${item.id}`,
       source: 'ESUT Library',
       sourceTag: 'ESUT Library',
       pdf_url: null,
@@ -289,11 +290,11 @@ export default function GlobalSearch() {
       aiSummary: '',
       local,
       openAccess: external,
-      crossref: [],
-      semanticScholar: [],
+      crossref: sourceIncludes(/crossref/i),
+      semanticScholar: sourceIncludes(/semantic scholar|semanticscholar/i),
       pubMed: sourceIncludes(/pubmed|pmc|biomedical/i),
-      archive: [],
-      ajol: [],
+      archive: sourceIncludes(/internet archive|archive\.org/i),
+      ajol: sourceIncludes(/ajol|african journals/i),
       ebooks: sourceIncludes(/book|ebook|library|archive|doab|gutenberg|standard ebooks|hathitrust/i),
       journals: sourceIncludes(/doaj|journal|crossref|openalex|article/i),
       all: [...local, ...external],

@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 
 const COAR_MAX_TIMESTAMP_DRIFT_SEC = 300;
 const COAR_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -19,7 +20,7 @@ export function isCoarConfigured(): boolean {
 }
 
 export function getCoarTargetHost(): string {
-  return process.env.COAR_NOTIFY_TARGET_HOST || 'esutlibrary.edu.ng';
+  return process.env.COAR_NOTIFY_TARGET_HOST || new URL(appBaseUrl()).hostname;
 }
 
 export function verifyCoarSignature(payload: string, signature: string, timestamp: string): boolean {

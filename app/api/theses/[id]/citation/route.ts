@@ -40,6 +40,7 @@ export async function GET(
     created_at: thesis.created_at,
     department: thesis.department,
     faculty_code: thesis.faculty,
+    landing_path: `/theses/${thesis.id}`,
   };
   const body = format === 'ris' ? toRis(citationInput) : toBibtex(citationInput);
 

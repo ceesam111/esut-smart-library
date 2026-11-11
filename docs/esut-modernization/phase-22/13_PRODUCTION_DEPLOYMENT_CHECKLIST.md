@@ -1,0 +1,35 @@
+# 13 — Production Deployment Checklist (Phase 22, §16)
+
+Live production today: Coolify dockerimage flow, app UUID `dgbxbva96eayp8ktfc3guqi0`. **Deployed 2026-10-26 with explicit owner approval: image `ghcr.io/ceesam111/esut-smart-library:20261026-0947` (tag `20261026-0947`, digest `sha256:24477bb95d45…`, pushed to ghcr.io, flipped via Coolify, `running:healthy`, fresh `last_online 2026-10-26 18:30:23`). All 6 pending migrations applied to the production DB the same day, owner-approved, transactional, each verified by markers. Previous live tag `20261023-0259` (localhost-inlining defect) superseded; rollback tags available: `20261023-0259`, `20261020-2101`.**
+
+| # | §16 check | Status | Evidence / action |
+|---|---|---|---|
+| 1 | All required database migrations reviewed | ✅ | 100 migrations reviewed; **exactly 6 were unapplied, proven by behavioral markers, and applied 2026-10-26** (owner-approved): `20261011130000` (RLS escalation), `20261011140000` (diagnostics schedule), `20261022090000` (backup monitoring), `20261022100000` (identity hardening), `20261022110000` (view counters), `20261026090000` (42P17 recursion fix). Each ran in its own transaction via the direct connection (DSN in-memory, never argv), stop-on-failure; all 6 committed (`OK … ALL_APPLIED=6`). Post-apply markers all present: `theses_insert_own`=1, `visibility.diagnostics`=1, `preservation_backups`=1, `orcid_verified_at`=1, `increment_repository_view_count`=1, `is_thesis_submitter`=1, `versions_read_anon` qual changed from `true` to the restricted EXISTS (published+global). Rollback `.down.sql` exists for 5/6; `20261011140000` has no down file (its rollback = `delete from public.agent_schedules where job_type='visibility.diagnostics';`). No migration tracking table exists in this DB (ad-hoc history — documented). |
+| 2 | Backups available & recovery procedures validated | 🚫 BLOCKED | Backup-status monitoring implemented (`backups.ts`). **Restore drill: BLOCKED** — no authorized non-production environment holding a real backup artifact. Exact procedure documented in 08 per §7's allowance. Backup existence ≠ backup reliability (not claimed). |
+| 3 | Secrets/env changes documented, no secrets committed | ✅ | Build args (6 `NEXT_PUBLIC_*` + server env `APP_BASE_URL`, `OAI_ENABLED`, `OAI_TOKEN_SECRET`, Supabase URL/anon key, Arcjet) documented by *name only*; `.env*` files byte-intact (hash-verified) and excluded by `.dockerignore` (only `*.example` allowed); no secret printed or written to any file. Build/push/login credentials passed via stdin/environment, never argv. |
+| 4 | Restricted system access remains secure | ✅ | RLS migration set applied and live-verified: anon sees 0 rows on `user_roles`/`patrons`/thesis tables; authenticated sees 0 rows (tables empty — no widening); `rpc/has_any_role` → 200 `false` for a non-existent subject; storage buckets remain private. Negative CSRF probes still 403 (see row 5). |
+| 5 | Researcher / librarian / administrator journeys function | ⚠️ partial | Code-path verified for all 12 T03 steps (02). **Live post-flip proofs:** `GET /` sets `csrf-token`; same-origin POST with cookie + matching `x-csrf-token` **passes the middleware** (reaches route → 400 payload validation, was 403 pre-flip); mismatched token → **403 "CSRF check failed"**; evil `Origin` → **403 "Origin not allowed"**; authenticated reads on `theses`/`thesis_workflow`/`thesis_supervisors`/`thesis_reviews` → **200** (were 500 `42P17`). **Still blocked:** full human journeys need real test accounts (owner-gated) — see row 10. |
+| 6 | Security regression tests pass | ✅ | 1003/1003 final; §11 audit table complete; zero critical findings open in code. |
+| 7 | Production build passes | ✅ | `next build` exit 0 with corrected env; artifact gate clean. **Phase 22 image:** `ghcr.io/ceesam111/esut-smart-library:20261026-0947` (480 MB), built from the workspace through `.dockerignore` (stale temp context unused — defect 5 resolved), pushed to ghcr (attempt 2 after one resumed network timeout). Image verification: `localhost:3000`=**0**, `explore.proquest.com`=**0**, canonical URL in 9 built files; CSRF middleware edge bundle + client `csrfFetch` chunks present; boot smoke = healthy container, `/api/health` 200, homepage 200 without `localhost:3000`. `NEXT_PUBLIC_CLOUDFLARE_SITE_KEY` empty (key absent in every env file — identical to all prior builds; Turnstile remains an owner item). |
+| 8 | Existing functionality intact | ✅ | Full suite 1003/1003 + targeted regression 203/203 + live read-only probes post-flip: `/api/health` 200, home 200 (`localhost:3000`=absent), `/robots.txt` 200, `/api/oai?verb=Identify` 200, `sitemap.xml` 200, `catalog-sitemap.xml` 200, `theses-sitemap.xml` 200, `/faq` 200. |
+| 9 | Monitoring & rollback plan confirmed | ⚠️ | Rollback path: Coolify tag swap to `20261023-0259` (or `20261020-2101`); DB rollback = per-migration `.down.sql` (5 ready + the one-row delete for `20261011140000`). Live monitoring = `/api/health` + Coolify logs. **Post-flip smoke executed (all green, row 8); 24 h observation window unexecuted — owner action.** CWV/GSC remain unverified (no access — no claims). |
+| 10 | Institutional approvals identified | 📌 mostly obtained | **Obtained (2026-10-26):** image build; image push + Coolify flip; application of all 6 migrations to production. **Still outstanding:** production env vars (`OAI_ENABLED`, `OAI_TOKEN_SECRET`, `APP_BASE_URL`); GitHub PAT rotation; Resend DNS; Turnstile keys; deposit/copyright policy; GSC sitemap submission; ORCID OAuth registration; test accounts for authenticated journeys; staging for §3 write-matrix + rollback execution (owner deferred 2026-10-26). |
+
+## Pre-flip sequence — fully executed 2026-10-26
+
+1. ✅ Build context = workspace via `.dockerignore`.
+2. ✅ Image built with all 6 `NEXT_PUBLIC_*` build args via process environment (never argv); both URL args forced to `https://virtuallibrary.esut.edu.ng`.
+3. ✅ Pre-flight done: image artifact gate re-scanned, tag recorded, rollback targets confirmed.
+4. ✅ Flipped via Coolify API (PATCH tag → POST deploy → `running:healthy`); immediate smoke executed.
+5. ✅ No smoke item failed — no rollback needed.
+
+## Post-deploy verification — executed 2026-10-26
+
+- §10 endpoints re-run against the new image: health/home/robots/sitemaps/OAI/FAQ all **200**; homepage HTML contains **no** `localhost:3000`.
+- CSRF proof: same-origin cookie POST passes (400 route validation, was 403); mismatched token 403; evil origin 403.
+- Real-role DB probes: authenticated 200 on all four thesis tables (was 500 `42P17`); anon unchanged (0 rows); `has_any_role` → 200 `false`.
+- CWV/GSC still **unverified** (no access — no claims).
+
+## Classification input
+
+Approvals for the core release are **obtained** (build, push, flip, migrations) and all known release-blocking technical defects are fixed + live-verified; outstanding items are operational/institutional (restore drill, real test accounts, 24 h observation, PAT/DNS/Turnstile/GSC/ORCID, staging write-matrix/rollback execution) → feeds §16 re-classification in 15.

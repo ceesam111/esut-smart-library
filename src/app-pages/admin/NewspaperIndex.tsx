@@ -8,6 +8,10 @@ type Tab = 'feeds' | 'monitor' | 'manual';
 const LOCAL_SERIALS_KEY = 'admin_newspaper_serials';
 const LOCAL_ARTICLES_KEY = 'admin_newspaper_articles';
 const LOCAL_LOGS_KEY = 'admin_newspaper_harvest_logs';
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
 const CATEGORIES = ['AI', 'Science and Technology', 'Education', 'Politics', 'Religion', 'Sports and Youth Development', 'Communication', 'Tourism and Culture', 'Business', 'Health', 'Agriculture', 'Environment', 'Entertainment and Lifestyle', 'Investigative', 'General News'];
 
 interface Serial {
@@ -111,7 +115,7 @@ export default function NewspaperIndex() {
     try {
       const resp = await fetch('/api/public/hooks/rss-fetch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify(serialId ? { serialId } : {}),
       });
       const json = await resp.json();

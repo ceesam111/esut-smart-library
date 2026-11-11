@@ -1,4 +1,5 @@
 import { generateCoarNonce, isCoarConfigured, signCoarPayload } from '@/server/interoperability/coar-security';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 
 export interface CoarNotifyNotification {
   '@context': string;
@@ -27,7 +28,7 @@ export function createCoarNotify(input: {
 }): CoarNotifyNotification {
   return {
     '@context': 'https://www.w3.org/ns/activitystreams',
-    id: `https://esutlibrary.edu.ng/notify/${crypto.randomUUID()}`,
+    id: `${appBaseUrl()}/notify/${crypto.randomUUID()}`,
     type: ['coar-notify:EndorsementAction', 'Like'],
     actor: {
       id: input.actorId,

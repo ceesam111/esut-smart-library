@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { FALLBACK_BASE } from '@/server/seo/scholarlyMetadata';
 import { getRegistrationPolicy } from '@/server/registration/policy';
 import { isPrivilegedSelfRegistrationRole, policyRequiresBranchApproval } from '@/lib/registrationPolicy';
 
@@ -11,7 +12,7 @@ function hashToken(token: string) {
 }
 
 function getPublicOrigin(request: NextRequest) {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.SITE_URL;
+  const configuredOrigin = process.env.APP_URL || process.env.SITE_URL;
   if (configuredOrigin) return configuredOrigin.replace(/\/$/, '');
 
   const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host');
@@ -20,7 +21,7 @@ function getPublicOrigin(request: NextRequest) {
     return `${forwardedProto}://${forwardedHost.split(',')[0].trim()}`;
   }
 
-  return 'https://esutlibrary.edu.ng';
+  return FALLBACK_BASE;
 }
 
 async function grantPatronRole(supabase: ReturnType<typeof getSupabaseAdminClient>, patron: { user_id: string; account_role: string | null; preferred_branch: string | null; tenant_id: string | null }) {

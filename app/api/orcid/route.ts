@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { validateOrcidId } from '@/lib/identity/orcid';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,8 +7,8 @@ export async function GET(request: NextRequest) {
   const orcidId = new URL(request.url).searchParams.get('id');
   if (!orcidId) return NextResponse.json({ success: false, error: 'id required' }, { status: 400 });
 
-  const formatted = formatOrcidId(orcidId);
-  if (!formatted) return NextResponse.json({ success: false, error: 'Invalid ORCID ID format' }, { status: 400 });
+  const formatted = validateOrcidId(orcidId);
+  if (!formatted) return NextResponse.json({ success: false, error: 'Invalid ORCID ID format or checksum' }, { status: 400 });
 
   try {
     const res = await fetch(`https://pub.orcid.org/v3.0/${formatted}/record`, {
@@ -44,10 +45,4 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
   }
-}
-
-function formatOrcidId(input: string): string | null {
-  const cleaned = input.replace(/^https?:\/\//, '').replace(/^orcid\.org\//, '');
-  if (!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(cleaned)) return null;
-  return cleaned;
 }

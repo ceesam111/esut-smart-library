@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { trackClientEvent } from '@/lib/analytics';
 import BackButton from '@/components/BackButton';
 import ImageViewer, { isImageFile } from '@/components/repository/ImageViewer';
 import { useI18n, type TranslationKey } from '@/lib/i18n';
@@ -159,13 +158,20 @@ export default function RepositoryItem() {
       const { data } = await supabase.from('repository_items').select('*').or(`id.eq.${lookup},handle.eq.${lookup}`).maybeSingle();
       setItem(data);
       if (data) {
-        await supabase.from('repository_items').update({ view_count: (data.view_count ?? 0) + 1 }).eq('id', id!);
-        void trackClientEvent({
-          event_type: 'repository_item_view',
-          entity_id: String(data.id),
-          entity_type: 'repository_item',
-          path: `/repository/${id}`,
-        });
+        void fetch(`/api/repository/${encodeURIComponent(String(data.id))}/view`, {
+          method: 'POST',
+          keepalive: true,
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'view' }),
+        })
+          .then((res) => res.json() as Promise<{ view_count?: number }>)
+          .then((payload) => {
+            const nextCount = payload?.view_count;
+            if (typeof nextCount === 'number') {
+              setItem(prev => (prev ? { ...prev, view_count: nextCount } : prev));
+            }
+          })
+          .catch(() => undefined);
       }
 
       const [
@@ -259,8 +265,20 @@ export default function RepositoryItem() {
   const handleDownload = async () => {
     if (!item?.file_url) return;
     window.open(item.file_url, '_blank');
-    await supabase.from('repository_items').update({ download_count: (item.download_count ?? 0) + 1 }).eq('id', id!);
-    setItem(prev => (prev ? { ...prev, download_count: (prev.download_count ?? 0) + 1 } : prev));
+    void fetch(`/api/repository/${encodeURIComponent(String(item.id))}/view`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'download' }),
+    })
+      .then((res) => res.json() as Promise<{ download_count?: number }>)
+      .then((payload) => {
+        const nextCount = payload?.download_count;
+        if (typeof nextCount === 'number') {
+          setItem(prev => (prev ? { ...prev, download_count: nextCount } : prev));
+        }
+      })
+      .catch(() => undefined);
   };
 
   const handleReserve = async () => {

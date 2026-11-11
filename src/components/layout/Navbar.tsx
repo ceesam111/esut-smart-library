@@ -671,30 +671,50 @@ export default function Navbar() {
             <div className="border-t border-white/10 px-5 py-4 space-y-3">
               <div className="flex gap-2">
                 {user ? (
-                  <Link
-                    to={dashboardPath}
-                    className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-neutral-900 hover:opacity-90 transition-opacity"
-                    style={{ background: GOLD }}
-                  >
-                    {dashboardLabel}
-                  </Link>
-                ) : (
                   <>
-                    <Link
-                      to="/login"
-                      className="flex-1 text-center py-2 rounded-md text-sm font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors"
-                    >
-                      {t('nav.login')}
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-neutral-900 hover:opacity-90 transition-opacity"
-                      style={{ background: GOLD }}
-                    >
-                      {t('nav.signUp')}
-                    </Link>
-                  </>
-                )}
+                    <div className="px-3 py-2">
+                      <div className="flex items-center gap-2 px-3 py-2">
+                        {patron?.profile_photo_url ? (
+                          <img src={patron.profile_photo_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white/30" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white/30 text-neutral-800" style={{ background: GOLD }}>
+                            {patron?.full_name?.slice(0, 2).toUpperCase() ?? 'ME'}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-neutral-900 truncate">{patron?.full_name}</p>
+                          <p className="text-xs text-neutral-500 truncate">{patron?.account_role ?? 'Patron'}</p>
+                        </div>
+                      </div>
+                      <div className="w-full">
+                        <Link to={dashboardPath} className="block text-center py-2 rounded-md text-sm font-semibold text-neutral-900 hover:opacity-90 transition-opacity" style={{ background: GOLD }}>
+                          {dashboardLabel}
+                        </Link>
+                      </div>
+                      <button
+                        onClick={handleSignOut}
+                        className="block w-full text-left py-2 rounded-md text-sm text-red-600 hover:bg-red-50 transition-colors duration-100"
+                      >
+                        {t('nav.signOut')}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        to="/login"
+                        className="flex-1 text-center py-2 rounded-md text-sm font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors"
+                      >
+                        {t('nav.login')}
+                      </Link>
+                      <Link
+                        to="/register"
+                        className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-neutral-900 hover:opacity-90 transition-opacity"
+                        style={{ background: GOLD }}
+                      >
+                        {t('nav.signUp')}
+                      </Link>
+                    </>
+                  )}
               </div>
               <div>
                 <LanguageSwitcher id="lang-switcher-mobile" className="w-full justify-center" />
@@ -719,10 +739,8 @@ export default function Navbar() {
               </a>
             </div>
           </div>
-        </>
-      )}
-    </>
-  );
+        )}
+      );
 }
 
 // ── Mobile sub-components ─────────────────────────────────────────────────────

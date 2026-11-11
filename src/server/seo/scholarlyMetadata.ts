@@ -21,11 +21,26 @@ export interface ScholarlyItem {
   landing_path?: string;
 }
 
-const FALLBACK_BASE = 'https://virtuallibrary.esut.edu.ng';
+export const FALLBACK_BASE = 'https://virtuallibrary.esut.edu.ng';
+
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]', '::1']);
+
+function isLoopbackBase(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
+    return LOOPBACK_HOSTNAMES.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
 
 export function appBaseUrl(): string {
-  const base = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL || FALLBACK_BASE;
-  return base.replace(/\/+$/, '');
+  const configured = (process.env.APP_BASE_URL || '').replace(/\/+$/, '');
+  if (configured && !(process.env.NODE_ENV === 'production' && isLoopbackBase(configured))) {
+    return configured;
+  }
+  return FALLBACK_BASE;
 }
 
 export function normalizeNames(value: unknown): string[] {

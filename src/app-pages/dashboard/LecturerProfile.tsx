@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import BackButton from '@/components/BackButton';
+import { useI18n } from '@/lib/i18n';
+import { normalizeOrcidId } from '@/lib/identity/orcid';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -151,15 +153,18 @@ function SectionHead({ n, title, done }: { n: number; title: string; done: boole
 
 export default function LecturerProfile() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [patronId, setPatronId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileSlug, setProfileSlug] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [orcidVerifying, setOrcidVerifying] = useState(false);
-  const [orcidStatus, setOrcidStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [orcidStatus, setOrcidStatus] = useState<'idle' | 'valid' | 'invalid' | 'mismatch' | 'conflict' | 'unreachable'>('idle');
   const [orcidName, setOrcidName] = useState('');
+  const [verifiedOrcid, setVerifiedOrcid] = useState<string | null>(null);
   const [fetchingPubs, setFetchingPubs] = useState(false);
   const [publications, setPublications] = useState<Publication[]>([]);
   const [grants, setGrants] = useState<Grant[]>([]);
@@ -222,6 +227,7 @@ export default function LecturerProfile() {
 
       if (profile) {
         setProfileId(profile.id);
+        setProfileSlug(profile.slug ?? null);
         setSalutation(profile.salutation ?? '');
         setFirstName(profile.first_name ?? '');
         setMiddleName(profile.middle_name ?? '');
@@ -240,7 +246,10 @@ export default function LecturerProfile() {
         setKeywords(profile.research_keywords ?? []);
         setBiography(profile.biography ?? '');
         setOrcidId(profile.orcid_id ?? '');
-        if (profile.orcid_verified) setOrcidStatus('valid');
+        if (profile.orcid_verified && profile.orcid_id) {
+          setOrcidStatus('valid');
+          setVerifiedOrcid(profile.orcid_id);
+        }
         setGoogleScholarId(profile.google_scholar_id ?? '');
         setResearchgateUrl(profile.researchgate_url ?? '');
         setAcademiaUrl(profile.academia_url ?? '');
@@ -300,6 +309,9 @@ export default function LecturerProfile() {
       ? undefined
       : generateSlug(salutation, firstName, surname);
 
+    const normalizedOrcid = normalizeOrcidId(orcidId);
+    const orcidStillVerified = normalizedOrcid !== null && normalizedOrcid === verifiedOrcid;
+
     const payload = {
       patron_id: patronId,
       salutation: salutation || null,
@@ -319,8 +331,8 @@ export default function LecturerProfile() {
       specialisations,
       research_keywords: keywords,
       biography: biography || null,
-      orcid_id: orcidId || null,
-      orcid_verified: orcidStatus === 'valid',
+      orcid_id: orcidStillVerified && verifiedOrcid ? verifiedOrcid : orcidId || null,
+      orcid_verified: orcidStillVerified,
       google_scholar_id: googleScholarId || null,
       researchgate_url: researchgateUrl || null,
       academia_url: academiaUrl || null,
@@ -394,7 +406,7 @@ export default function LecturerProfile() {
       setSaveMsg('Saved');
     }
     setTimeout(() => setSaveMsg(''), 3000);
-  }, [patronId, profileId, salutation, firstName, middleName, surname, academicRank, employmentStatus, department, programmesTaught, institutionalEmail, phone, officeLocation, highestQual, otherQuals, memberships, specialisations, keywords, biography, orcidId, orcidStatus, googleScholarId, researchgateUrl, academiaUrl, profilePhotoUrl, visibility, supervisPhD, supervisMEd, publications, grants, generateSlug]);
+  }, [patronId, profileId, salutation, firstName, middleName, surname, academicRank, employmentStatus, department, programmesTaught, institutionalEmail, phone, officeLocation, highestQual, otherQuals, memberships, specialisations, keywords, biography, orcidId, verifiedOrcid, googleScholarId, researchgateUrl, academiaUrl, profilePhotoUrl, visibility, supervisPhD, supervisMEd, publications, grants, generateSlug]);
 
   // ── ORCID verify ────────────────────────────────────────────────────────────
 
@@ -403,17 +415,38 @@ export default function LecturerProfile() {
     setOrcidVerifying(true);
     setOrcidStatus('idle');
     try {
-      const { data } = await supabase.functions.invoke('publication-fetch', {
-        body: { action: 'verify_orcid', orcid: orcidId.trim() },
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const response = await fetch('/api/profile/orcid/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ orcid: orcidId.trim() }),
       });
-      if (data?.valid) {
+      const payload = await response.json().catch(() => ({})) as {
+        success?: boolean;
+        failure?: string;
+        orcidName?: string | null;
+        data?: { orcid?: string; orcidName?: string };
+      };
+      if (response.ok && payload.success && payload.data?.orcid) {
         setOrcidStatus('valid');
-        setOrcidName(data.name ?? '');
+        setVerifiedOrcid(payload.data.orcid);
+        setOrcidName(payload.data.orcidName ?? '');
+      } else if (payload.failure === 'name_mismatch') {
+        setOrcidName(payload.orcidName ?? '');
+        setOrcidStatus('mismatch');
+      } else if (payload.failure === 'orcid_conflict') {
+        setOrcidStatus('conflict');
+      } else if (payload.failure === 'fetch_failed') {
+        setOrcidStatus('unreachable');
       } else {
         setOrcidStatus('invalid');
       }
     } catch {
-      setOrcidStatus('invalid');
+      setOrcidStatus('unreachable');
     }
     setOrcidVerifying(false);
   };
@@ -476,7 +509,7 @@ export default function LecturerProfile() {
             <p className="text-neutral-500 text-sm mt-1">Your public academic profile on the ESUT Lecturer Directory.</p>
           </div>
           {status === 'published' && (
-            <a href={`/lecturers/${generateSlug(salutation, firstName, surname)}`} className="btn-outline text-sm px-4 py-2 rounded-lg" target="_blank">
+            <a href={`/lecturers/${profileSlug ?? generateSlug(salutation, firstName, surname)}`} className="btn-outline text-sm px-4 py-2 rounded-lg" target="_blank" rel="noopener noreferrer">
               View Published Profile
             </a>
           )}
@@ -725,13 +758,18 @@ export default function LecturerProfile() {
             </div>
             {orcidStatus === 'valid' && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-green-600 font-medium">✓ Verified: {orcidName}</span>
+                <span className="text-xs text-green-600 font-medium">✓ Verified{orcidName ? `: ${orcidName}` : ''}</span>
                 <button type="button" onClick={fetchPublications} disabled={fetchingPubs} className="text-xs text-primary-600 hover:text-primary-800 font-medium disabled:opacity-50">
                   {fetchingPubs ? 'Fetching…' : '→ Fetch publications'}
                 </button>
               </div>
             )}
             {orcidStatus === 'invalid' && <p className="text-xs text-red-600 mt-1">ORCID not found. Check the format: 0000-0000-0000-0000</p>}
+            {orcidStatus === 'mismatch' && (
+              <p className="text-xs text-red-600 mt-1">{t('profile.orcidNameMismatch', { name: orcidName || '—' })}</p>
+            )}
+            {orcidStatus === 'conflict' && <p className="text-xs text-red-600 mt-1">{t('profile.orcidConflict')}</p>}
+            {orcidStatus === 'unreachable' && <p className="text-xs text-amber-600 mt-1">{t('profile.orcidUnreachable')}</p>}
           </div>
           <div>
             <label className="label">Google Scholar Profile ID</label>

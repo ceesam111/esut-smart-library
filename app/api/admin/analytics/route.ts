@@ -11,6 +11,8 @@ interface EventQuery {
   gte: (col: string, val: string) => EventQuery;
   lt: (col: string, val: string) => EventQuery;
   is: (col: string, val: unknown) => EventQuery;
+  or: (expr: string) => EventQuery;
+  in: (col: string, vals: string[]) => EventQuery;
   limit: (n: number) => EventQuery;
   then: (onfulfilled: (value: { count: number | null; data: Record<string, unknown>[] | null }) => void) => void;
 }
@@ -19,7 +21,8 @@ export async function GET(request: NextRequest) {
   try {
     await requireRole(request, GLOBAL_ADMIN_ROLES);
     const { searchParams } = new URL(request.url);
-    const days = Math.min(parseInt(searchParams.get('days') ?? '30', 10), 365);
+    const requestedDays = Number.parseInt(searchParams.get('days') ?? '30', 10);
+    const days = Number.isFinite(requestedDays) ? Math.min(Math.max(requestedDays, 1), 365) : 30;
     const filters: Filters = {};
     const faculty = searchParams.get('faculty');
     const patronRole = searchParams.get('patron_role');
@@ -31,8 +34,10 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdminClient();
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+    const BOT_FILTER = 'bot_flag.is.null,bot_flag.neq.BOT';
+
     const eventCount = (eventType: string, extra?: (q: EventQuery) => EventQuery) => {
-      let q: EventQuery = supabase.from('analytics_events').select('id', { count: 'exact', head: true }).eq('event_type', eventType).gte('created_at', since) as unknown as EventQuery;
+      let q: EventQuery = supabase.from('analytics_events').select('id', { count: 'exact', head: true }).eq('event_type', eventType).gte('created_at', since).or(BOT_FILTER) as unknown as EventQuery;
       if (filters.faculty) q = q.eq('faculty', filters.faculty);
       if (filters.patronRole) q = q.eq('patron_role', filters.patronRole);
       if (filters.department) q = q.eq('department', filters.department);
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
     };
 
     const eventRows = (eventType: string, columns: string, limit: number) => {
-      let q: EventQuery = supabase.from('analytics_events').select(columns).eq('event_type', eventType).gte('created_at', since).limit(limit) as unknown as EventQuery;
+      let q: EventQuery = supabase.from('analytics_events').select(columns).eq('event_type', eventType).gte('created_at', since).or(BOT_FILTER).limit(limit) as unknown as EventQuery;
       if (filters.faculty) q = q.eq('faculty', filters.faculty);
       if (filters.patronRole) q = q.eq('patron_role', filters.patronRole);
       if (filters.department) q = q.eq('department', filters.department);
@@ -51,8 +56,8 @@ export async function GET(request: NextRequest) {
     const [checkouts, borrowerRows, currentLoans, overdueLoans, catalogueSearches, zeroResultSearches, repositoryViews, repositoryDownloads, topTitles, topRepositoryItems, dailyActivity] = await Promise.all([
       eventCount('checkout'),
       eventRows('checkout', 'user_id', 5000),
-      supabase.from('loans').select('id', { count: 'exact', head: true }).is('returned_at', null),
-      supabase.from('loans').select('id', { count: 'exact', head: true }).is('returned_at', null).lt('due_date', new Date().toISOString()),
+      supabase.from('loans').select('id', { count: 'exact', head: true }).in('status', ['active', 'overdue']),
+      supabase.from('loans').select('id', { count: 'exact', head: true }).in('status', ['active', 'overdue']).lt('due_date', new Date().toISOString()),
       eventCount('catalogue_search'),
       eventCount('catalogue_search', (q: EventQuery) => q.eq('result_count', 0)),
       eventCount('repository_item_view'),
@@ -60,7 +65,7 @@ export async function GET(request: NextRequest) {
       eventRows('checkout', 'entity_id, metadata', 1000),
       eventRows('repository_file_download', 'entity_id', 1000),
       (async () => {
-        let q: EventQuery = supabase.from('analytics_events').select('event_type, created_at').gte('created_at', since).limit(10000) as unknown as EventQuery;
+        let q: EventQuery = supabase.from('analytics_events').select('event_type, created_at').gte('created_at', since).or(BOT_FILTER).limit(10000) as unknown as EventQuery;
         if (filters.faculty) q = q.eq('faculty', filters.faculty);
         if (filters.patronRole) q = q.eq('patron_role', filters.patronRole);
         if (filters.department) q = q.eq('department', filters.department);
@@ -117,7 +122,7 @@ export async function GET(request: NextRequest) {
           ...(filters.faculty ? { faculty: filters.faculty } : {}),
           ...(filters.patronRole ? { patron_role: filters.patronRole } : {}),
           ...(filters.department ? { department: filters.department } : {}),
-          note: 'currentLoans/overdueLoans come from the loans table and are not segmented by faculty/role.',
+          note: 'currentLoans/overdueLoans come from the loans table and are not segmented by faculty/role. Bot events (bot_flag=BOT) are excluded from all event counts.',
         },
       },
     });

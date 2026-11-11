@@ -170,6 +170,11 @@ interface MarcField {
   subfields: { code: string; value: string }[];
 }
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function CatalogueNew() {
   const navigate = useNavigate();
   const { loading: authLoading, hasRole } = useAuth();
@@ -221,10 +226,12 @@ export default function CatalogueNew() {
 
   // Load MARC frameworks
   useEffect(() => {
-    fetch('/api/catalogue/frameworks')
-      .then(r => r.ok ? r.json() : { frameworks: [] })
-      .then(data => setFrameworks(data.frameworks?.map((f: { code: string; name: string }) => ({ code: f.code, name: f.name })) ?? []))
-      .catch(() => {});
+    void authHeaders().then((headers) => {
+      fetch('/api/catalogue/frameworks', { headers })
+        .then(r => r.ok ? r.json() : { frameworks: [] })
+        .then(data => setFrameworks(data.frameworks?.map((f: { code: string; name: string }) => ({ code: f.code, name: f.name })) ?? []))
+        .catch(() => {});
+    });
   }, []);
 
   // Load shelves when library selection changes
@@ -361,7 +368,7 @@ export default function CatalogueNew() {
   // ── Z39.50 Copy Cataloguing ─────────────────────────────────────────────────
   const loadZ3950Targets = async () => {
     try {
-      const res = await fetch('/api/z3950/targets');
+      const res = await fetch('/api/z3950/targets', { headers: await authHeaders() });
       if (!res.ok) return;
       const data = await res.json();
       setZ3950Targets(data.targets ?? []);
@@ -382,7 +389,7 @@ export default function CatalogueNew() {
     try {
       const res = await fetch('/api/z3950/search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ targetId: z3950TargetId, query: z3950Query, index: z3950Index }),
       });
       const data = await res.json();

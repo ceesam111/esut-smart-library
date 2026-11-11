@@ -2,6 +2,7 @@ import { randomBytes, createHash } from 'crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getBearerToken, requireUser } from '@/server/auth/requireUser';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { FALLBACK_BASE } from '@/server/seo/scholarlyMetadata';
 import { getRegistrationPolicy } from '@/server/registration/policy';
 import { verifyRecoveryReceipt } from '@/server/registration/recoveryReceipt';
 import { completeEmailVerification } from '@/server/registration/completeEmailVerification';
@@ -15,7 +16,7 @@ function hashToken(token: string) {
 }
 
 function getPublicOrigin(request: NextRequest) {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.SITE_URL;
+  const configuredOrigin = process.env.APP_URL || process.env.SITE_URL;
   if (configuredOrigin) return configuredOrigin.replace(/\/$/, '');
 
   const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host');
@@ -24,7 +25,7 @@ function getPublicOrigin(request: NextRequest) {
     return `${forwardedProto}://${forwardedHost.split(',')[0].trim()}`;
   }
 
-  return 'https://esutlibrary.edu.ng';
+  return FALLBACK_BASE;
 }
 
 export async function POST(request: NextRequest) {

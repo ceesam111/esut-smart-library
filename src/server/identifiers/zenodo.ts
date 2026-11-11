@@ -1,4 +1,5 @@
 import type { DoiProvider } from './types';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 
 export class ZenodoDoiProvider implements DoiProvider {
   name = 'zenodo';
@@ -15,7 +16,7 @@ export class ZenodoDoiProvider implements DoiProvider {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.ZENODO_TOKEN}`,
-          'User-Agent': 'ESUT-Smart-Library/1.0 (https://esutlibrary.edu.ng)',
+          'User-Agent': `ESUT-Smart-Library/1.0 (${appBaseUrl()})`,
         },
         body: JSON.stringify({
           metadata: {

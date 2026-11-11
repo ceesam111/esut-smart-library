@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 import '../src/styles.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://virtuallibrary.esut.edu.ng'),
+  metadataBase: new URL(appBaseUrl()),
   title: 'ESUT Smart Library',
   description:
     'The official digital library platform of Enugu State University of Science and Technology — powering research, catalogues, repositories, AI-librarian services, and academic resources.',

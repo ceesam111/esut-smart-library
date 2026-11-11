@@ -1,4 +1,5 @@
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 import {
   buildToken,
   dateDatestamp,
@@ -344,8 +345,23 @@ async function handleListVerb(
   };
 }
 
+function loopbackPrefixLength(value: string): number {
+  const match = /^(https?):\/\/([^/?#]+)/i.exec(value);
+  if (!match) return 0;
+  const hostname = match[2].split(':')[0].toLowerCase();
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '0.0.0.0') return 0;
+  return match[0].length;
+}
+
+function trustedBaseUrl(requestUrl: string): string {
+  const requestBase = requestUrl.replace(/\?.*$/, '');
+  const prefixLength = loopbackPrefixLength(requestBase);
+  if (prefixLength === 0) return requestBase;
+  return `${appBaseUrl()}${requestBase.slice(prefixLength)}`;
+}
+
 export function buildContext(requestUrl: string, overrides?: Partial<OaiRequestContext>): OaiRequestContext {
-  const baseUrl = process.env.OAI_BASE_URL ?? requestUrl.replace(/\?.*$/, '');
+  const baseUrl = process.env.OAI_BASE_URL ?? trustedBaseUrl(requestUrl);
   return {
     baseUrl,
     config: {

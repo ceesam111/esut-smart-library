@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 interface AnalyticsData {
   checkouts: number;
@@ -16,6 +17,11 @@ interface AnalyticsData {
   daily: Record<string, Record<string, number>>;
 }
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function Analytics() {
   const navigate = useNavigate();
   const { loading: authLoading, hasRole } = useAuth();
@@ -25,7 +31,8 @@ export default function Analytics() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/admin/analytics?days=${days}`)
+    authHeaders()
+      .then(headers => fetch(`/api/admin/analytics?days=${days}`, { headers }))
       .then(r => r.ok ? r.json() : { data: null })
       .then(result => setData(result.data))
       .catch(() => {})

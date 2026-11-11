@@ -7,7 +7,7 @@ const FAQS = [
   },
   {
     q: 'How do I access library resources from home?',
-    a: 'Log in at esutlibrary.edu.ng from any device. Open access items are available without login. Licensed resources require your library account. Install the ESUT Library app from your browser for offline access by clicking "Add to Home Screen" when prompted.',
+    a: 'Log in at virtuallibrary.esut.edu.ng from any device. Open access items are available without login. Licensed resources require your library account. Install the ESUT Library app from your browser for offline access by clicking "Add to Home Screen" when prompted.',
   },
   {
     q: 'How do I borrow a physical book?',

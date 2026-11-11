@@ -1,0 +1,634 @@
+{
+  "backedUpAt": "2026-10-10T18:10:47.201Z",
+  "backupMs": 6268,
+  "counts": {
+    "academic_calendar": 1,
+    "library_branches": 1,
+    "patrons": 1,
+    "access_visitors": 1,
+    "library_access_identities": 1,
+    "access_visits": 2,
+    "access_events": 3,
+    "access_visitor_passes": 1,
+    "library_branch_capacity_history": 2,
+    "analytics_events": 2,
+    "audit_logs": 8,
+    "user_roles": 2,
+    "auth_users": 2
+  },
+  "tables": {
+    "academic_calendar": [
+      {
+        "id": "e2c562de-49e6-4acc-999d-56ca186da151",
+        "session": "DR SLAAS/2026",
+        "semester_one_start": "2026-08-31",
+        "semester_one_end": "2026-11-19",
+        "exam_one_start": null,
+        "exam_one_end": null,
+        "semester_two_start": null,
+        "semester_two_end": null,
+        "exam_two_start": null,
+        "exam_two_end": null,
+        "vacation_start": null,
+        "vacation_end": null,
+        "public_holidays": [],
+        "created_by": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "created_at": "2026-10-10T18:09:49.347245+00:00",
+        "updated_at": "2026-10-10T18:09:49.347245+00:00"
+      }
+    ],
+    "library_branches": [
+      {
+        "id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "code": "DR-SLAAS-A",
+        "name": "DR Drill Branch",
+        "location": null,
+        "timezone": "Africa/Lagos",
+        "operating_hours": {},
+        "capacity": 12,
+        "capacity_mode": "warning",
+        "warn_threshold_pct": 80,
+        "active": true,
+        "created_at": "2026-10-10T18:09:53.341751+00:00",
+        "updated_at": "2026-10-10T18:09:53.341751+00:00"
+      }
+    ],
+    "patrons": [
+      {
+        "id": "98f75a07-1caf-439a-9a5f-d04b7dcb1383",
+        "user_id": "4f76f011-67c0-4b2e-9dc6-6c9426ffc895",
+        "patron_id": "DR-SLAAS-P1",
+        "full_name": "DR Patron Dana",
+        "email": "dr-slaas-p1@invalid.invalid",
+        "phone": null,
+        "date_of_birth": null,
+        "gender": null,
+        "patron_category": "undergraduate",
+        "faculty_code": null,
+        "faculty_name": null,
+        "department": null,
+        "level": null,
+        "programme": null,
+        "matric_number": null,
+        "staff_id": null,
+        "rank": null,
+        "status": "active",
+        "membership_expires_at": null,
+        "created_at": "2026-10-10T18:10:06.309808+00:00",
+        "updated_at": "2026-10-10T18:10:06.309808+00:00",
+        "deletion_requested": false,
+        "deletion_requested_at": null,
+        "surname": null,
+        "other_names": null,
+        "student_type": null,
+        "institution": null,
+        "duration_years": null,
+        "current_level": null,
+        "academic_rank": null,
+        "research_interests": null,
+        "highest_qualification": null,
+        "professional_qualification": null,
+        "short_bio": null,
+        "preferred_branch": null,
+        "library_section": null,
+        "job_title": null,
+        "account_role": null,
+        "library_number": "AFUED-2026-00179",
+        "approved_by": null,
+        "approved_at": "2026-10-10T18:10:06.309808+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "email_verified_at": null,
+        "main_library_access_at": null,
+        "branch_approved_at": null,
+        "branch_approved_by": null,
+        "registration_policy": null,
+        "profile_photo_url": null
+      }
+    ],
+    "access_visitors": [
+      {
+        "id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "full_name": "DR Visitor One",
+        "organization": "DR Org",
+        "purpose": "DR restore drill",
+        "host_department": null,
+        "contact_email": null,
+        "contact_phone": null,
+        "created_by": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "created_at": "2026-10-10T18:10:12.213475+00:00",
+        "updated_at": "2026-10-10T18:10:12.213475+00:00"
+      }
+    ],
+    "library_access_identities": [
+      {
+        "id": "a95ea6f8-237c-40b0-b113-0c1c1a5e4df4",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "patron_id": "98f75a07-1caf-439a-9a5f-d04b7dcb1383",
+        "secure_token_hash": "b877defbbb2a6ea22d20c2c3dfd20e61354e1dabb94718760b2fd09e63a41bcb",
+        "qr_version": 1,
+        "status": "active",
+        "barcode": null,
+        "issued_at": "2026-10-10T18:10:09.676+00:00",
+        "revoked_at": null,
+        "created_at": "2026-10-10T18:10:09.732954+00:00",
+        "updated_at": "2026-10-10T18:10:09.732954+00:00"
+      }
+    ],
+    "access_visits": [
+      {
+        "id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "access_identity_id": null,
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "patron_id": null,
+        "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "status": "checked_out",
+        "entry_method": "visitor_pass",
+        "exit_method": "visitor_pass",
+        "checked_in_at": "2026-10-10T18:10:16.575+00:00",
+        "checked_out_at": "2026-10-10T18:10:28.352+00:00",
+        "duration_minutes": 0,
+        "academic_session": "DR SLAAS/2026",
+        "semester": "1",
+        "is_observed": true,
+        "correction_reason": null,
+        "corrected_by": null,
+        "corrected_at": null,
+        "created_at": "2026-10-10T18:10:18.415891+00:00",
+        "updated_at": "2026-10-10T18:10:18.415891+00:00",
+        "visitor_pass_id": "cc95c90a-4c10-4573-a5ff-d4e89a35dcf7"
+      },
+      {
+        "id": "807dcd81-2101-48bd-8a75-9a4503d3c125",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "access_identity_id": "a95ea6f8-237c-40b0-b113-0c1c1a5e4df4",
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "patron_id": "98f75a07-1caf-439a-9a5f-d04b7dcb1383",
+        "visitor_id": null,
+        "status": "checked_in",
+        "entry_method": "qr",
+        "exit_method": null,
+        "checked_in_at": "2026-10-10T16:10:37.371+00:00",
+        "checked_out_at": null,
+        "duration_minutes": null,
+        "academic_session": "DR SLAAS/2026",
+        "semester": "1",
+        "is_observed": true,
+        "correction_reason": null,
+        "corrected_by": null,
+        "corrected_at": null,
+        "created_at": "2026-10-10T18:10:34.943919+00:00",
+        "updated_at": "2026-10-10T18:10:34.943919+00:00",
+        "visitor_pass_id": null
+      }
+    ],
+    "access_events": [
+      {
+        "id": "5021952d-70bb-4caa-9fc2-c9dd5d5b8977",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "access_identity_id": null,
+        "visit_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "patron_id": null,
+        "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "event_type": "VISITOR_ENTRY",
+        "event_source": "visitor_pass",
+        "workstation_id": null,
+        "metadata": {
+          "pass_id": "cc95c90a-4c10-4573-a5ff-d4e89a35dcf7"
+        },
+        "created_at": "2026-10-10T18:10:18.708418+00:00"
+      },
+      {
+        "id": "c8a18024-65ca-4320-8318-b4e456e1130d",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "access_identity_id": null,
+        "visit_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "patron_id": null,
+        "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "event_type": "VISITOR_EXIT",
+        "event_source": "visitor_pass",
+        "workstation_id": null,
+        "metadata": {
+          "duration_minutes": 0
+        },
+        "created_at": "2026-10-10T18:10:30.00735+00:00"
+      },
+      {
+        "id": "1e8c579f-54b1-40a9-8e73-ce1527064460",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "access_identity_id": "a95ea6f8-237c-40b0-b113-0c1c1a5e4df4",
+        "visit_id": "807dcd81-2101-48bd-8a75-9a4503d3c125",
+        "patron_id": "98f75a07-1caf-439a-9a5f-d04b7dcb1383",
+        "visitor_id": null,
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "event_type": "CHECK_IN",
+        "event_source": "qr",
+        "workstation_id": null,
+        "metadata": {},
+        "created_at": "2026-10-10T18:10:35.871735+00:00"
+      }
+    ],
+    "access_visitor_passes": [
+      {
+        "id": "cc95c90a-4c10-4573-a5ff-d4e89a35dcf7",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "secure_token_hash": "23552b622c2fc144a7c79cd8139b7425ff32eaba9a6946324098eea24b400f48",
+        "valid_from": "2026-10-10T18:10:14.272+00:00",
+        "valid_until": "2026-10-10T19:10:14.272+00:00",
+        "status": "active",
+        "issued_by": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "revoked_at": null,
+        "created_at": "2026-10-10T18:10:14.621962+00:00",
+        "updated_at": "2026-10-10T18:10:14.621962+00:00"
+      }
+    ],
+    "library_branch_capacity_history": [
+      {
+        "id": "bfa1afff-8c9a-4edf-8df2-f433c1cbd286",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "capacity": 10,
+        "capacity_mode": "warning",
+        "effective_from": "2026-10-10T18:10:00.356+00:00",
+        "effective_to": null,
+        "changed_by": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "reason": null,
+        "created_at": "2026-10-10T18:10:01.114312+00:00"
+      },
+      {
+        "id": "2b2f8262-25a4-4a85-8cb9-70709a5a38e5",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "capacity": 12,
+        "capacity_mode": "warning",
+        "effective_from": "2026-10-10T18:10:04.179+00:00",
+        "effective_to": null,
+        "changed_by": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "reason": "DR capacity change",
+        "created_at": "2026-10-10T18:10:04.57402+00:00"
+      }
+    ],
+    "analytics_events": [
+      {
+        "id": "531dd8f2-10ac-4fae-a589-c231d73ef19a",
+        "event_type": "library_visit",
+        "user_id": null,
+        "session_id": null,
+        "ip_hash": null,
+        "user_agent": null,
+        "referrer": null,
+        "path": null,
+        "metadata": {
+          "action": "visitor_check_out",
+          "visitor": true,
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27"
+        },
+        "created_at": "2026-10-10T18:10:31.332252+00:00",
+        "entity_type": "access_visit",
+        "entity_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "search_query": null,
+        "provider": null,
+        "bot_flag": "HUMAN",
+        "event_category": "ACCESS",
+        "faculty": null,
+        "department": null,
+        "patron_role": null,
+        "result_count": null,
+        "session_token": null
+      },
+      {
+        "id": "991e2a40-0aef-45b1-b199-ef8090a6f266",
+        "event_type": "library_visit",
+        "user_id": null,
+        "session_id": null,
+        "ip_hash": null,
+        "user_agent": null,
+        "referrer": null,
+        "path": null,
+        "metadata": {
+          "action": "visitor_check_in",
+          "visitor": true,
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27"
+        },
+        "created_at": "2026-10-10T18:10:20.452541+00:00",
+        "entity_type": "access_visit",
+        "entity_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "search_query": null,
+        "provider": null,
+        "bot_flag": "HUMAN",
+        "event_category": "ACCESS",
+        "faculty": null,
+        "department": null,
+        "patron_role": null,
+        "result_count": null,
+        "session_token": null
+      }
+    ],
+    "audit_logs": [
+      {
+        "id": "8ba94917-b5df-43fd-9841-6acb3766b7d1",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "access.identity_issued",
+        "table_name": "library_access_identities",
+        "record_id": "a95ea6f8-237c-40b0-b113-0c1c1a5e4df4",
+        "old_values": null,
+        "new_values": {
+          "patron_id": "98f75a07-1caf-439a-9a5f-d04b7dcb1383"
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:10.406684+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "library_access_identities",
+        "entity_id": "a95ea6f8-237c-40b0-b113-0c1c1a5e4df4",
+        "before_data": null,
+        "after_data": {
+          "patron_id": "98f75a07-1caf-439a-9a5f-d04b7dcb1383"
+        },
+        "metadata": {
+          "source": "api"
+        }
+      },
+      {
+        "id": "a947b8b0-4a82-4fde-88e4-b0107ccaeb71",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "access.visitor_exit",
+        "table_name": "access_visits",
+        "record_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "old_values": null,
+        "new_values": {
+          "checked_out_at": "2026-10-10T18:10:28.352Z",
+          "duration_minutes": 0
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:30.297243+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "access_visits",
+        "entity_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "before_data": null,
+        "after_data": {
+          "checked_out_at": "2026-10-10T18:10:28.352Z",
+          "duration_minutes": 0
+        },
+        "metadata": {
+          "source": "visitor_pass"
+        }
+      },
+      {
+        "id": "59d5b656-8a81-4c12-a37d-6cf7731e2643",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "access.check_in",
+        "table_name": "access_visits",
+        "record_id": "807dcd81-2101-48bd-8a75-9a4503d3c125",
+        "old_values": null,
+        "new_values": {
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "checked_in_at": "2026-10-10T18:10:32.651Z"
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:36.295411+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "access_visits",
+        "entity_id": "807dcd81-2101-48bd-8a75-9a4503d3c125",
+        "before_data": null,
+        "after_data": {
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "checked_in_at": "2026-10-10T18:10:32.651Z"
+        },
+        "metadata": {
+          "source": "qr"
+        }
+      },
+      {
+        "id": "00e363c5-aa65-405a-8e91-825b411d5471",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "access.branch_created",
+        "table_name": "library_branches",
+        "record_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "old_values": null,
+        "new_values": {
+          "code": "DR-SLAAS-A",
+          "name": "DR Drill Branch",
+          "active": true,
+          "capacity": 10,
+          "location": null,
+          "capacity_mode": "warning",
+          "warn_threshold_pct": 80
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:01.994305+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "library_branches",
+        "entity_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "before_data": null,
+        "after_data": {
+          "code": "DR-SLAAS-A",
+          "name": "DR Drill Branch",
+          "active": true,
+          "capacity": 10,
+          "location": null,
+          "capacity_mode": "warning",
+          "warn_threshold_pct": 80
+        },
+        "metadata": {
+          "reason": null
+        }
+      },
+      {
+        "id": "03219aa2-b89a-4e99-b3dd-426018cc712f",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "access.branch_updated",
+        "table_name": "library_branches",
+        "record_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "old_values": {
+          "id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "code": "DR-SLAAS-A",
+          "name": "DR Drill Branch",
+          "active": true,
+          "capacity": 10,
+          "location": null,
+          "capacity_mode": "warning",
+          "warn_threshold_pct": 80
+        },
+        "new_values": {
+          "code": "DR-SLAAS-A",
+          "name": "DR Drill Branch",
+          "active": true,
+          "capacity": 12,
+          "location": null,
+          "capacity_mode": "warning",
+          "warn_threshold_pct": 80
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:04.877481+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "library_branches",
+        "entity_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+        "before_data": {
+          "id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "code": "DR-SLAAS-A",
+          "name": "DR Drill Branch",
+          "active": true,
+          "capacity": 10,
+          "location": null,
+          "capacity_mode": "warning",
+          "warn_threshold_pct": 80
+        },
+        "after_data": {
+          "code": "DR-SLAAS-A",
+          "name": "DR Drill Branch",
+          "active": true,
+          "capacity": 12,
+          "location": null,
+          "capacity_mode": "warning",
+          "warn_threshold_pct": 80
+        },
+        "metadata": {
+          "reason": "DR capacity change"
+        }
+      },
+      {
+        "id": "fbc77d4d-a158-4533-89d7-30413b7102ba",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "visitor.registered",
+        "table_name": "access_visitors",
+        "record_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "old_values": null,
+        "new_values": {
+          "full_name": "DR Visitor One",
+          "organization": "DR Org"
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:12.524186+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "access_visitors",
+        "entity_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+        "before_data": null,
+        "after_data": {
+          "full_name": "DR Visitor One",
+          "organization": "DR Org"
+        },
+        "metadata": {
+          "source": "api"
+        }
+      },
+      {
+        "id": "a77c8198-a904-498f-b2fe-98da4ebe7c16",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "visitor.pass_issued",
+        "table_name": "access_visitor_passes",
+        "record_id": "cc95c90a-4c10-4573-a5ff-d4e89a35dcf7",
+        "old_values": null,
+        "new_values": {
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+          "valid_until": "2026-10-10T19:10:14.272Z"
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:15.311087+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "access_visitor_passes",
+        "entity_id": "cc95c90a-4c10-4573-a5ff-d4e89a35dcf7",
+        "before_data": null,
+        "after_data": {
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232",
+          "valid_until": "2026-10-10T19:10:14.272Z"
+        },
+        "metadata": {
+          "source": "api"
+        }
+      },
+      {
+        "id": "3595091d-4522-41fe-a35a-397ef23766b2",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "action": "access.visitor_entry",
+        "table_name": "access_visits",
+        "record_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "old_values": null,
+        "new_values": {
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232"
+        },
+        "ip_address": null,
+        "user_agent": null,
+        "created_at": "2026-10-10T18:10:19.030734+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "actor_user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "actor_role": "super_admin",
+        "entity_type": "access_visits",
+        "entity_id": "520bca80-95aa-4f93-a50b-a51c68e05ab6",
+        "before_data": null,
+        "after_data": {
+          "branch_id": "c95dd5d8-6f19-480e-8e75-92da5f48df27",
+          "visitor_id": "555d3127-ea92-488e-aed4-d937ab0e0232"
+        },
+        "metadata": {
+          "source": "visitor_pass"
+        }
+      }
+    ],
+    "user_roles": [
+      {
+        "id": "30fc71b6-ce48-496d-95b8-85c696240bb5",
+        "user_id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+        "role": "super_admin",
+        "branch_code": null,
+        "faculty_code": null,
+        "librarian_section": null,
+        "created_at": "2026-10-10T18:09:47.593619+00:00",
+        "updated_at": "2026-10-10T18:09:47.593619+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "super_admin_level": null
+      },
+      {
+        "id": "fd750b48-84dc-484c-9539-1412ccb9b4d0",
+        "user_id": "4f76f011-67c0-4b2e-9dc6-6c9426ffc895",
+        "role": "student",
+        "branch_code": null,
+        "faculty_code": null,
+        "librarian_section": null,
+        "created_at": "2026-10-10T18:09:48.638563+00:00",
+        "updated_at": "2026-10-10T18:09:48.638563+00:00",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "super_admin_level": null
+      }
+    ]
+  },
+  "authUsers": [
+    {
+      "id": "4f76f011-67c0-4b2e-9dc6-6c9426ffc895",
+      "email": "dr-slaas-patron@invalid.invalid"
+    },
+    {
+      "id": "4abb22c8-1fbd-4dd5-930c-a800c189b723",
+      "email": "dr-slaas-officer@invalid.invalid"
+    }
+  ]
+}

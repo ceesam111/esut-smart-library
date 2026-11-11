@@ -1,0 +1,99 @@
+{
+  "phases": [
+    {
+      "phase": "Direct DB round-trip baseline (PostgREST x10)",
+      "n": 10,
+      "p50": 314.6,
+      "p95": 764.4,
+      "p99": 764.4,
+      "max": 764.4,
+      "errors": 0
+    },
+    {
+      "phase": "QR validation latency (reject path, sequential x25)",
+      "n": 25,
+      "p50": 1865.3,
+      "p95": 6630.3,
+      "p99": 9516.3,
+      "max": 9516.3,
+      "errors": 0
+    },
+    {
+      "phase": "Check-in latency (sequential x12)",
+      "n": 12,
+      "p50": 5931.8,
+      "p95": 12141.3,
+      "p99": 12141.3,
+      "max": 12141.3,
+      "errors": 0
+    },
+    {
+      "phase": "Checkout latency (sequential x12)",
+      "n": 12,
+      "p50": 4574.4,
+      "p95": 6900.4,
+      "p99": 6900.4,
+      "max": 6900.4,
+      "errors": 0
+    },
+    {
+      "phase": "Concurrent check-in burst (12 parallel)",
+      "n": 12,
+      "p50": 6329.8,
+      "p95": 7430.4,
+      "p99": 7430.4,
+      "max": 7430.4,
+      "errors": 0,
+      "wallMs": 7433
+    },
+    {
+      "phase": "Occupancy query latency (x6, occupancy=12)",
+      "n": 6,
+      "p50": 2404.6,
+      "p95": 3044.9,
+      "p99": 3044.9,
+      "max": 3044.9,
+      "errors": 0
+    },
+    {
+      "phase": "Dashboard analytics query latency (x10)",
+      "n": 10,
+      "p50": 2143.4,
+      "p95": 3775.3,
+      "p99": 3775.3,
+      "max": 3775.3,
+      "errors": 0
+    },
+    {
+      "phase": "Attendance history query latency (x10)",
+      "n": 10,
+      "p50": 1649.5,
+      "p95": 10357.7,
+      "p99": 10357.7,
+      "max": 10357.7,
+      "errors": 0
+    },
+    {
+      "phase": "Report generation latency (CSV x3)",
+      "n": 3,
+      "p50": 2779.8,
+      "p95": 3681.5,
+      "p99": 3681.5,
+      "max": 3681.5,
+      "errors": 0
+    },
+    {
+      "phase": "Concurrent checkout burst (12 parallel)",
+      "n": 12,
+      "p50": 5412,
+      "p95": 5979.2,
+      "p99": 5979.2,
+      "max": 5979.2,
+      "errors": 0,
+      "wallMs": 5989
+    }
+  ],
+  "finalOccupancy": 0,
+  "allPassed": true,
+  "ranAt": "2026-10-10T18:18:29.492Z"
+}

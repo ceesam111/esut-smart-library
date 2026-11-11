@@ -69,6 +69,11 @@ interface HoldRow {
 const ITEM_COLS = 'id, title, authors, call_number, available_copies, total_copies, format';
 const PATRON_COLS = 'id, patron_id, user_id, full_name, email, patron_category, faculty_name, status, membership_expires_at';
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function Circulation() {
   const { t, formatDate, formatCurrency } = useI18n();
   const off = useOfflineCirculation();
@@ -173,11 +178,11 @@ export default function Circulation() {
 
   // ── Checkout
   const fireNotice = (action: string, payload: Record<string, unknown>) => {
-    void fetch('/api/admin/notices/dispatch', {
+    void authHeaders().then((headers) => fetch('/api/admin/notices/dispatch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ action, channel: 'in-app', ...payload }),
-    }).catch(() => undefined);
+    }).catch(() => undefined));
   };
 
   const handleCheckout = async () => {

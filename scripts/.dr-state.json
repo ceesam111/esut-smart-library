@@ -1,0 +1,171 @@
+{
+  "allPassed": true,
+  "checks": [
+    {
+      "name": "fixture: academic period exists",
+      "ok": true,
+      "detail": "id=e2c562de-49e6-4acc-999d-56ca186da151"
+    },
+    {
+      "name": "fixture: branch created",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "name": "fixture: capacity updated to 12",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "fixture: patron linked to auth user",
+      "ok": true,
+      "detail": "patron=98f75a07-1caf-439a-9a5f-d04b7dcb1383"
+    },
+    {
+      "name": "fixture: identity issued",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "name": "fixture: visitor registered",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "name": "fixture: visitor pass issued",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "name": "fixture: visitor checked in",
+      "ok": true,
+      "detail": "event=CHECK_IN"
+    },
+    {
+      "name": "fixture: visitor checked out (closed visit)",
+      "ok": true,
+      "detail": "event=CHECK_OUT"
+    },
+    {
+      "name": "fixture: patron checked in (open visit)",
+      "ok": true,
+      "detail": "event=CHECK_IN"
+    },
+    {
+      "name": "fixture: occupancy 1 with capacity 12",
+      "ok": true,
+      "detail": "inside=1 capacity=12"
+    },
+    {
+      "name": "backup: 2 visits (1 open + 1 closed)",
+      "ok": true,
+      "detail": "n=2"
+    },
+    {
+      "name": "backup: branch, calendar, patron, identity, visitor, pass present",
+      "ok": true,
+      "detail": "{\"academic_calendar\":1,\"library_branches\":1,\"patrons\":1,\"access_visitors\":1,\"library_access_identities\":1,\"access_visits\":2,\"access_events\":3,\"access_visitor_passes\":1,\"library_branch_capacity_history\":2,\"analytics_events\":2,\"audit_logs\":8,\"user_roles\":2,\"auth_users\":2}"
+    },
+    {
+      "name": "backup: capacity history + roles + users captured",
+      "ok": true,
+      "detail": "{\"academic_calendar\":1,\"library_branches\":1,\"patrons\":1,\"access_visitors\":1,\"library_access_identities\":1,\"access_visits\":2,\"access_events\":3,\"access_visitor_passes\":1,\"library_branch_capacity_history\":2,\"analytics_events\":2,\"audit_logs\":8,\"user_roles\":2,\"auth_users\":2}"
+    },
+    {
+      "name": "backup: events, analytics and audit captured",
+      "ok": true,
+      "detail": "{\"events\":3,\"analytics\":2,\"audit\":8}"
+    },
+    {
+      "name": "loss simulated: visits, branch and users gone",
+      "ok": true,
+      "detail": "{\"visits\":0,\"branches\":0,\"users\":0}"
+    },
+    {
+      "name": "restore: all audit rows returned",
+      "ok": true,
+      "detail": "missing=0 of 8"
+    },
+    {
+      "name": "restore: both users can sign in again",
+      "ok": true,
+      "detail": "sign-in ok"
+    },
+    {
+      "name": "restore: user ids preserved",
+      "ok": true,
+      "detail": "{\"dr-slaas-officer@invalid.invalid\":\"4abb22c8-1fbd-4dd5-930c-a800c189b723\",\"dr-slaas-patron@invalid.invalid\":\"4f76f011-67c0-4b2e-9dc6-6c9426ffc895\"}"
+    },
+    {
+      "name": "restore: visits list shows 2 visits with original ids",
+      "ok": true,
+      "detail": "rows=2 ids=[\"520bca80-95aa-4f93-a50b-a51c68e05ab6\",\"807dcd81-2101-48bd-8a75-9a4503d3c125\"]"
+    },
+    {
+      "name": "restore: open/closed visit state preserved",
+      "ok": true,
+      "detail": "{\"checked_out\":1,\"checked_in\":1}"
+    },
+    {
+      "name": "restore: occupancy derived from open visit = 1, capacity 12",
+      "ok": true,
+      "detail": "inside=1 capacity=12"
+    },
+    {
+      "name": "restore: CSV report contains both visits",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "restore: analytics counts restored visits",
+      "ok": true,
+      "detail": "total=2 visitor=1"
+    },
+    {
+      "name": "restore: personal attendance history intact",
+      "ok": true,
+      "detail": "total=1"
+    },
+    {
+      "name": "restore: visitor pass row restored intact (status + token hash)",
+      "ok": true,
+      "detail": "status=active"
+    },
+    {
+      "name": "restore: academic period restored with original id",
+      "ok": true,
+      "detail": "id=e2c562de-49e6-4acc-999d-56ca186da151"
+    },
+    {
+      "name": "restore: credential still valid, checkout works, duration recalculated",
+      "ok": true,
+      "detail": "event=CHECK_OUT duration=121"
+    },
+    {
+      "name": "restore: occupancy 0 after post-restore checkout",
+      "ok": true,
+      "detail": "inside=0"
+    }
+  ],
+  "backupMs": 6268,
+  "lossMs": 7412,
+  "restoreMs": 6324,
+  "verifyMs": 28511,
+  "lossToVerifiedMs": 42247,
+  "counts": {
+    "academic_calendar": 1,
+    "library_branches": 1,
+    "patrons": 1,
+    "access_visitors": 1,
+    "library_access_identities": 1,
+    "access_visits": 2,
+    "access_events": 3,
+    "access_visitor_passes": 1,
+    "library_branch_capacity_history": 2,
+    "analytics_events": 2,
+    "audit_logs": 8,
+    "user_roles": 2,
+    "auth_users": 2
+  },
+  "ranAt": "2026-10-10T18:11:30.663Z"
+}

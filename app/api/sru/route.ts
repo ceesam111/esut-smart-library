@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { xmlEscape } from '@/server/oai/oaiXml';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 import { parseCQL, cqlToSupabaseFilter, isSupportedIndex, isSupportedRelation } from '@/server/interoperability/cqlParser';
 import { serializeRecord, type SRURecord } from '@/server/interoperability/sru/serializers';
 import { errorResponse, SRU_DIAGNOSTICS } from '@/server/interoperability/sru/diagnostics';
@@ -41,7 +42,7 @@ function sruExplain() {
     <recordData>
       <explain>
         <serverInfo>
-          <host>esutlibrary.edu.ng</host>
+          <host>${new URL(appBaseUrl()).hostname}</host>
           <port>443</port>
           <database>/api/sru</database>
         </serverInfo>

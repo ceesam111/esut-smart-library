@@ -1,3 +1,5 @@
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
+
 export interface OpenUrlMetadata {
   genre?: string;
   aulast?: string;
@@ -27,7 +29,7 @@ export interface OpenUrlMetadata {
   pid?: string;
 }
 
-export function generateOpenUrl(metadata: OpenUrlMetadata, baseUrl = 'https://esutlibrary.edu.ng'): string {
+export function generateOpenUrl(metadata: OpenUrlMetadata, baseUrl = appBaseUrl()): string {
   const params = new URLSearchParams();
   params.set('ctx_ver', 'Z39.88-2004');
   params.set('rft_val_fmt', 'info:ofi/fmt:kev:mtx:journal');

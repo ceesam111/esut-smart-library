@@ -37,6 +37,17 @@ export interface PreservationOverview {
     last_run_at: string | null;
     payload: Record<string, unknown>;
   }>;
+  backups: Array<{
+    id: string;
+    bucket: string;
+    key_prefix: string;
+    status: string;
+    object_count: number | null;
+    total_bytes: number | null;
+    latest_object_at: string | null;
+    error: string | null;
+    checked_at: string;
+  }>;
   storage: ReturnType<typeof describeStores>;
 }
 
@@ -115,12 +126,22 @@ async function incidentCounts(db: SupabaseLike): Promise<{ open: number; acknowl
   return counts;
 }
 
+async function loadBackupChecks(db: SupabaseLike): Promise<PreservationOverview['backups']> {
+  const { data, error } = await db
+    .from('preservation_backups')
+    .select('id, bucket, key_prefix, status, object_count, total_bytes, latest_object_at, error, checked_at')
+    .order('checked_at', { ascending: false })
+    .limit(10);
+  if (error) return [] as unknown as PreservationOverview['backups'];
+  return (data ?? []) as unknown as PreservationOverview['backups'];
+}
+
 export async function getPreservationOverview(): Promise<PreservationOverview> {
   const db = getSupabaseAdminClient();
   const now = new Date();
   const since = new Date(now.getTime() - 7 * 86_400_000).toISOString();
 
-  const [files, counts, recentIncidents, restoreRuns, events, queue, schedules] = await Promise.all([
+  const [files, counts, recentIncidents, restoreRuns, events, queue, schedules, backups] = await Promise.all([
     countFiles(db, now),
     incidentCounts(db),
     listIncidents({ db, limit: 25 }),
@@ -128,6 +149,7 @@ export async function getPreservationOverview(): Promise<PreservationOverview> {
     countEvents(db, since),
     queueCounts(db),
     loadSchedules(db),
+    loadBackupChecks(db),
   ]);
 
   return {
@@ -141,6 +163,7 @@ export async function getPreservationOverview(): Promise<PreservationOverview> {
     events,
     queue,
     schedules,
+    backups,
     storage: describeStores(),
   };
 }

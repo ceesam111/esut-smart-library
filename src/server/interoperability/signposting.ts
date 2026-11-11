@@ -1,3 +1,5 @@
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
+
 export interface SignpostingLink {
   rel: string;
   href: string;
@@ -13,7 +15,7 @@ export function generateSignpostingLinks(input: {
   citationUrl?: string;
   baseUrl?: string;
 }): SignpostingLink[] {
-  const base = input.baseUrl || 'https://esutlibrary.edu.ng';
+  const base = input.baseUrl || appBaseUrl();
   const links: SignpostingLink[] = [];
 
   const landingPage = input.handle

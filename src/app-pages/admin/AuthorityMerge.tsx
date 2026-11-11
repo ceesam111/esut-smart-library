@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface Authority {
   id: string;
@@ -17,6 +18,11 @@ interface MergePreview {
   conflicts: string[];
 }
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function AuthorityMerge() {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<Authority[]>([]);
@@ -29,7 +35,7 @@ export default function AuthorityMerge() {
   const searchAuthorities = async () => {
     if (!search.trim()) return;
     try {
-      const res = await fetch(`/api/authorities?search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/authorities?search=${encodeURIComponent(search)}`, { headers: await authHeaders() });
       const data = await res.json();
       setResults(data.authorities ?? []);
     } catch { /* silent */ }
@@ -42,7 +48,7 @@ export default function AuthorityMerge() {
     try {
       const res = await fetch('/api/authorities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'merge', sourceId: source.id, targetId: target.id }),
       });
       const data = await res.json();

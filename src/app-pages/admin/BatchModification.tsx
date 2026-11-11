@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -41,6 +42,11 @@ const OPERATIONS: Array<{ value: BatchOperation['type']; label: string }> = [
   { value: 'REPLACE_SUBFIELD', label: 'Replace Subfield' },
 ];
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function BatchModification() {
   const navigate = useNavigate();
   const { loading: authLoading, hasRole } = useAuth();
@@ -53,12 +59,14 @@ export default function BatchModification() {
   const [result, setResult] = useState<{ success: number; failure: number } | null>(null);
 
   useEffect(() => {
-    fetch('/api/catalogue/frameworks')
-      .then(r => r.ok ? r.json() : { frameworks: [] })
-      .then(() => fetch('/api/catalogue/marc-import?batchId=all'))
-      .then(r => r.ok ? r.json() : { records: [] })
-      .then(data => setRecords(data.records ?? []))
-      .catch(() => {});
+    void authHeaders().then((headers) => {
+      fetch('/api/catalogue/frameworks', { headers })
+        .then(r => r.ok ? r.json() : { frameworks: [] })
+        .then(() => fetch('/api/catalogue/marc-import?batchId=all', { headers }))
+        .then(r => r.ok ? r.json() : { records: [] })
+        .then(data => setRecords(data.records ?? []))
+        .catch(() => {});
+    });
   }, []);
 
   if (authLoading) return <div className="p-8 text-sm text-neutral-500">Loading...</div>;
@@ -83,7 +91,7 @@ export default function BatchModification() {
     try {
       const res = await fetch('/api/catalogue/batch-modify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'preview', recordIds: [...selectedIds], operations: [operation] }),
       });
       const data = await res.json();
@@ -97,7 +105,7 @@ export default function BatchModification() {
     try {
       const res = await fetch('/api/catalogue/batch-modify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'apply', recordIds: [...selectedIds], operations: [operation] }),
       });
       const data = await res.json();

@@ -4,12 +4,13 @@ import { harvestResources, downloadResourceToB2 } from './resources';
 import { extractRepositoryMetadata } from './repository';
 import { draftNewsletter, overdueReminders, sendOverdueEmails, sendDueSoonEmails } from './communications';
 import { weeklyTenantReport, systemHealthCheck } from './reports';
-import { produceFixity, verifyFixity } from './preservation';
+import { produceFixity, verifyFixity, backupMonitor, retentionReview } from './preservation';
 import { extractRepositoryText } from './extraction';
 import { produceSearchReindex, reindexSearch } from './searchIndex';
 import { overdueNoticeWorker, dueSoonNoticeWorker } from './notices';
 import { scheduledReportWorker } from './scheduledReports';
 import { visibilityDiagnosticsWorker } from './visibility';
+import { accreditationSync, accreditationVerify } from './accreditation';
 
 export const handlers: Record<string, AgentJobHandler> = {
   'catalogue.enrich': enrichCatalogue,
@@ -24,6 +25,8 @@ export const handlers: Record<string, AgentJobHandler> = {
   'circulation.sendDueSoonEmails': sendDueSoonEmails,
   'preservation.verifyFixity': verifyFixity,
   'preservation.fixityProducer': produceFixity,
+  'preservation.backupMonitor': backupMonitor,
+  'preservation.retentionReview': retentionReview,
   'repository.extractText': extractRepositoryText,
   'search.reindex': reindexSearch,
   'search.reindexProducer': produceSearchReindex,
@@ -31,6 +34,8 @@ export const handlers: Record<string, AgentJobHandler> = {
   'notices.dueSoon': dueSoonNoticeWorker,
   'reports.scheduledRun': scheduledReportWorker,
   'visibility.diagnostics': visibilityDiagnosticsWorker,
+  'accreditation.sync': accreditationSync,
+  'accreditation.verify': accreditationVerify,
 };
 
 export function getHandler(jobType: string) {

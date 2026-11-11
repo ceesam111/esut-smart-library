@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,11 @@ const BUILT_IN_REPORTS = [
   { name: 'Active Subscriptions', dataset: 'serials', description: 'Serial subscriptions' },
 ];
 
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+};
+
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('builder');
   const [selectedDataset, setSelectedDataset] = useState<string>('');
@@ -99,7 +105,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'list' }),
       });
       const data = await res.json();
@@ -119,7 +125,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'history' }),
       });
       const data = await res.json();
@@ -144,7 +150,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           action: 'run',
           query: { dataset, pageSize: 1 },
@@ -166,7 +172,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           action: 'run',
           logRun: true,
@@ -198,7 +204,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           action: 'export',
           query: {
@@ -231,7 +237,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           action: 'save',
           definition: {
@@ -263,7 +269,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'delete', reportId }),
       });
       const data = await res.json();
@@ -283,7 +289,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/admin/reports/builder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'schedule', reportId, schedule }),
       });
       const data = await res.json();

@@ -189,8 +189,8 @@ export default function Dashboard() {
                 {patron?.profile_photo_url ? <img src={patron.profile_photo_url} alt="" className="w-full h-full object-cover" /> : '👤'}
               </div>
               <div>
-              <h1 className="text-4xl font-bold mb-2">{t('dashboard.welcome', { name: patron?.full_name ?? '' })}</h1>
-              <p className="text-primary-100 text-lg">
+              <h1 className="text-3xl sm:text-4xl font-bold mb-2 break-words max-w-full">{t('dashboard.welcome', { name: patron?.full_name ?? '' })}</h1>
+              <p className="text-primary-100 text-lg break-words max-w-full">
                 {patron?.library_number ? t('dashboard.libraryNumber') : t('dashboard.patronId')}{' '}
                 <span className="font-mono font-semibold">{patron?.library_number ?? patron?.patron_id}</span>
               </p>

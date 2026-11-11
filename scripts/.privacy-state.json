@@ -1,0 +1,81 @@
+{
+  "allPassed": true,
+  "checks": [
+    {
+      "name": "fixture: visit closed for probes",
+      "ok": true,
+      "detail": "event=CHECK_OUT"
+    },
+    {
+      "name": "anonymous scan rejected 401 without data",
+      "ok": true,
+      "detail": "status=401"
+    },
+    {
+      "name": "student visits probe: 403 and error carries no attendance data",
+      "ok": true,
+      "detail": "status=403 leaks=none"
+    },
+    {
+      "name": "unauthorized correction: 403 and error carries no personal data",
+      "ok": true,
+      "detail": "status=403 leaks=none"
+    },
+    {
+      "name": "unknown branch occupancy: 404 with empty error",
+      "ok": true,
+      "detail": "status=404"
+    },
+    {
+      "name": "branch creation ignores attacker tenant/timezone/created_at",
+      "ok": true,
+      "detail": "status=201 tenant=00000000-0000-0000-0000-000000000001 tz=Africa/Lagos"
+    },
+    {
+      "name": "visitor creation ignores attacker created_by/tenant/id",
+      "ok": true,
+      "detail": "status=201 createdBy=actor tenant=00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "name": "scan response does not echo the credential",
+      "ok": true,
+      "detail": "event=CHECK_IN echo=false"
+    },
+    {
+      "name": "invalid scan error does not echo the presented credential",
+      "ok": true,
+      "detail": "err=INVALID_QR echo=false"
+    },
+    {
+      "name": "analytics carries aggregates only (no raw user identifiers)",
+      "ok": true,
+      "detail": "leaks=none total=2"
+    },
+    {
+      "name": "attendance rows expose operational ids but no email addresses",
+      "ok": true,
+      "detail": "rows=2 leaks=none"
+    },
+    {
+      "name": "export columns exclude direct identifiers and stay capped",
+      "ok": true,
+      "detail": "headerLeak=none lines=3 cap=5000"
+    },
+    {
+      "name": "sequential invalid-scan abuse: all rejected, no 5xx",
+      "ok": true,
+      "detail": "invalid=15 5xx=0 other=0"
+    },
+    {
+      "name": "parallel invalid-scan burst: all rejected, no 5xx",
+      "ok": true,
+      "detail": "invalid=10 5xx=0"
+    },
+    {
+      "name": "anonymous burst: every request 401, no data paths open",
+      "ok": true,
+      "detail": "statuses=401,401,401,401,401,401,401,401,401,401"
+    }
+  ],
+  "ranAt": "2026-10-11T01:39:42.472Z"
+}

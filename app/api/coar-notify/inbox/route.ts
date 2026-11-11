@@ -9,6 +9,7 @@ import {
   getCoarTargetHost,
 } from '@/server/interoperability/coar-security';
 import { validateCoarNotify } from '@/server/interoperability/coar-notify';
+import { appBaseUrl } from '@/server/seo/scholarlyMetadata';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { childLogger } from '@/server/logging/logger';
 
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 const JSON_CONTENT_TYPE = /^application\/(ld\+)?json\b/i;
 
 export async function GET() {
-  const inboxUrl = 'https://esutlibrary.edu.ng/api/coar-notify/inbox';
+  const inboxUrl = `${appBaseUrl()}/api/coar-notify/inbox`;
   const body = {
     '@context': 'https://www.w3.org/ns/activitystreams',
     id: inboxUrl,

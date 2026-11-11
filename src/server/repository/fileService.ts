@@ -57,7 +57,7 @@ export async function uploadRepositoryFile(input: RepositoryFileInput) {
     checksum_calculated_at: new Date().toISOString(), description: input.description || null,
     role: input.role || 'ORIGINAL', display_order: input.displayOrder ?? 0,
     access_level: input.accessLevel || 'PUBLIC', embargo_until: input.embargoUntil || null,
-    uploader_id: input.uploaderId, preservation_status: 'PENDING', extracted_text_status: 'PENDING',
+    uploader_id: input.uploaderId, preservation_status: 'active', extracted_text_status: 'PENDING',
   }).select('*').single();
 
   if (error) { await supabase.storage.from('repository').remove([key]); throw new Error('File record creation failed: ' + error.message); }

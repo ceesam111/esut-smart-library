@@ -7,24 +7,26 @@ import { useI18n } from '@/lib/i18n';
 
 interface ResearcherProfile {
   id: string;
-  user_id: string;
-  salutation: string;
-  full_name: string;
-  rank: string;
-  employment_status: string;
-  institutional_email: string;
-  phone: string;
-  office_location: string;
-  highest_qualification: { degree: string; field: string; year: number } | null;
+  patron_id: string;
+  salutation: string | null;
+  first_name: string;
+  middle_name: string | null;
+  surname: string;
+  academic_rank: string | null;
+  employment_status: string | null;
+  institutional_email: string | null;
+  phone: string | null;
+  office_location: string | null;
+  highest_qualification: { degree: string; field: string; institution?: string; year: number | string } | null;
   specialisations: string[];
   research_keywords: string[];
-  biography: string;
-  orcid: string;
+  biography: string | null;
+  orcid_id: string | null;
   orcid_verified: boolean;
-  google_scholar_id: string;
-  researchgate_url: string;
+  google_scholar_id: string | null;
+  researchgate_url: string | null;
   profile_photo_url: string | null;
-  status: 'draft' | 'pending' | 'approved';
+  status: string;
 }
 
 export default function MyProfile() {
@@ -49,7 +51,6 @@ export default function MyProfile() {
     specialisations: ['', '', ''],
     research_keywords: ['', '', '', '', ''],
     biography: '',
-    orcid: '',
     google_scholar_id: '',
     researchgate_url: '',
   });
@@ -63,19 +64,33 @@ export default function MyProfile() {
           return;
         }
 
+        const { data: patronData } = await supabase
+          .from('patrons')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .maybeSingle();
+
+        if (!patronData) return;
+
         const { data: profileData, error } = await supabase
           .from('researcher_profiles')
           .select('*')
-          .eq('user_id', userData.user.id)
-          .single();
+          .eq('patron_id', patronData.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
 
         if (profileData) {
           setProfile(profileData);
           setPhotoUrl(profileData.profile_photo_url ?? null);
           setFormData({
             salutation: profileData.salutation || '',
-            full_name: profileData.full_name || '',
-            rank: profileData.rank || '',
+            full_name: [profileData.first_name, profileData.middle_name, profileData.surname]
+              .filter((part) => Boolean(part && String(part).trim()))
+              .join(' '),
+            rank: profileData.academic_rank || '',
             employment_status: profileData.employment_status || '',
             institutional_email: profileData.institutional_email || '',
             phone: profileData.phone || '',
@@ -88,12 +103,9 @@ export default function MyProfile() {
             specialisations: profileData.specialisations || ['', '', ''],
             research_keywords: profileData.research_keywords || ['', '', '', '', ''],
             biography: profileData.biography || '',
-            orcid: profileData.orcid || '',
             google_scholar_id: profileData.google_scholar_id || '',
             researchgate_url: profileData.researchgate_url || '',
           });
-        } else if (error && error.code !== 'PGRST116') {
-          throw error;
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -158,36 +170,63 @@ export default function MyProfile() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Not authenticated');
 
-      const filterEmptyStrings = (arr: string[]) => arr.filter((item) => item.trim() !== '');
+      const { data: patronData } = await supabase
+        .from('patrons')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+      if (!patronData) throw new Error('No patron record for this account.');
 
-      const upsertData = {
-        user_id: userData.user.id,
-        salutation: formData.salutation,
-        full_name: formData.full_name,
-        rank: formData.rank,
-        employment_status: formData.employment_status,
-        institutional_email: formData.institutional_email,
-        phone: formData.phone,
-        office_location: formData.office_location,
-        highest_qualification: formData.highest_qualification,
+      const filterEmptyStrings = (arr: string[]) => arr.filter((item) => item.trim() !== '');
+      const keepReviewStatus = profile && (profile.status === 'pending_review' || profile.status === 'published')
+        ? profile.status
+        : 'pending_review';
+
+      const sharedFields = {
+        salutation: formData.salutation || null,
+        academic_rank: formData.rank || null,
+        employment_status: formData.employment_status || null,
+        institutional_email: formData.institutional_email || null,
+        phone: formData.phone || null,
+        office_location: formData.office_location || null,
+        highest_qualification: formData.highest_qualification.degree ? formData.highest_qualification : null,
         specialisations: filterEmptyStrings(formData.specialisations),
         research_keywords: filterEmptyStrings(formData.research_keywords),
-        biography: formData.biography,
-        orcid: formData.orcid,
-        google_scholar_id: formData.google_scholar_id,
-        researchgate_url: formData.researchgate_url,
+        biography: formData.biography || null,
+        google_scholar_id: formData.google_scholar_id || null,
+        researchgate_url: formData.researchgate_url || null,
         profile_photo_url: photoUrl,
-        status: 'pending' as const,
+        last_updated_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabase
-        .from('researcher_profiles')
-        .upsert([upsertData], { onConflict: 'user_id' })
-        .select();
+      let saved;
+      if (profile) {
+        const { data, error } = await supabase
+          .from('researcher_profiles')
+          .update({ ...sharedFields, status: keepReviewStatus })
+          .eq('id', profile.id)
+          .select();
+        if (error) throw error;
+        saved = data?.[0] ?? null;
+      } else {
+        const tokens = formData.full_name.trim().split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) throw new Error('Full name is required.');
+        const { data, error } = await supabase
+          .from('researcher_profiles')
+          .insert({
+            patron_id: patronData.id,
+            first_name: tokens[0],
+            middle_name: tokens.length > 2 ? tokens.slice(1, -1).join(' ') : null,
+            surname: tokens.length > 1 ? tokens[tokens.length - 1] : tokens[0],
+            ...sharedFields,
+            status: 'pending_review',
+          })
+          .select();
+        if (error) throw error;
+        saved = data?.[0] ?? null;
+      }
 
-      if (error) throw error;
-
-      setProfile(data[0]);
+      if (saved) setProfile(saved);
     } catch (error) {
       console.error('Error saving profile:', error);
     } finally {
@@ -223,14 +262,20 @@ export default function MyProfile() {
           {profile && (
             <span
               className={`badge px-4 py-2 rounded-full text-sm font-semibold ${
-                profile.status === 'approved'
+                profile.status === 'published'
                   ? 'badge-success'
-                  : profile.status === 'pending'
+                  : profile.status === 'pending_review'
                     ? 'badge-warning'
                     : 'badge-secondary'
               }`}
             >
-              {profile.status.charAt(0).toUpperCase() + profile.status.slice(1)}
+              {profile.status === 'published'
+                ? t('profile.statusPublished')
+                : profile.status === 'pending_review'
+                  ? t('profile.statusPendingReview')
+                  : profile.status === 'returned'
+                    ? t('profile.statusReturned')
+                    : t('profile.statusDraft')}
             </span>
           )}
         </div>
@@ -300,8 +345,10 @@ export default function MyProfile() {
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleInputChange}
+                  readOnly={Boolean(profile)}
                   className="input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {profile && <p className="text-xs text-gray-500 mt-1">{t('profile.nameManagedInFullEditor')}</p>}
               </div>
 
               <div>
@@ -492,24 +539,17 @@ export default function MyProfile() {
                 <label className="label block text-sm font-semibold text-gray-700 mb-2">
                   {t('profile.orcid')}
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="orcid"
-                    value={formData.orcid}
-                    onChange={handleInputChange}
-                    placeholder={t('profile.orcidPlaceholder')}
-                    className="input flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {formData.orcid && (
-                    <button
-                      type="button"
-                      className="btn-outline px-4 py-2 rounded font-semibold"
-                    >
-                      {t('profile.verify')}
-                    </button>
-                  )}
-                </div>
+                <p className="text-sm text-gray-700 font-mono">{profile?.orcid_id || t('profile.orcidNotSet')}</p>
+                {profile?.orcid_id && (
+                  <p className="text-xs mt-1">
+                    {profile.orcid_verified ? (
+                      <span className="text-green-600 font-semibold">{t('profile.orcidVerifiedBadge')}</span>
+                    ) : (
+                      <span className="text-orange-600">{t('profile.orcidUnverifiedBadge')}</span>
+                    )}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-2">{t('profile.orcidManagedElsewhere')}</p>
               </div>
 
               <div>
@@ -547,7 +587,11 @@ export default function MyProfile() {
               disabled={saving || !bioValid}
               className="btn-primary flex-1 px-4 py-3 rounded font-semibold disabled:opacity-50"
             >
-              {saving ? t('profile.saving') : t('profile.submitForReview')}
+              {saving
+                ? t('profile.saving')
+                : profile && (profile.status === 'pending_review' || profile.status === 'published')
+                  ? t('profile.saveChanges')
+                  : t('profile.submitForReview')}
             </button>
             <a href="/dashboard" className="btn-outline flex-1 px-4 py-3 rounded font-semibold text-center">
               {t('profile.cancel')}

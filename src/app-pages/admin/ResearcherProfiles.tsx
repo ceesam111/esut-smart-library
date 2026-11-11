@@ -83,7 +83,7 @@ export default function ResearcherProfiles() {
           subject: 'Your ESUT Research Profile is Now Published',
           html: `<p>Dear ${fullName},</p>
 <p>Your research profile has been reviewed and <strong>approved</strong> by the Digital Resources Librarian. It is now publicly available on the ESUT Lecturer Directory.</p>
-<p><a href="https://library.esut.edu.ng/lecturers/${profile.slug}">View your profile</a></p>
+<p><a href="https://virtuallibrary.esut.edu.ng/lecturers/${profile.slug}">View your profile</a></p>
 <p>Regards,<br/>ESUT Library</p>`,
       });
     }

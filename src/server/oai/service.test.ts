@@ -543,3 +543,24 @@ describe('OAI-PMH strict argument validation', () => {
     expect(verified?.offset).toBe(100);
   });
 });
+
+describe('OAI-PMH base URL trust', () => {
+  it('keeps a non-loopback request origin unchanged', () => {
+    const context = buildContext('https://library.example.edu.ng/api/oai?verb=Identify');
+    expect(context.baseUrl).toBe('https://library.example.edu.ng/api/oai');
+  });
+
+  it('replaces a loopback request origin with the configured app base', () => {
+    vi.stubEnv('APP_BASE_URL', 'https://virtuallibrary.esut.edu.ng');
+    const context = buildContext('http://localhost:3000/api/oai?verb=Identify');
+    expect(context.baseUrl).toBe('https://virtuallibrary.esut.edu.ng/api/oai');
+    vi.unstubAllEnvs();
+  });
+
+  it('prefers an explicit OAI_BASE_URL over the request origin', () => {
+    vi.stubEnv('OAI_BASE_URL', 'https://oai.example.edu.ng/oai');
+    const context = buildContext('http://localhost:3000/api/oai');
+    expect(context.baseUrl).toBe('https://oai.example.edu.ng/oai');
+    vi.unstubAllEnvs();
+  });
+});
