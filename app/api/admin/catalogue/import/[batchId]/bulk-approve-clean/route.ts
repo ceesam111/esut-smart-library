@@ -5,7 +5,8 @@ import { resolveTenant } from '@/server/tenant/resolveTenant';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { approveStagedCatalogueRow } from '@/server/catalogue/approveStagedRow';
 
-export async function POST(request: NextRequest, { params }: { params: { batchId: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ batchId: string }> }) {
+  const { batchId } = await params;
   try {
     const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
     const tenant = await resolveTenant(ctx.user.id);
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest, { params }: { params: { batchId
       .from('catalogue_staging')
       .select('id')
       .eq('tenant_id', tenant.tenantId)
-      .eq('batch_id', params.batchId)
+      .eq('batch_id', batchId)
       .eq('status', 'pending')
       .eq('confidence', 'clean_match');
     if (error) throw new Error(error.message);

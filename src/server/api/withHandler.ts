@@ -34,14 +34,14 @@ export function withHandler<TBody = unknown, TQuery = unknown, TParams extends R
   tenantFrom?: (ctx: AppHandlerContext<TBody, TQuery, TParams>) => { tenantId?: string | null; tenantSlug?: string | null } | Promise<{ tenantId?: string | null; tenantSlug?: string | null }>;
   handler: (ctx: AppHandlerContext<TBody, TQuery, TParams>) => Promise<HandlerResult>;
 }) {
-  return async function wrapped(request: NextRequest, routeContext?: { params?: TParams }) {
+  return async function wrapped(request: NextRequest, routeContext?: { params?: Promise<TParams> | TParams }) {
     const startedAt = Date.now();
     const requestId = getRequestId(request);
     const baseLog = childLogger({ requestId, method: request.method, path: request.nextUrl.pathname });
     try {
       const rawBody = await parseBody(request);
       const rawQuery = Object.fromEntries(request.nextUrl.searchParams.entries());
-      const rawParams = routeContext?.params ?? ({} as TParams);
+      const rawParams = (routeContext?.params ? await routeContext.params : {}) as TParams;
       const body = options.bodySchema ? options.bodySchema.parse(rawBody) : rawBody;
       const query = options.querySchema ? options.querySchema.parse(rawQuery) : rawQuery;
       const params = options.paramsSchema ? options.paramsSchema.parse(rawParams) : rawParams;

@@ -4,17 +4,18 @@ import { LIBRARY_ADMIN_ROLES, canReadApprovalItem } from '@/server/auth/permissi
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 import { rejectItem } from '@/server/approvals/rejectItem';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
     const supabase = getSupabaseAdminClient();
-    const { data: item, error } = await supabase.from('approval_queue').select('content_type').eq('id', params.id).single();
+    const { data: item, error } = await supabase.from('approval_queue').select('content_type').eq('id', id).single();
     if (error) throw new Error(error.message);
     if (!canReadApprovalItem(ctx.roles, item.content_type)) throw new Error('Forbidden.');
 
     const body = await request.json().catch(() => ({}));
     const approval = await rejectItem({
-      id: params.id,
+      id,
       actorUserId: ctx.user.id,
       actorRole: ctx.primaryRole,
       decisionNote: body.decisionNote ?? null,

@@ -183,7 +183,7 @@ export default function Dashboard() {
           </div>
         )}
         <div className="card mb-8 bg-gradient-to-r from-primary-700 to-primary-800 text-white">
-          <div className="p-8 flex items-start justify-between gap-4 flex-wrap">
+          <div className="p-5 sm:p-8 flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-2xl bg-white/10 border border-white/25 overflow-hidden flex items-center justify-center text-3xl shrink-0">
                 {patron?.profile_photo_url ? <img src={patron.profile_photo_url} alt="" className="w-full h-full object-cover" /> : '👤'}
@@ -252,7 +252,7 @@ export default function Dashboard() {
                 {recentLoans.length > 0 ? (
                   <div className="space-y-4">
                     {recentLoans.map((loan) => (
-                      <div key={loan.id} className="flex justify-between items-start p-4 bg-gray-50 rounded-lg">
+                      <div key={loan.id} className="flex flex-col sm:flex-row sm:justify-between items-start p-4 bg-gray-50 rounded-lg">
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900">{loan.item_title}</h3>
                           <p className="text-sm text-gray-600 mt-1">{loan.item_authors}</p>
@@ -260,7 +260,7 @@ export default function Dashboard() {
                             {t('dashboard.dueOn', { date: formatDate(loan.due_date) })}
                           </p>
                         </div>
-                        <button className="btn-outline px-4 py-2 rounded ml-4">{t('dashboard.renew')}</button>
+                        <button className="btn-outline px-4 py-2 rounded w-full sm:w-auto sm:ml-4 text-center">{t('dashboard.renew')}</button>
                       </div>
                     ))}
                   </div>

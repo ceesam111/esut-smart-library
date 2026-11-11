@@ -4,7 +4,8 @@ import { GLOBAL_ADMIN_ROLES } from '@/server/auth/permissions';
 import { resolveTenant } from '@/server/tenant/resolveTenant';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const ctx = await requireRole(request, GLOBAL_ADMIN_ROLES);
     const tenant = await resolveTenant(ctx.user.id);
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { data, error } = await supabase
       .from('agent_jobs')
       .update({ status: 'pending', error: null, run_after: new Date().toISOString(), locked_at: null, locked_by: null, finished_at: null })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('tenant_id', tenant.tenantId)
       .in('status', ['failed', 'cancelled'])
       .select('*')

@@ -4,7 +4,8 @@ import { LIBRARY_ADMIN_ROLES } from '@/server/auth/permissions';
 import { resolveTenant } from '@/server/tenant/resolveTenant';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
 
-export async function GET(request: NextRequest, { params }: { params: { batchId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ batchId: string }> }) {
+  const { batchId } = await params;
   try {
     const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
     const tenant = await resolveTenant(ctx.user.id);
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: { batchId:
       .from('catalogue_import_batches')
       .select('*')
       .eq('tenant_id', tenant.tenantId)
-      .eq('id', params.batchId)
+      .eq('id', batchId)
       .single();
     if (batchError) throw new Error(batchError.message);
 
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { batchId:
       .from('catalogue_staging')
       .select('*')
       .eq('tenant_id', tenant.tenantId)
-      .eq('batch_id', params.batchId)
+      .eq('batch_id', batchId)
       .order('created_at', { ascending: true });
     if (confidence) query = query.eq('confidence', confidence);
     const { data: rows, error } = await query;

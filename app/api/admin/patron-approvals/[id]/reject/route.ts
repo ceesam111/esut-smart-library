@@ -23,11 +23,12 @@ async function canRejectPatron(actorUserId: string, actorRoles: string[], patron
   });
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
     const supabase = getSupabaseAdminClient();
-    const { data: before, error: beforeError } = await supabase.from('patrons').select('*').eq('id', params.id).single();
+    const { data: before, error: beforeError } = await supabase.from('patrons').select('*').eq('id', id).single();
     if (beforeError) throw new Error(beforeError.message);
     if (!(await canRejectPatron(ctx.user.id, ctx.roles, before))) throw new Error('Forbidden.');
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { data: patron, error } = await supabase
       .from('patrons')
       .update({ status: 'suspended' })
-      .eq('id', params.id)
+      .eq('id', id)
       .select('*')
       .single();
     if (error) throw new Error(error.message);

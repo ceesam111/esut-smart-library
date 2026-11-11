@@ -25,11 +25,12 @@ async function canApprovePatron(actorUserId: string, actorRoles: string[], patro
   });
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const ctx = await requireRole(request, LIBRARY_ADMIN_ROLES);
     const supabase = getSupabaseAdminClient();
-    const { data: before, error: beforeError } = await supabase.from('patrons').select('*').eq('id', params.id).single();
+    const { data: before, error: beforeError } = await supabase.from('patrons').select('*').eq('id', id).single();
     if (beforeError) throw new Error(beforeError.message);
     if (!(await canApprovePatron(ctx.user.id, ctx.roles, before))) throw new Error('Forbidden.');
     const policy = await getRegistrationPolicy();
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         branch_approved_by: ctx.user.id,
         main_library_access_at: before.main_library_access_at ?? new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select('*')
       .single();
     if (error) throw new Error(error.message);
