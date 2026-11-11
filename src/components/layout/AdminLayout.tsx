@@ -83,6 +83,7 @@ const adminNav: { groupKey: TranslationKey; items: NavItem[] }[] = [
   ]},
   { groupKey: 'admin.system', items: [
     { labelKey: 'admin.accountManagement', href: '/admin/accounts',              icon: '🔐', accountManager: true },
+    { labelKey: 'admin.emailProviders',    href: '/admin/email',                icon: '📧' },
     { labelKey: 'admin.preservation',        href: '/admin/preservation',           icon: '◆' },
   ]},
 ];

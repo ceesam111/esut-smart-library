@@ -1,7 +1,10 @@
 import { logger } from '../logging/logger';
-import { createIdempotencyKey, isResendConfigured, sendWithResend } from './providers/resend.provider';
+import { createIdempotencyKey, isResendConfigured, sendWithResend, type ResendSendConfig } from './providers/resend.provider';
 import { isGmailConfigured, sendWithGmail } from './providers/gmail.provider';
-import { EmailDeliveryError, type SendEmailOptions, type SendEmailResult } from './types';
+import { isEmailbumpConfigReady, sendWithEmailbump, type EmailbumpSendConfig } from './providers/emailbump.provider';
+import { sendWithSmtp, type SmtpSendConfig } from './providers/smtp.provider';
+import { getEmailProviderConfigs, type EmailProviderConfigRecord } from './providerConfig';
+import { EmailDeliveryError, type EmailProviderId, type SendEmailOptions, type SendEmailResult } from './types';
 
 const MAX_RECIPIENTS = 10;
 const MAX_SUBJECT_LENGTH = 500;
@@ -69,25 +72,134 @@ export function htmlToText(html: string): string {
 export interface EmailProviderStatus {
   resend: { configured: boolean };
   gmail: { configured: boolean; user?: string };
+  database: { active: boolean; providers: { id: string; provider: EmailProviderId; label: string; priority: number }[] };
 }
 
-export function getEmailProviderStatus(): EmailProviderStatus {
+interface RuntimeProvider {
+  id: EmailProviderId;
+  configId: string | null;
+  label: string;
+  priority: number;
+  send: (options: SendEmailOptions) => Promise<SendEmailResult>;
+}
+
+export async function getEmailProviderStatus(): Promise<EmailProviderStatus> {
   const gmailUser = process.env.GMAIL_SMTP_USER;
+  const rows = await getEmailProviderConfigs();
+  const active = rows.filter((row) => row.is_enabled && isRowConfigured(row));
   return {
     resend: { configured: isResendConfigured() },
     gmail: {
       configured: isGmailConfigured(),
       ...(gmailUser ? { user: gmailUser } : {}),
     },
+    database: {
+      active: active.length > 0,
+      providers: active.map((row) => ({
+        id: row.id,
+        provider: row.provider,
+        label: row.label,
+        priority: row.priority,
+      })),
+    },
   };
+}
+
+function isRowConfigured(row: EmailProviderConfigRecord): boolean {
+  if (!row.from_email) return false;
+  if (row.provider === 'resend') return Boolean(row.config.api_key);
+  if (row.provider === 'emailbump') {
+    return isEmailbumpConfigReady({ apiKey: row.config.api_key, fromEmail: row.from_email });
+  }
+  if (row.provider === 'smtp') {
+    return Boolean(row.config.smtp_host && row.config.smtp_user && row.config.smtp_password);
+  }
+  return false;
+}
+
+function rowToRuntime(row: EmailProviderConfigRecord): RuntimeProvider {
+  const fromEmail = row.from_email;
+  const fromName = row.from_name;
+  if (row.provider === 'resend') {
+    const config: ResendSendConfig = { apiKey: row.config.api_key ?? '', fromEmail, fromName };
+    return {
+      id: 'resend',
+      configId: row.id,
+      label: row.label,
+      priority: row.priority,
+      send: (options) => sendWithResend(options, createIdempotencyKey(), config),
+    };
+  }
+  if (row.provider === 'emailbump') {
+    const config: EmailbumpSendConfig = { apiKey: row.config.api_key ?? '', fromEmail, fromName };
+    return {
+      id: 'emailbump',
+      configId: row.id,
+      label: row.label,
+      priority: row.priority,
+      send: (options) => sendWithEmailbump(options, config),
+    };
+  }
+  const port = Number(row.config.smtp_port) || 587;
+  const config: SmtpSendConfig = {
+    host: row.config.smtp_host ?? '',
+    port,
+    secure: row.config.smtp_secure ?? port === 465,
+    user: row.config.smtp_user ?? '',
+    password: row.config.smtp_password ?? '',
+    fromEmail,
+    fromName,
+  };
+  return {
+    id: 'smtp',
+    configId: row.id,
+    label: row.label,
+    priority: row.priority,
+    send: (options) => sendWithSmtp(options, config),
+  };
+}
+
+function environmentChain(): RuntimeProvider[] {
+  const chain: RuntimeProvider[] = [];
+  if (isResendConfigured()) {
+    chain.push({
+      id: 'resend',
+      configId: null,
+      label: 'Resend (environment)',
+      priority: 10,
+      send: (options) => sendWithResend(options, createIdempotencyKey()),
+    });
+  }
+  if (isGmailConfigured()) {
+    chain.push({
+      id: 'gmail',
+      configId: null,
+      label: 'Gmail SMTP (environment)',
+      priority: 20,
+      send: (options) => sendWithGmail(options),
+    });
+  }
+  return chain;
+}
+
+async function buildChain(): Promise<RuntimeProvider[]> {
+  const rows = await getEmailProviderConfigs();
+  const enabled = rows
+    .filter((row) => row.is_enabled && isRowConfigured(row))
+    .map((row) => rowToRuntime(row));
+  if (enabled.length === 0) return environmentChain();
+  return [...enabled, ...environmentChain()].sort((a, b) => a.priority - b.priority);
 }
 
 /**
  * Central delivery entry point.
  *
- * Resend is primary; Gmail SMTP takes over only when Resend definitively did
- * not accept the message. When Resend may have accepted it but the response
- * was lost, no fallback runs so the recipient cannot receive the email twice.
+ * Admin-configured providers from the database run in priority order with the
+ * environment providers (Resend, then Gmail SMTP) merged in as the last
+ * resort, so a database provider with a high priority number acts as a
+ * fallback and never removes the environment safety net. A provider whose
+ * failure may still have delivered the message blocks the fallback so the
+ * recipient cannot receive the email twice.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const errors = validateSendEmailOptions(options);
@@ -101,25 +213,30 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     text: options.text || htmlToText(options.html),
   };
 
-  const resendReady = isResendConfigured();
-  const gmailReady = isGmailConfigured();
+  const chain = await buildChain();
 
-  if (!resendReady && !gmailReady) {
+  if (chain.length === 0) {
     throw new EmailDeliveryError('The email service is not configured.', 'not_configured', {
       category: 'configuration',
-      detail: 'Neither RESEND_API_KEY nor GMAIL_SMTP_APP_PASSWORD is set',
+      detail: 'No email provider is enabled in the database or environment',
     });
   }
 
-  if (resendReady) {
-    logger.debug('[email] Attempting delivery using Resend');
+  for (let index = 0; index < chain.length; index += 1) {
+    const provider = chain[index];
     try {
-      const result = await sendWithResend(payload, createIdempotencyKey());
-      logger.info('[email] Resend delivery successful');
+      const result = await provider.send(payload);
+      logger.info('[email] Delivery successful', {
+        provider: provider.id,
+        label: provider.label,
+        configId: provider.configId,
+      });
       return result;
     } catch (error) {
       const failure = error instanceof EmailDeliveryError ? error : null;
-      logger.warn('[email] Resend delivery failed', {
+      logger.warn('[email] Provider delivery failed', {
+        provider: provider.id,
+        label: provider.label,
         category: failure?.category ?? 'unknown',
         code: failure?.code ?? 'send_failed',
         detail: failure?.detail ?? (error instanceof Error ? error.message : String(error)),
@@ -127,44 +244,73 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       });
 
       if (failure?.ambiguous) {
-        // Resend may already have accepted the message: fall back only by
-        // risking a duplicate, so surface a controlled failure instead.
         throw new EmailDeliveryError(
           'The email could not be confirmed as sent. Please try again shortly.',
           failure.code,
-          { provider: 'resend', category: failure.category, detail: failure.detail, ambiguous: true },
+          { provider: failure.provider ?? provider.id, category: failure.category, detail: failure.detail, ambiguous: true },
         );
       }
-      // Not accepted by Resend — a Gmail retry cannot duplicate anything.
+      if (index === chain.length - 1) {
+        throw new EmailDeliveryError(
+          'Unable to send the email at this time. Please try again later.',
+          failure?.code ?? 'send_failed',
+          {
+            provider: failure?.provider ?? provider.id,
+            category: failure?.category ?? 'unknown',
+            detail: failure?.detail,
+          },
+        );
+      }
     }
   }
 
-  if (gmailReady) {
-    logger.debug('[email] Attempting Gmail fallback');
-    try {
-      const result = await sendWithGmail(payload);
-      logger.info('[email] Gmail fallback successful');
-      return result;
-    } catch (error) {
-      const failure = error instanceof EmailDeliveryError ? error : null;
-      logger.error('[email] Gmail fallback failed', {
-        category: failure?.category ?? 'unknown',
-        code: failure?.code ?? 'send_failed',
-        detail: failure?.detail ?? (error instanceof Error ? error.message : String(error)),
-      });
-      throw new EmailDeliveryError(
-        'Unable to send the email at this time. Please try again later.',
-        failure?.code ?? 'send_failed',
-        { provider: 'gmail', category: failure?.category ?? 'unknown', detail: failure?.detail },
-      );
-    }
-  }
-
-  // Resend failed and no fallback provider is configured.
-  logger.error('[email] Delivery failed and Gmail SMTP fallback is not configured');
   throw new EmailDeliveryError('Unable to send the email at this time. Please try again later.', 'send_failed', {
-    provider: 'resend',
-    category: 'configuration',
-    detail: 'Gmail fallback not configured',
+    category: 'unknown',
   });
+}
+
+export async function sendEmailViaConfig(configId: string, options: SendEmailOptions): Promise<SendEmailResult> {
+  const errors = validateSendEmailOptions(options);
+  if (errors.length > 0) {
+    throw new EmailDeliveryError(errors[0], 'send_failed', { category: 'rejected', detail: errors.join(' ') });
+  }
+
+  const rows = await getEmailProviderConfigs();
+  const row = rows.find((item) => item.id === configId);
+  if (!row || !row.is_enabled || !isRowConfigured(row)) {
+    throw new EmailDeliveryError('The selected email provider is not available.', 'not_configured', {
+      category: 'configuration',
+      detail: `No enabled provider config ${configId}`,
+    });
+  }
+
+  const payload: SendEmailOptions = {
+    ...options,
+    to: normalizeRecipients(options.to),
+    text: options.text || htmlToText(options.html),
+  };
+
+  const provider = rowToRuntime(row);
+  try {
+    const result = await provider.send(payload);
+    logger.info('[email] Directed delivery successful', { provider: provider.id, configId: row.id });
+    return result;
+  } catch (error) {
+    const failure = error instanceof EmailDeliveryError ? error : null;
+    logger.warn('[email] Directed delivery failed', {
+      provider: provider.id,
+      configId: row.id,
+      category: failure?.category ?? 'unknown',
+      detail: failure?.detail ?? (error instanceof Error ? error.message : String(error)),
+    });
+    throw new EmailDeliveryError(
+      failure?.message ?? 'Unable to send the email at this time. Please try again later.',
+      failure?.code ?? 'send_failed',
+      {
+        provider: failure?.provider ?? provider.id,
+        category: failure?.category ?? 'unknown',
+        detail: failure?.detail,
+      },
+    );
+  }
 }

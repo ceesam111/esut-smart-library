@@ -12,8 +12,13 @@ const gmailMocks = vi.hoisted(() => ({
   verifyGmailTransport: vi.fn(),
 }));
 
+const providerConfigMocks = vi.hoisted(() => ({
+  getEmailProviderConfigs: vi.fn(async () => [] as import('./providerConfig').EmailProviderConfigRecord[]),
+}));
+
 vi.mock('./providers/resend.provider', () => resendMocks);
 vi.mock('./providers/gmail.provider', () => gmailMocks);
+vi.mock('./providerConfig', () => providerConfigMocks);
 vi.mock('../logging/logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
@@ -45,6 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resendMocks.isResendConfigured.mockReturnValue(true);
   gmailMocks.isGmailConfigured.mockReturnValue(false);
+  providerConfigMocks.getEmailProviderConfigs.mockResolvedValue([]);
 });
 
 describe('sendEmail', () => {
@@ -169,5 +175,68 @@ describe('htmlToText', () => {
     expect(text).toContain('Line one');
     expect(text).toContain('Line & two');
     expect(text).not.toContain('<');
+  });
+});
+
+describe('database provider chain', () => {
+  const dbRow = {
+    id: 'cfg-1',
+    provider: 'emailbump' as const,
+    label: 'EmailBump fallback',
+    from_email: 'noreply@viaemailbump.com',
+    from_name: 'ESUT Library',
+    is_enabled: true,
+    priority: 20,
+    config: { api_key: 'ebk_db' },
+    created_at: '2026-11-11T00:00:00Z',
+    updated_at: '2026-11-11T00:00:00Z',
+  };
+
+  it('uses an enabled database provider as the first environment fallback', async () => {
+    providerConfigMocks.getEmailProviderConfigs.mockResolvedValue([dbRow]);
+    resendMocks.sendWithResend.mockRejectedValue(resendFailure({ category: 'rejected', ambiguous: false }));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'eb_db' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await sendEmail(baseMessage);
+
+    expect(result).toEqual({ success: true, provider: 'emailbump', messageId: 'eb_db' });
+    expect(resendMocks.sendWithResend).toHaveBeenCalledTimes(1);
+    const init = fetchMock.mock.calls[0][1] as { headers: Record<string, string> };
+    expect(init.headers.Authorization).toBe('Bearer ebk_db');
+    vi.unstubAllGlobals();
+  });
+
+  it('lets a low-priority database provider take over as primary', async () => {
+    providerConfigMocks.getEmailProviderConfigs.mockResolvedValue([{ ...dbRow, priority: 5 }]);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'eb_db' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await sendEmail(baseMessage);
+
+    expect(result).toEqual({ success: true, provider: 'emailbump', messageId: 'eb_db' });
+    expect(resendMocks.sendWithResend).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('directs a test send to one configured provider', async () => {
+    providerConfigMocks.getEmailProviderConfigs.mockResolvedValue([dbRow]);
+    const { sendEmailViaConfig } = await import('./emailService');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'eb_direct' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await sendEmailViaConfig('cfg-1', baseMessage);
+
+    expect(result).toEqual({ success: true, provider: 'emailbump', messageId: 'eb_direct' });
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(body.from).toBe('ESUT Library <noreply@viaemailbump.com>');
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects a directed send to an unknown provider id', async () => {
+    providerConfigMocks.getEmailProviderConfigs.mockResolvedValue([dbRow]);
+    const { sendEmailViaConfig } = await import('./emailService');
+    const promise = sendEmailViaConfig('missing', baseMessage);
+    await expect(promise).rejects.toMatchObject({ code: 'not_configured' });
   });
 });

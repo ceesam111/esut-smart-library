@@ -11,14 +11,17 @@ export function isResendConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && (process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL));
 }
 
+export interface ResendSendConfig {
+  apiKey?: string | null;
+  fromEmail?: string | null;
+  fromName?: string | null;
+}
+
 export function createIdempotencyKey(): string {
   return randomUUID();
 }
 
-function buildFrom(): string {
-  const email = process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || '';
-  const name = process.env.FROM_NAME || process.env.RESEND_FROM_NAME || '';
-  if (!email) return '';
+function composeFrom(email: string, name?: string | null): string {
   return name ? `${name} <${email}>` : email;
 }
 
@@ -51,9 +54,14 @@ function describeNetworkFailure(error: unknown): {
 export async function sendWithResend(
   options: SendEmailOptions,
   idempotencyKey: string,
+  config?: ResendSendConfig,
 ): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = buildFrom();
+  const apiKey = config?.apiKey || process.env.RESEND_API_KEY || '';
+  const fromEmail = config?.fromEmail || process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || '';
+  const fromName = config?.fromName !== undefined && config.fromName !== null
+    ? config.fromName
+    : process.env.FROM_NAME || process.env.RESEND_FROM_NAME || '';
+  const from = fromEmail ? composeFrom(fromEmail, fromName) : '';
 
   if (!apiKey || !from) {
     throw new EmailDeliveryError('The email service is not configured.', 'not_configured', {

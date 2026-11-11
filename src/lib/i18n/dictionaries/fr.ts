@@ -1340,6 +1340,7 @@ export const fr = {
     offlineSync: 'Synchronisation hors ligne',
     sip2Terminals: 'Terminaux SIP2',
     accountManagement: 'Gestion des comptes',
+    emailProviders: 'Fournisseurs e-mail',
     preservation: 'Préservation',
     collections: 'Collections',
     academic: 'Académique',

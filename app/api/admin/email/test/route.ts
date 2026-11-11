@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/server/auth/requireRole';
 import { GLOBAL_ADMIN_ROLES } from '@/server/auth/permissions';
-import { getEmailProviderStatus, sendEmail, verifyGmailTransport, EmailDeliveryError } from '@/server/email';
+import { getEmailProviderStatus, sendEmail, sendEmailViaConfig, verifyGmailTransport, EmailDeliveryError } from '@/server/email';
 import { template } from '@/server/email/resend';
 import { logger } from '@/server/logging/logger';
 
@@ -12,16 +12,17 @@ export const dynamic = 'force-dynamic';
  *
  * - `GET`  — configuration status (never exposes keys or app passwords)
  * - `POST` — `{ action: 'verify' }` checks the Gmail SMTP handshake;
- *            `{ action: 'send', to }` sends one real test message and reports
- *            which provider carried it (Resend first, Gmail fallback)
+ *            `{ action: 'send', to, providerId? }` sends one real test message
+ *            through the provider chain, or through one database provider when
+ *            `providerId` is given.
  */
 export async function GET(request: NextRequest) {
   try {
     await requireRole(request, GLOBAL_ADMIN_ROLES);
-    const status = getEmailProviderStatus();
+    const status = await getEmailProviderStatus();
     return NextResponse.json({
       ...status,
-      healthy: status.resend.configured || status.gmail.configured,
+      healthy: status.database.active || status.resend.configured || status.gmail.configured,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
@@ -32,13 +33,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await requireRole(request, GLOBAL_ADMIN_ROLES);
-    const body = await request.json().catch(() => ({}));
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const action = typeof body.action === 'string' ? body.action : 'status';
 
     if (action === 'verify') {
       const gmail = await verifyGmailTransport();
+      const status = await getEmailProviderStatus();
       return NextResponse.json({
-        resend: getEmailProviderStatus().resend,
+        resend: status.resend,
+        database: status.database,
         gmail,
       });
     }
@@ -52,6 +55,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'A valid recipient address is required.' }, { status: 400 });
     }
 
+    const providerId = typeof body.providerId === 'string' && body.providerId ? body.providerId : null;
+
     const html = template(`
       <h2 style="color:#6B1D2A;margin-top:0">Email service test</h2>
       <p style="color:#374151">This message was sent from the ESUT Library admin console to confirm that delivery works.</p>
@@ -60,12 +65,10 @@ export async function POST(request: NextRequest) {
     `);
 
     try {
-      const result = await sendEmail({
-        to,
-        subject: 'ESUT Library email service test',
-        html,
-      });
-      logger.info('[email] Admin test message sent', { provider: result.provider, messageId: result.messageId });
+      const result = providerId
+        ? await sendEmailViaConfig(providerId, { to, subject: 'ESUT Library email service test', html })
+        : await sendEmail({ to, subject: 'ESUT Library email service test', html });
+      logger.info('[email] Admin test message sent', { provider: result.provider, messageId: result.messageId, providerId });
       return NextResponse.json({ ok: true, provider: result.provider, messageId: result.messageId });
     } catch (error) {
       if (error instanceof EmailDeliveryError) {

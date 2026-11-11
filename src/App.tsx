@@ -117,6 +117,7 @@ const AdminDeliveryHistory = lazy(() => import('@/pages/admin/DeliveryHistory'))
 const AdminMigration      = lazy(() => import('@/pages/admin/Migration'));
 const AdminContentEngine  = lazy(() => import('@/pages/admin/ContentEngine'));
 const AdminAgents         = lazy(() => import('@/pages/admin/Agents'));
+const AdminEmailSettings  = lazy(() => import('@/pages/admin/EmailSettings'));
 const AdminPreservation   = lazy(() => import('@/pages/admin/Preservation'));
 const AdminAnalytics      = lazy(() => import('@/pages/admin/Analytics'));
 const AdminAccreditationEvidence = lazy(() => import('@/pages/admin/AccreditationEvidence'));
@@ -329,6 +330,7 @@ export default function App() {
             <Route path="/admin/repository/stats" element={<RepositoryStats />} />
             <Route path="/admin/team" element={<AdminTeam />} />
             <Route path="/admin/accounts" element={<AdminAccounts />} />
+            <Route path="/admin/email" element={<AdminEmailSettings />} />
             <Route path="/admin/library-manual" element={<AdminLibraryManual />} />
             <Route path="/admin/access" element={<AccessDashboardPage />} />
             <Route path="/admin/access/scanner" element={<AccessScanner />} />

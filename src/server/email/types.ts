@@ -1,4 +1,4 @@
-export type EmailProviderId = 'resend' | 'gmail';
+export type EmailProviderId = 'resend' | 'emailbump' | 'smtp' | 'gmail';
 
 export type EmailErrorCode = 'not_configured' | 'rate_limited' | 'send_failed';
 

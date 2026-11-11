@@ -1340,6 +1340,7 @@ export const en = {
     offlineSync: 'Offline Sync',
     sip2Terminals: 'SIP2 Terminals',
     accountManagement: 'Account Management',
+    emailProviders: 'Email Providers',
     preservation: 'Preservation',
     collections: 'Collections',
     academic: 'Academic',
