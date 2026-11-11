@@ -683,7 +683,7 @@ export default function Navbar() {
                         )}
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-neutral-900 truncate">{patron?.full_name}</p>
-                          <p className="text-xs text-neutral-500 truncate">{patron?.account_role ?? 'Patron'}</p>
+                          <p className="text-xs text-neutral-500 truncate">{role ?? 'Patron'}</p>
                         </div>
                       </div>
                       <div className="w-full">
@@ -697,7 +697,8 @@ export default function Navbar() {
                       >
                         {t('nav.signOut')}
                       </button>
-                    </>
+                    </div>
+                  </>
                   ) : (
                     <>
                       <Link
@@ -739,8 +740,10 @@ export default function Navbar() {
               </a>
             </div>
           </div>
-        )}
-      );
+        </>
+      )}
+    </>
+  );
 }
 
 // ── Mobile sub-components ─────────────────────────────────────────────────────
