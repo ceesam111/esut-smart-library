@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { data, error } = await getSupabaseAdminClient()
-    .from('repository_items')
+    .from('ir_items')
     .select('id,handle')
     .or(`legacy_catalog_id.eq.${id},id.eq.${id}`)
     .maybeSingle();
