@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { withHandler } from '@/server/api/withHandler';
 import { requireUser } from '@/server/auth/requireUser';
 import { getSupabaseAdminClient } from '@/server/supabase/adminClient';
@@ -14,7 +15,7 @@ async function ensureIdentity(supabase: ReturnType<typeof getSupabaseAdminClient
 
   const { data: created, error } = await supabase
     .from('library_access_identities')
-    .insert({ tenant_id: tenantId, patron_id: patronId, secure_token_hash: 'pending', status: 'active' })
+    .insert({ tenant_id: tenantId, patron_id: patronId, secure_token_hash: `pending:${randomUUID()}`, status: 'active' })
     .select('id');
   if (!error && created?.[0]) return created[0].id;
 

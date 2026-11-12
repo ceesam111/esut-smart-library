@@ -1,4 +1,4 @@
-import arcjet, { detectBot, shield } from '@arcjet/next';
+import arcjet, { detectBot, shield, type ArcjetDecision } from '@arcjet/next';
 import { NextResponse, type NextRequest } from 'next/server';
 import { FALLBACK_BASE } from '@/server/seo/scholarlyMetadata';
 
@@ -15,11 +15,19 @@ const aj = ajKey
   ? arcjet({
       key: ajKey,
       rules: [
-        shield({ mode: 'LIVE' }),
-        detectBot({ mode: 'LIVE', allow: ['CATEGORY:SEARCH_ENGINE', 'CATEGORY:MONITOR'] }),
+        shield({ mode: 'DRY_RUN' }),
+        detectBot({ mode: 'DRY_RUN', allow: ['CATEGORY:SEARCH_ENGINE', 'CATEGORY:MONITOR'] }),
       ],
     })
   : null;
+
+function describeArcjetReason(reason: ArcjetDecision['reason']): string {
+  if (reason.isRateLimit()) return 'rate_limit';
+  if (reason.isBot()) return 'bot';
+  if (reason.isShield()) return 'shield';
+  if (reason.isError()) return 'error';
+  return 'other';
+}
 
 function requestId(request: NextRequest) {
   return request.headers.get('x-request-id') || crypto.randomUUID();
@@ -153,10 +161,22 @@ export async function middleware(request: NextRequest) {
   }
 
   if (aj && shouldUseArcjet(request)) {
-    const decision = await aj.protect(request);
-    if (decision.isDenied()) {
-      const status = decision.reason.isRateLimit() ? 429 : 403;
-      return applySecurityHeaders(request, NextResponse.json({ success: false, error: { code: status === 429 ? 'RATE_LIMITED' : 'FORBIDDEN', message: status === 429 ? 'Too many requests.' : 'Request blocked.', requestId: id } }, { status }), id);
+    let decision: ArcjetDecision | null = null;
+    try {
+      decision = await aj.protect(request);
+    } catch (error) {
+      console.warn('[security] Arcjet evaluation failed; continuing without enforcement', {
+        requestId: id,
+        path: request.nextUrl.pathname,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+    if (decision?.isDenied()) {
+      console.warn('[security] Arcjet flagged a sensitive request (dry-run, not enforced)', {
+        requestId: id,
+        path: request.nextUrl.pathname,
+        reason: describeArcjetReason(decision.reason),
+      });
     }
   }
 

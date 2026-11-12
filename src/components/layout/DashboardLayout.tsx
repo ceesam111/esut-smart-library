@@ -21,6 +21,7 @@ const navItems: { labelKey: TranslationKey; href: string; icon: string; show?: b
   { labelKey: 'dashboard.mySubmissions', href: '/dashboard/workflows',        icon: '📤' },
   { labelKey: 'dashboard.courseReserves',href: '/dashboard/course-reserves',  icon: '📖', show: institutionConfig.features.courseReserves },
   { labelKey: 'dashboard.myReservations',href: '/dashboard/requests',        icon: '🔖' },
+  { labelKey: 'dashboard.libraryManual', href: '/library-manual',           icon: '📘' },
   { labelKey: 'dashboard.settings',        href: '/dashboard/settings',          icon: '⚙️' },
   { labelKey: 'dashboard.researchProfile', href: '/dashboard/lecturer-profile',  icon: '🔬' },
 ];

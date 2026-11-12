@@ -769,17 +769,42 @@ export default function Circulation() {
 
   const offlineEligible = off.canOperateOffline && !cacheIsStale(off.cache);
 
+  const initials = (name: string) =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('');
+
+  const dueStatus = (dueDate: string): 'overdue' | 'soon' | 'ok' => {
+    const days = differenceInDays(new Date(dueDate), new Date());
+    if (days < 0) return 'overdue';
+    if (days <= 3) return 'soon';
+    return 'ok';
+  };
+
+  const statTiles = [
+    { label: t('circulation.holds', { count: '' }), value: holds.length, tone: holds.length > 0 ? 'text-primary-800' : 'text-gray-400' },
+    { label: t('circulation.offlineQueue', { count: '' }), value: off.queue.length, tone: off.queue.length > 0 ? 'text-blue-700' : 'text-gray-400' },
+    { label: t('circulation.conflictsChip'), value: off.conflictCount, tone: off.conflictCount > 0 ? 'text-red-700' : 'text-gray-400' },
+  ];
+
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t('circulation.circulationTitle')}</h1>
+          <h1 className="text-3xl font-serif font-bold text-neutral-900">{t('circulation.circulationTitle')}</h1>
           <p className="text-gray-600 mt-1">{t('circulation.circulationSubtitle')}</p>
         </div>
         <div className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full ${stateBadge}`}>
           <span className={`w-2 h-2 rounded-full ${stateDot}`} />
           {off.state}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {statTiles.map((tile) => (
+          <div key={tile.label} className="card flex items-center justify-between px-5 py-4">
+            <span className="text-sm text-gray-500">{tile.label}</span>
+            <span className={`text-2xl font-semibold tabular-nums ${tile.tone}`}>{tile.value}</span>
+          </div>
+        ))}
       </div>
 
       {/* Connectivity / queue banner */}
@@ -825,13 +850,15 @@ export default function Circulation() {
       )}
 
       {/* Tabs */}
-      <div className="border-b flex gap-6">
+      <div className="inline-flex flex-wrap gap-1 p-1 bg-neutral-100 rounded-xl">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.id ? 'border-primary-700 text-primary-800' : 'border-transparent text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              tab === t.id
+                ? 'bg-white text-primary-800 shadow-sm ring-1 ring-neutral-200'
+                : 'text-gray-500 hover:text-gray-800'
             }`}
           >
             {t.label}
@@ -841,49 +868,72 @@ export default function Circulation() {
 
       {/* ── Check Out ─────────────────────────────────────────── */}
       {tab === 'checkout' && (
-        <div className="max-w-xl space-y-5">
+        <div className="max-w-2xl space-y-5">
           {coAlert && (
-            <div className={`p-4 rounded-lg text-sm font-medium ${alertCls(coAlert.type)}`}>
+            <div className={`p-4 rounded-xl text-sm font-medium border-l-4 ${alertCls(coAlert.type)}`}>
               {coAlert.msg}
             </div>
           )}
 
           <div className="card space-y-4">
-            <h2 className="font-semibold text-lg">{t('circulation.findPatron')}</h2>
+            <h2 className="font-serif font-semibold text-lg text-neutral-900">{t('circulation.findPatron')}</h2>
             <PatronDropdown
               query={patronQuery}
               results={patronResults}
               onQuery={(q) => void searchPatrons(q)}
               onSelect={(p) => { setSelectedPatron(p); setPatronResults([]); }}
             />
-            {selectedPatron && (
-              <div className="p-3 bg-blue-50 rounded-lg text-sm">
-                <strong>{selectedPatron.full_name}</strong> — {selectedPatron.patron_category}
-                <span className="text-gray-500"> · {t('circulation.dueInDays', { days: durationDaysFor(selectedPatron.patron_category), due: dueDate(selectedPatron) })}</span>
+            {selectedPatron ? (
+              <div className="p-4 bg-gradient-to-r from-primary-50 to-white border border-primary-100 rounded-xl flex items-center gap-4">
+                <span className="w-11 h-11 rounded-full bg-primary-700 text-white flex items-center justify-center font-semibold text-sm shrink-0">
+                  {initials(selectedPatron.full_name)}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-semibold text-neutral-900 truncate">{selectedPatron.full_name}</div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {selectedPatron.patron_id} · {selectedPatron.patron_category} · {selectedPatron.faculty_name}
+                  </div>
+                  <div className="text-xs text-primary-800 mt-1 font-medium">
+                    {t('circulation.dueInDays', { days: durationDaysFor(selectedPatron.patron_category), due: dueDate(selectedPatron) })}
+                  </div>
+                </div>
               </div>
+            ) : (
+              <p className="text-xs text-gray-400">{t('circulation.searchPatronPlaceholder')}</p>
             )}
           </div>
 
           <div className="card space-y-4">
-            <h2 className="font-semibold text-lg">{t('circulation.findItem')}</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-serif font-semibold text-lg text-neutral-900">{t('circulation.findItem')}</h2>
+              <button
+                onClick={() => setScannerOpen(true)}
+                className="btn-secondary text-xs py-1.5 px-3"
+                title={t('circulation.scanBarcodeTitle')}
+              >
+                {t('circulation.scanBarcode')}
+              </button>
+            </div>
             <ItemDropdown
               query={itemQuery}
               results={itemResults}
               onQuery={(q) => void searchItems(q)}
               onSelect={(it) => { setSelectedItem(it); setItemResults([]); }}
             />
-            <button
-              onClick={() => setScannerOpen(true)}
-              className="btn-secondary mt-2"
-              title={t('circulation.scanBarcodeTitle')}
-            >
-              {t('circulation.scanBarcode')}
-            </button>
-            {selectedItem && (
-              <div className={`p-3 rounded-lg text-sm ${selectedItem.available_copies > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                <strong>{selectedItem.title}</strong>
-                <span className="text-gray-600"> — {selectedItem.available_copies}/{selectedItem.total_copies} available</span>
+            {selectedItem ? (
+              <div className="p-4 bg-gradient-to-r from-neutral-50 to-white border border-neutral-200 rounded-xl">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-neutral-900 truncate">{selectedItem.title}</div>
+                    <div className="text-xs text-gray-500 truncate">{selectedItem.call_number} · {selectedItem.format}</div>
+                  </div>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${selectedItem.available_copies > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {selectedItem.available_copies}/{selectedItem.total_copies}
+                  </span>
+                </div>
               </div>
+            ) : (
+              <p className="text-xs text-gray-400">{t('circulation.searchItemPlaceholder')}</p>
             )}
             {!serverReachable && (
               <div className="p-3 bg-amber-50 rounded-lg text-xs text-amber-800">
@@ -896,7 +946,7 @@ export default function Circulation() {
           <button
             onClick={() => void handleCheckout()}
             disabled={!selectedPatron || !selectedItem || coLoading}
-            className="btn-primary w-full py-3 text-base disabled:opacity-50"
+            className="btn-primary w-full py-3.5 text-base rounded-xl disabled:opacity-50 shadow-sm"
           >
             {coLoading ? t('circulation.processing') : serverReachable ? t('circulation.checkOut') : t('circulation.checkOutQueue')}
           </button>
@@ -905,14 +955,14 @@ export default function Circulation() {
 
       {/* ── Check In / Renew ─────────────────────────────────── */}
       {tab === 'checkin' && (
-        <div className="max-w-xl space-y-5">
+        <div className="max-w-3xl space-y-5">
           {ciAlert && (
-            <div className={`p-4 rounded-lg text-sm font-medium ${alertCls(ciAlert.type)}`}>
+            <div className={`p-4 rounded-xl text-sm font-medium border-l-4 ${alertCls(ciAlert.type)}`}>
               {ciAlert.msg}
             </div>
           )}
           <div className="card space-y-3">
-            <h2 className="font-semibold text-lg">{t('circulation.findActiveLoan')}</h2>
+            <h2 className="font-serif font-semibold text-lg text-neutral-900">{t('circulation.findActiveLoan')}</h2>
             <input
               type="text"
               className="input w-full"
@@ -928,31 +978,44 @@ export default function Circulation() {
           {checkinResults.length > 0 && (
             <div className="card overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b">
+                <thead className="border-b bg-neutral-50">
                   <tr>
-                    <th className="text-left p-3 font-semibold">{t('circulation.tableItem')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.tablePatron')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.tableDue')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.tableFine')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.tableItem')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.tablePatron')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.tableDue')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.tableFine')}</th>
                     <th className="p-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {checkinResults.map((loan) => {
                     const fine = calculateFine(loan.due_date);
-                    const overdue = differenceInDays(new Date(), new Date(loan.due_date)) > 0;
+                    const status = dueStatus(loan.due_date);
+                    const chipCls =
+                      status === 'overdue' ? 'bg-red-100 text-red-700' :
+                      status === 'soon' ? 'bg-amber-100 text-amber-800' :
+                      'bg-green-100 text-green-700';
+                    const chipLabel =
+                      status === 'overdue' ? t('circulation.overdueChip') :
+                      status === 'soon' ? t('circulation.dueSoonChip') :
+                      t('circulation.onTimeChip');
                     return (
-                      <tr key={loan.id} className={`border-b ${overdue ? 'bg-red-50' : ''}`}>
-                        <td className="p-3 font-medium">{loan.catalogue_items?.title}</td>
+                      <tr key={loan.id} className={`border-b last:border-0 transition-colors ${status === 'overdue' ? 'bg-red-50/60' : 'hover:bg-neutral-50'}`}>
+                        <td className="p-3 font-medium text-neutral-900">{loan.catalogue_items?.title}</td>
                         <td className="p-3 text-gray-600">
                           {loan.patrons?.full_name}
                           <br />
-                          <span className="text-xs">{loan.patrons?.patron_id}</span>
+                          <span className="text-xs text-gray-400">{loan.patrons?.patron_id}</span>
                         </td>
-                        <td className={`p-3 text-sm ${overdue ? 'text-red-600 font-semibold' : ''}`}>
-                          {loan.due_date}
+                        <td className="p-3">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${chipCls}`}>{chipLabel}</span>
+                            <span className={`text-sm tabular-nums ${status === 'overdue' ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                              {loan.due_date}
+                            </span>
+                          </div>
                         </td>
-                        <td className="p-3 text-sm font-semibold text-red-700">
+                        <td className="p-3 text-sm font-semibold text-red-700 tabular-nums">
                           {fine > 0 ? t('circulation.fineCurrency', { amount: formatCurrency(fine) }) : isExamPeriod() ? t('circulation.dash') : t('circulation.zeroCurrency', { amount: formatCurrency(0) })}
                         </td>
                         <td className="p-3">
@@ -960,14 +1023,14 @@ export default function Circulation() {
                             <button
                               onClick={() => void handleCheckin(loan)}
                               disabled={ciLoading}
-                              className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
+                              className="btn-primary text-xs py-1.5 px-3 rounded-lg disabled:opacity-50"
                             >
                               {t('circulation.return')}
                             </button>
                             <button
                               onClick={() => void handleRenew(loan)}
                               disabled={ciLoading}
-                              className="btn-secondary text-xs py-1.5 px-3 disabled:opacity-50"
+                              className="btn-secondary text-xs py-1.5 px-3 rounded-lg disabled:opacity-50"
                               title={t('circulation.renewLoanTitle')}
                             >
                               {t('circulation.renew')}
@@ -992,8 +1055,8 @@ export default function Circulation() {
               {t('circulation.holdsOfflineNote')}
             </div>
           )}
-          <div className="max-w-xl card space-y-4">
-            <h2 className="font-semibold text-lg">{t('circulation.placeHold')}</h2>
+          <div className="max-w-2xl card space-y-4">
+            <h2 className="font-serif font-semibold text-lg text-neutral-900">{t('circulation.placeHold')}</h2>
             {holdsAlert && (
               <div className={`p-3 rounded-lg text-sm font-medium ${alertCls(holdsAlert.type)}`}>
                 {holdsAlert.msg}
@@ -1027,26 +1090,30 @@ export default function Circulation() {
           </div>
 
           <div className="card overflow-x-auto">
-            <h2 className="font-semibold text-lg mb-4">{t('circulation.activeHoldQueue')}</h2>
+            <h2 className="font-serif font-semibold text-lg mb-4 text-neutral-900">{t('circulation.activeHoldQueue')}</h2>
             {holds.length === 0 ? (
               <p className="text-gray-400 text-sm">{t('circulation.noPendingHolds')}</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="border-b">
+                <thead className="border-b bg-neutral-50">
                   <tr>
-                    <th className="text-left p-3 font-semibold">{t('circulation.priority')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.item')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.patron')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.requested')}</th>
-                    <th className="text-left p-3 font-semibold">{t('circulation.status')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.priority')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.item')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.patron')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.requested')}</th>
+                    <th className="text-left p-3 font-semibold text-neutral-700">{t('circulation.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {holds.map((h) => (
-                    <tr key={h.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-bold text-primary-700">{h.priority}</td>
-                      <td className="p-3 font-medium">{h.catalogue_items?.title}</td>
-                      <td className="p-3 text-gray-600">{h.patrons?.full_name} <span className="text-xs">({h.patrons?.patron_id})</span></td>
+                    <tr key={h.id} className="border-b last:border-0 hover:bg-neutral-50 transition-colors">
+                      <td className="p-3">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-50 text-primary-800 text-xs font-bold">
+                          {h.priority}
+                        </span>
+                      </td>
+                      <td className="p-3 font-medium text-neutral-900">{h.catalogue_items?.title}</td>
+                      <td className="p-3 text-gray-600">{h.patrons?.full_name} <span className="text-xs text-gray-400">({h.patrons?.patron_id})</span></td>
                       <td className="p-3 text-sm text-gray-500">{formatDate(h.created_at)}</td>
                       <td className="p-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${h.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
@@ -1058,7 +1125,7 @@ export default function Circulation() {
                           <button
                             onClick={() => void checkoutFromHold(h)}
                             disabled={coLoading}
-                            className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
+                            className="btn-primary text-xs py-1.5 px-3 rounded-lg disabled:opacity-50"
                           >
                             {t('circulation.checkOut')}
                           </button>
